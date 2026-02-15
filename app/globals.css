@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1a1a26;
+  --border: #2a2a3a;
+  --accent: #ff4444;
+  --accent2: #4488ff;
+  --gold: #ffd700;
+  --green: #22c55e;
+  --red: #ef4444;
+  --text: #e8e8f0;
+  --text2: #888899;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Pixel-perfect rendering */
+canvas {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Button animations */
+.btn-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover:hover {
+  transform: translateY(-1px);
+}
+
+.btn-hover:active {
+  transform: translateY(0);
+}
+
+/* Gradient backgrounds */
+.bg-gradient-fight {
+  background: radial-gradient(ellipse at 30% 20%, rgba(255,68,68,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 80%, rgba(68,136,255,0.08) 0%, transparent 60%);
+}
+
+.bg-grid {
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Text glow effects */
+.text-glow {
+  text-shadow: 0 0 20px currentColor;
+}
+
+.text-glow-lg {
+  text-shadow: 0 0 40px currentColor, 0 4px 0 rgba(0,0,0,0.5);
+}
+
+/* Price movement animations */
+.price-up {
+  animation: price-bounce 0.3s ease-out, glow-green 0.5s ease-out;
+}
+
+.price-down {
+  animation: price-bounce 0.3s ease-out, glow-red 0.5s ease-out;
+}
+
+@keyframes glow-green {
+  0% { box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+  50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+  100% { box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+@keyframes glow-red {
+  0% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+  100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Loading states */
+.skeleton {
+  animation: skeleton-loading 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes skeleton-loading {
+  0% { opacity: 0.3; }
+  100% { opacity: 0.7; }
+}
+
+/* Focus styles */
+.focus-ring {
+  outline: none;
+  transition: all 0.2s;
+}
+
+.focus-ring:focus {
+  ring: 2px;
+  ring-color: var(--accent);
+  ring-offset: 2px;
+  ring-offset-color: var(--bg);
+}
+
+/* Health bar styles */
+.hp-bar {
+  background: linear-gradient(90deg, 
+    rgba(239, 68, 68, 1) 0%, 
+    rgba(249, 115, 22, 1) 50%, 
+    rgba(34, 197, 94, 1) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+.hp-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.2) 50%, 
+    transparent 100%
+  );
+  animation: shine 2s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Market data styles */
+.orderbook-row {
+  transition: background-color 0.3s ease;
+}
+
+.orderbook-row:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.orderbook-flash {
+  animation: order-flash 0.4s ease-out;
+}
+
+/* Commentary styles */
+.commentary-text {
+  animation: fade-in-up 0.3s ease-out;
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fighter selection highlight */
+.fighter-selected {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 20px rgba(255, 68, 68, 0.3);
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .mobile-stack {
+    flex-direction: column;
+  }
+  
+  .mobile-full {
+    width: 100%;
+  }
+  
+  .mobile-hide {
+    display: none;
+  }
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000;
+}
