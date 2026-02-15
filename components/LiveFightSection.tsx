@@ -9,12 +9,11 @@ import CommentaryBar from './CommentaryBar'
 import { FightEngine } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
+import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
 
 interface LiveFightSectionProps {
-  userCredits: number
-  onSpendCredits: (amount: number) => boolean
-  onEarnCredits: (amount: number) => void
+  onFightComplete?: (fighterId: string, fightData: any) => void
 }
 
 // Sample fighter data
@@ -36,7 +35,8 @@ const sampleFighters: Fighter[] = [
     },
     owner: 'DarkMatter_Labs',
     isActive: true,
-    trainingCost: 50
+    trainingCost: 50,
+    evolution: FighterEvolutionEngine.createNewEvolution(29)
   },
   {
     id: 'nexus-prime',
@@ -55,14 +55,13 @@ const sampleFighters: Fighter[] = [
     },
     owner: 'SynthCorp',
     isActive: true,
-    trainingCost: 50
+    trainingCost: 50,
+    evolution: FighterEvolutionEngine.createNewEvolution(32)
   }
 ]
 
 export default function LiveFightSection({
-  userCredits,
-  onSpendCredits,
-  onEarnCredits
+  onFightComplete
 }: LiveFightSectionProps) {
   const [fightState, setFightState] = useState<FightState | null>(null)
   const [marketState, setMarketState] = useState<MarketState | null>(null)

@@ -11,93 +11,49 @@ const playTradeSound = (success: boolean, volume?: number) => {
 }
 
 interface FightersSectionProps {
-  userCredits: number
-  onSpendCredits: (amount: number) => boolean
+  fighters: Fighter[]
+  onFightComplete: (fighterId: string, fightData: any) => void
+  onSelectFighter: (fighterId: string) => void
 }
 
-// Mock user fighters data
-const userFighters: Fighter[] = [
-  {
-    id: 'ironclad-7',
-    name: 'IRONCLAD-7',
-    emoji: '🤖',
-    class: 'Heavyweight',
-    record: { wins: 14, losses: 2, draws: 0 },
-    elo: 1847,
-    stats: {
-      strength: 88,
-      speed: 72,
-      defense: 81,
-      stamina: 75,
-      fightIQ: 85,
-      aggression: 79
-    },
-    owner: 'You',
-    isActive: true,
-    trainingCost: 50
-  },
-  {
-    id: 'volt-x',
-    name: 'VOLT-X',
-    emoji: '⚡',
-    class: 'Middleweight',
-    record: { wins: 9, losses: 3, draws: 0 },
-    elo: 1654,
-    stats: {
-      strength: 65,
-      speed: 92,
-      defense: 70,
-      stamina: 88,
-      fightIQ: 78,
-      aggression: 85
-    },
-    owner: 'You',
-    isActive: true,
-    trainingCost: 35
-  },
-  {
-    id: 'ghost-shell',
-    name: 'GHOST-SHELL',
-    emoji: '👻',
-    class: 'Lightweight',
-    record: { wins: 6, losses: 1, draws: 0 },
-    elo: 1580,
-    stats: {
-      strength: 58,
-      speed: 86,
-      defense: 90,
-      stamina: 82,
-      fightIQ: 91,
-      aggression: 45
-    },
-    owner: 'You',
-    isActive: false,
-    trainingCost: 25
-  }
-]
-
-export default function FightersSection({ userCredits, onSpendCredits }: FightersSectionProps) {
+// Remove the mock data and use props instead
+export default function FightersSection({ fighters, onFightComplete, onSelectFighter }: FightersSectionProps) {
   const [selectedFighter, setSelectedFighter] = useState<string | null>(null)
   const [trainingInProgress, setTrainingInProgress] = useState<string | null>(null)
 
   const handleTraining = (fighterId: string, cost: number) => {
-    if (onSpendCredits(cost)) {
-      setTrainingInProgress(fighterId)
-      playTradeSound(true, 0.8)
-      
-      // Simulate training duration
-      setTimeout(() => {
-        setTrainingInProgress(null)
-        playTradeSound(true, 0.6)
-      }, 3000)
-    } else {
-      playTradeSound(false, 0.5)
-    }
+    setTrainingInProgress(fighterId)
+    playTradeSound(true, 0.8)
+    
+    // Simulate training duration and improvement
+    setTimeout(() => {
+      setTrainingInProgress(null)
+      playTradeSound(true, 0.6)
+      // Training complete - could trigger stat improvements here
+    }, 3000)
   }
 
   const handleEnterFight = (fighterId: string) => {
     playTradeSound(true, 0.7)
-    // In a real app, this would add the fighter to the matchmaking queue
+    onSelectFighter(fighterId)
+    // Simulate a fight result for demo
+    setTimeout(() => {
+      onFightComplete(fighterId, {
+        opponent: 'Random Opponent',
+        result: Math.random() > 0.5 ? 'win' : 'loss',
+        method: Math.random() > 0.7 ? 'KO' : 'Decision',
+        round: Math.floor(Math.random() * 5) + 1,
+        actions: {
+          offensiveActions: Math.floor(Math.random() * 30) + 10,
+          defensiveActions: Math.floor(Math.random() * 20) + 5,
+          comboActions: Math.floor(Math.random() * 8) + 2,
+          precisionStrikes: Math.floor(Math.random() * 15) + 5,
+          knockdowns: Math.random() > 0.8 ? 1 : 0,
+          blocksLanded: Math.floor(Math.random() * 12) + 3,
+          dodgesSuccessful: Math.floor(Math.random() * 10) + 2
+        }
+      })
+    }, 2000)
   }
 
   const getStatIcon = (statName: string) => {
@@ -133,7 +89,7 @@ export default function FightersSection({ userCredits, onSpendCredits }: Fighter
 
       {/* Fighters Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {userFighters.map((fighter, index) => (
+        {fighters.map((fighter, index) => (
           <motion.div
             key={fighter.id}
             className={`
@@ -208,18 +164,16 @@ export default function FightersSection({ userCredits, onSpendCredits }: Fighter
                   e.stopPropagation()
                   handleTraining(fighter.id, fighter.trainingCost)
                 }}
-                disabled={trainingInProgress === fighter.id || userCredits < fighter.trainingCost}
+                disabled={trainingInProgress === fighter.id}
                 className={`
                   flex-1 py-2 px-3 text-sm font-semibold rounded transition-all duration-200
                   ${trainingInProgress === fighter.id 
                     ? 'bg-gold/20 text-gold cursor-not-allowed' 
-                    : userCredits >= fighter.trainingCost
-                      ? 'bg-accent text-white hover:bg-accent/90 hover:shadow-lg' 
-                      : 'bg-accent/30 text-accent/50 cursor-not-allowed'
+                    : 'bg-accent text-white hover:bg-accent/90 hover:shadow-lg'
                   }
                 `}
-                whileHover={userCredits >= fighter.trainingCost && trainingInProgress !== fighter.id ? { scale: 1.02 } : {}}
-                whileTap={userCredits >= fighter.trainingCost && trainingInProgress !== fighter.id ? { scale: 0.98 } : {}}
+                whileHover={trainingInProgress !== fighter.id ? { scale: 1.02 } : {}}
+                whileTap={trainingInProgress !== fighter.id ? { scale: 0.98 } : {}}
               >
                 {trainingInProgress === fighter.id ? (
                   <div className="flex items-center justify-center gap-2">
@@ -275,7 +229,7 @@ export default function FightersSection({ userCredits, onSpendCredits }: Fighter
           className="bg-surface border-2 border-dashed border-border/50 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:border-accent/50 transition-colors cursor-pointer"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: userFighters.length * 0.1 }}
+          transition={{ delay: fighters.length * 0.1 }}
           whileHover={{ scale: 1.02 }}
         >
           <Plus className="w-12 h-12 text-text2/50 mb-4" />

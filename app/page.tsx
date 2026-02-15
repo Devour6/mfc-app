@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import LandingPage from '@/components/LandingPage'
-import ArenaPage from '@/components/ArenaPage'
+import NewArenaPage from '@/components/NewArenaPage'
+import { useGameStore } from '@/lib/store'
 import soundManager from '@/lib/sound-manager'
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<'landing' | 'arena'>('landing')
-  const [currentSection, setCurrentSection] = useState<'live' | 'fighters' | 'rankings'>('live')
+  const [currentSection, setCurrentSection] = useState<'live' | 'fighters' | 'rankings' | 'tournaments' | 'achievements' | 'rewards' | 'evolution'>('live')
   const [isLoading, setIsLoading] = useState(true)
+  const { initializeUser, user } = useGameStore()
 
   useEffect(() => {
     // Initialize sound manager and preload assets
@@ -17,6 +19,11 @@ export default function Home() {
       try {
         // Preload sounds
         soundManager.preload()
+        
+        // Initialize user if not already done
+        if (user.fighters.length === 0) {
+          initializeUser('MFC Champion')
+        }
         
         // Simulate loading time for dramatic effect
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -29,7 +36,7 @@ export default function Home() {
     }
 
     initializeApp()
-  }, [])
+  }, [initializeUser, user.fighters.length])
 
   const handleEnterArena = (role: 'spectator' | 'fighter') => {
     soundManager.play('notification', 0.7)
@@ -42,7 +49,7 @@ export default function Home() {
     setCurrentPage('landing')
   }
 
-  const handleSectionChange = (section: 'live' | 'fighters' | 'rankings') => {
+  const handleSectionChange = (section: any) => {
     soundManager.play('notification', 0.3)
     setCurrentSection(section)
   }
@@ -104,7 +111,7 @@ export default function Home() {
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.5 }}
           >
-            <ArenaPage
+            <NewArenaPage
               currentSection={currentSection}
               onSectionChange={handleSectionChange}
               onGoHome={handleGoHome}

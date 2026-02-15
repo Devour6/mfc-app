@@ -1,0 +1,331 @@
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { 
+  Fighter, 
+  ExtendedUser, 
+  TournamentBracket, 
+  Achievement, 
+  AchievementNotification,
+  LoginStreak,
+  DailyReward,
+  FightHistoryEntry 
+} from '@/types'
+import { FighterEvolutionEngine } from './evolution-engine'
+import { TournamentEngine } from './tournament-engine'
+import { AchievementEngine } from './achievement-engine'
+import { DailyRewardsEngine } from './daily-rewards-engine'
+
+interface GameState {
+  // User data
+  user: ExtendedUser
+  
+  // Game state
+  currentTournament: TournamentBracket | null
+  
+  // Actions
+  initializeUser: (name: string) => void
+  updateAfterFight: (fighterId: string, fightData: any) => void
+  startTournament: (fighterIds: string[]) => void
+  advanceTournament: (matchId: string, result: any) => void
+  claimDailyReward: (reward: DailyReward) => void
+  dismissNotification: (notificationId: string) => void
+  addFighter: (fighter: Omit<Fighter, 'evolution'>) => void
+}
+
+// Sample fighters with evolution data
+const createSampleFighters = (): Fighter[] => [
+  {
+    id: 'fighter-1',
+    name: 'Thunder Mike',
+    emoji: '⚡',
+    class: 'Heavyweight',
+    record: { wins: 8, losses: 2, draws: 0 },
+    elo: 1650,
+    stats: { strength: 85, speed: 70, defense: 75, stamina: 80, fightIQ: 72, aggression: 88 },
+    owner: 'user',
+    isActive: true,
+    trainingCost: 200,
+    evolution: FighterEvolutionEngine.createNewEvolution(28)
+  },
+  {
+    id: 'fighter-2', 
+    name: 'Steel Guardian',
+    emoji: '🛡️',
+    class: 'Middleweight',
+    record: { wins: 12, losses: 3, draws: 1 },
+    elo: 1720,
+    stats: { strength: 75, speed: 68, defense: 92, stamina: 85, fightIQ: 85, aggression: 45 },
+    owner: 'user',
+    isActive: true,
+    trainingCost: 250,
+    evolution: FighterEvolutionEngine.createNewEvolution(31)
+  },
+  {
+    id: 'fighter-3',
+    name: 'Lightning Lee',
+    emoji: '💨',
+    class: 'Lightweight', 
+    record: { wins: 15, losses: 1, draws: 0 },
+    elo: 1850,
+    stats: { strength: 70, speed: 95, defense: 68, stamina: 88, fightIQ: 90, aggression: 75 },
+    owner: 'user',
+    isActive: true,
+    trainingCost: 300,
+    evolution: FighterEvolutionEngine.createNewEvolution(26)
+  }
+]
+
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
+      user: {
+        id: 'user-1',
+        name: 'Champion',
+        credits: 2500,
+        fighters: [],
+        trades: [],
+        settings: {
+          soundEnabled: true,
+          commentaryEnabled: true,
+          autoTrade: false,
+          notifications: true
+        },
+        tournaments: [],
+        achievements: AchievementEngine.initializeAchievements(),
+        achievementNotifications: [],
+        loginStreak: DailyRewardsEngine.createNewLoginStreak(),
+        totalPlayTime: 0,
+        joinDate: Date.now()
+      },
+      
+      currentTournament: null,
+
+      initializeUser: (name: string) => {
+        set(state => ({
+          user: {
+            ...state.user,
+            name,
+            fighters: createSampleFighters(),
+            joinDate: Date.now()
+          }
+        }))
+        
+        // Process initial login
+        const { user } = get()
+        const loginResult = DailyRewardsEngine.processLogin(user.loginStreak)
+        if (loginResult.rewardClaimed) {
+          set(state => ({
+            user: {
+              ...state.user,
+              loginStreak: loginResult.updatedStreak,
+              credits: state.user.credits + loginResult.rewardClaimed!.credits
+            }
+          }))
+        }
+      },
+
+      updateAfterFight: (fighterId: string, fightData: {
+        opponent: string
+        result: 'win' | 'loss' | 'draw'  
+        method: 'KO' | 'TKO' | 'Decision' | 'Submission'
+        round: number
+        actions: FightHistoryEntry['actions']
+        isFirstRoundKO?: boolean
+        isPerfectRound?: boolean
+        isComeback?: boolean
+      }) => {
+        set(state => {
+          const fighterIndex = state.user.fighters.findIndex(f => f.id === fighterId)
+          if (fighterIndex === -1) return state
+
+          const updatedFighter = FighterEvolutionEngine.updateAfterFight(
+            state.user.fighters[fighterIndex],
+            fightData.result,
+            fightData
+          )
+
+          // Update fighter record
+          if (fightData.result === 'win') {
+            updatedFighter.record.wins++
+          } else if (fightData.result === 'loss') {
+            updatedFighter.record.losses++
+          } else {
+            updatedFighter.record.draws++
+          }
+
+          // Check achievements
+          const achievementResult = AchievementEngine.checkFightAchievements(
+            state.user.achievements,
+            updatedFighter,
+            updatedFighter.evolution.fightHistory[updatedFighter.evolution.fightHistory.length - 1],
+            fightData.isFirstRoundKO,
+            fightData.isPerfectRound,
+            fightData.isComeback
+          )
+
+          // Create notifications for new achievements
+          const newNotifications = achievementResult.newUnlocks.map(achievement => 
+            AchievementEngine.createNotification(achievement)
+          )
+
+          // Update fighters array
+          const newFighters = [...state.user.fighters]
+          newFighters[fighterIndex] = updatedFighter
+
+          return {
+            user: {
+              ...state.user,
+              fighters: newFighters,
+              achievements: achievementResult.updatedAchievements,
+              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications],
+              credits: state.user.credits + achievementResult.newUnlocks.reduce((sum, a) => sum + a.rewardCredits, 0)
+            }
+          }
+        })
+      },
+
+      startTournament: (fighterIds: string[]) => {
+        const { user } = get()
+        const selectedFighters = user.fighters.filter(f => fighterIds.includes(f.id))
+        
+        if (selectedFighters.length !== 8) {
+          // Add AI fighters to fill bracket
+          const aiFighters: Fighter[] = []
+          for (let i = selectedFighters.length; i < 8; i++) {
+            aiFighters.push({
+              id: `ai-fighter-${i}`,
+              name: `Fighter ${i + 1}`,
+              emoji: ['🤖', '👤', '🥊', '⚔️', '🔥', '💀', '🦾', '⭐'][i],
+              class: ['Heavyweight', 'Middleweight', 'Lightweight'][Math.floor(Math.random() * 3)] as any,
+              record: { wins: Math.floor(Math.random() * 10), losses: Math.floor(Math.random() * 5), draws: 0 },
+              elo: 1400 + Math.floor(Math.random() * 400),
+              stats: {
+                strength: 60 + Math.floor(Math.random() * 30),
+                speed: 60 + Math.floor(Math.random() * 30),
+                defense: 60 + Math.floor(Math.random() * 30),
+                stamina: 60 + Math.floor(Math.random() * 30),
+                fightIQ: 60 + Math.floor(Math.random() * 30),
+                aggression: 60 + Math.floor(Math.random() * 30)
+              },
+              owner: 'ai',
+              isActive: true,
+              trainingCost: 100,
+              evolution: FighterEvolutionEngine.createNewEvolution()
+            })
+          }
+          selectedFighters.push(...aiFighters)
+        }
+
+        const tournament = TournamentEngine.createTournament(selectedFighters)
+        
+        set(state => ({
+          currentTournament: tournament,
+          user: {
+            ...state.user,
+            tournaments: [tournament, ...state.user.tournaments]
+          }
+        }))
+      },
+
+      advanceTournament: (matchId: string, result: any) => {
+        const { currentTournament } = get()
+        if (!currentTournament) return
+
+        const match = currentTournament.matches.find(m => m.id === matchId)
+        if (!match) return
+
+        const updatedTournament = TournamentEngine.advanceTournament(currentTournament, match, result)
+        
+        set(state => {
+          let newState = {
+            ...state,
+            currentTournament: updatedTournament
+          }
+
+          // Check for tournament achievements
+          const userFighterWon = updatedTournament.winner && state.user.fighters.some(f => f.id === updatedTournament.winner!.id)
+          const achievementResult = AchievementEngine.checkTournamentAchievements(
+            state.user.achievements,
+            updatedTournament,
+            userFighterWon
+          )
+
+          if (achievementResult.newUnlocks.length > 0) {
+            const newNotifications = achievementResult.newUnlocks.map(achievement => 
+              AchievementEngine.createNotification(achievement)
+            )
+
+            newState.user = {
+              ...newState.user,
+              achievements: achievementResult.updatedAchievements,
+              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications],
+              credits: state.user.credits + achievementResult.newUnlocks.reduce((sum, a) => sum + a.rewardCredits, 0)
+            }
+          }
+
+          return newState
+        })
+      },
+
+      claimDailyReward: (reward: DailyReward) => {
+        set(state => {
+          const loginResult = DailyRewardsEngine.processLogin(state.user.loginStreak)
+          
+          return {
+            user: {
+              ...state.user,
+              loginStreak: loginResult.updatedStreak,
+              credits: state.user.credits + reward.credits
+            }
+          }
+        })
+      },
+
+      dismissNotification: (notificationId: string) => {
+        set(state => ({
+          user: {
+            ...state.user,
+            achievementNotifications: state.user.achievementNotifications.map(n => 
+              n.id === notificationId ? { ...n, seen: true } : n
+            )
+          }
+        }))
+      },
+
+      addFighter: (fighterData: Omit<Fighter, 'evolution'>) => {
+        set(state => {
+          const newFighter: Fighter = {
+            ...fighterData,
+            evolution: FighterEvolutionEngine.createNewEvolution()
+          }
+
+          const updatedFighters = [...state.user.fighters, newFighter]
+          
+          // Check collection achievements
+          const achievementResult = AchievementEngine.checkCollectionAchievements(
+            state.user.achievements,
+            updatedFighters
+          )
+
+          const newNotifications = achievementResult.newUnlocks.map(achievement => 
+            AchievementEngine.createNotification(achievement)
+          )
+
+          return {
+            user: {
+              ...state.user,
+              fighters: updatedFighters,
+              achievements: achievementResult.updatedAchievements,
+              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications],
+              credits: state.user.credits + achievementResult.newUnlocks.reduce((sum, a) => sum + a.rewardCredits, 0)
+            }
+          }
+        })
+      }
+    }),
+    {
+      name: 'mfc-game-storage',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+)

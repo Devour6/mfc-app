@@ -115,7 +115,11 @@ const rankings: RankingFighter[] = [
 
 const divisions = ['All', 'Heavyweight', 'Middleweight', 'Lightweight']
 
-export default function RankingsSection() {
+interface RankingsSectionProps {
+  fighters: any[]
+}
+
+export default function RankingsSection({ fighters }: RankingsSectionProps) {
   const [selectedDivision, setSelectedDivision] = useState('All')
   const [sortBy, setSortBy] = useState<'rank' | 'elo' | 'wins'>('rank')
 

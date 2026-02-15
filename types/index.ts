@@ -1,5 +1,53 @@
 // Core MFC Types
 
+export interface SignatureMove {
+  id: string
+  name: string
+  description: string
+  type: 'offensive' | 'defensive' | 'combo'
+  damageMultiplier: number
+  staminaCost: number
+  unlockCondition: string
+  requiredTrait?: 'aggressive' | 'defensive' | 'showboat' | 'technical'
+  requiredLevel?: number
+}
+
+export interface FightHistoryEntry {
+  fightId: string
+  opponent: string
+  result: 'win' | 'loss' | 'draw'
+  method: 'KO' | 'TKO' | 'Decision' | 'Submission'
+  round: number
+  actions: {
+    offensiveActions: number
+    defensiveActions: number
+    comboActions: number
+    precisionStrikes: number
+    knockdowns: number
+    blocksLanded: number
+    dodgesSuccessful: number
+  }
+  date: number
+}
+
+export interface FighterEvolution {
+  traits: {
+    aggressive: number  // 0-100
+    defensive: number   // 0-100
+    showboat: number    // 0-100
+    technical: number   // 0-100
+  }
+  signatureMoves: SignatureMove[]
+  age: number
+  peakAgeStart: number
+  peakAgeEnd: number
+  fightHistory: FightHistoryEntry[]
+  evolutionLevel: number
+  totalFights: number
+  winStreak: number
+  careerHighlights: string[]
+}
+
 export interface Fighter {
   id: string
   name: string
@@ -22,6 +70,7 @@ export interface Fighter {
   owner: string
   isActive: boolean
   trainingCost: number
+  evolution: FighterEvolution
 }
 
 export interface FightState {
@@ -179,4 +228,77 @@ export interface SoundManager {
   setMasterVolume: (volume: number) => void
   mute: () => void
   unmute: () => void
+}
+
+// Tournament System Types
+export interface TournamentBracket {
+  id: string
+  name: string
+  status: 'upcoming' | 'in-progress' | 'completed'
+  fighters: Fighter[]
+  matches: TournamentMatch[]
+  winner?: Fighter
+  prize: number
+  startDate: number
+  endDate?: number
+}
+
+export interface TournamentMatch {
+  id: string
+  round: number
+  fighter1: Fighter
+  fighter2: Fighter
+  winner?: Fighter
+  result?: FightState['result']
+  status: 'pending' | 'in-progress' | 'completed'
+  scheduledTime: number
+}
+
+// Achievement System Types
+export interface Achievement {
+  id: string
+  name: string
+  description: string
+  type: 'fight' | 'betting' | 'collection' | 'social' | 'streak'
+  icon: string
+  rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  rewardCredits: number
+  unlocked: boolean
+  unlockedAt?: number
+  progress: number
+  maxProgress: number
+  hidden: boolean
+}
+
+export interface AchievementNotification {
+  id: string
+  achievement: Achievement
+  timestamp: number
+  seen: boolean
+}
+
+// Daily Rewards System Types
+export interface DailyReward {
+  day: number
+  credits: number
+  bonus?: string
+  claimed: boolean
+}
+
+export interface LoginStreak {
+  currentStreak: number
+  longestStreak: number
+  lastLoginDate: number
+  rewards: DailyReward[]
+  nextRewardCredits: number
+}
+
+// Extended User interface with new features
+export interface ExtendedUser extends User {
+  tournaments: TournamentBracket[]
+  achievements: Achievement[]
+  achievementNotifications: AchievementNotification[]
+  loginStreak: LoginStreak
+  totalPlayTime: number
+  joinDate: number
 }
