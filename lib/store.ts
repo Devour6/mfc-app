@@ -8,12 +8,16 @@ import {
   AchievementNotification,
   LoginStreak,
   DailyReward,
-  FightHistoryEntry 
+  FightHistoryEntry,
+  CreditTransaction,
+  CreditPurchaseOption,
+  WalletConnection 
 } from '@/types'
 import { FighterEvolutionEngine } from './evolution-engine'
 import { TournamentEngine } from './tournament-engine'
 import { AchievementEngine } from './achievement-engine'
 import { DailyRewardsEngine } from './daily-rewards-engine'
+import { CreditEngine } from './credit-engine'
 
 interface GameState {
   // User data
@@ -30,6 +34,14 @@ interface GameState {
   claimDailyReward: (reward: DailyReward) => void
   dismissNotification: (notificationId: string) => void
   addFighter: (fighter: Omit<Fighter, 'evolution'>) => void
+  
+  // Credit system actions
+  connectWallet: () => Promise<void>
+  disconnectWallet: () => void
+  purchaseCredits: (option: CreditPurchaseOption) => Promise<void>
+  withdrawCredits: (amount: number, walletAddress: string) => Promise<void>
+  spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number) => boolean
+  addRewardCredits: (amount: number, description: string, relatedId?: string) => void
 }
 
 // Sample fighters with evolution data
@@ -95,7 +107,10 @@ export const useGameStore = create<GameState>()(
         achievementNotifications: [],
         loginStreak: DailyRewardsEngine.createNewLoginStreak(),
         totalPlayTime: 0,
-        joinDate: Date.now()
+        joinDate: Date.now(),
+        creditBalance: CreditEngine.createInitialBalance(),
+        transactions: [],
+        walletConnection: CreditEngine.createInitialWallet()
       },
       
       currentTournament: null,
@@ -172,15 +187,22 @@ export const useGameStore = create<GameState>()(
           const newFighters = [...state.user.fighters]
           newFighters[fighterIndex] = updatedFighter
 
-          return {
+          const newState = {
             user: {
               ...state.user,
               fighters: newFighters,
               achievements: achievementResult.updatedAchievements,
-              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications],
-              credits: state.user.credits + achievementResult.newUnlocks.reduce((sum, a) => sum + a.rewardCredits, 0)
+              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications]
             }
           }
+
+          // Add achievement reward transactions
+          achievementResult.newUnlocks.forEach(achievement => {
+            const { addRewardCredits } = get()
+            addRewardCredits(achievement.rewardCredits, `Achievement unlocked: ${achievement.name}`, achievement.id)
+          })
+
+          return newState
         })
       },
 
@@ -258,9 +280,14 @@ export const useGameStore = create<GameState>()(
             newState.user = {
               ...newState.user,
               achievements: achievementResult.updatedAchievements,
-              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications],
-              credits: state.user.credits + achievementResult.newUnlocks.reduce((sum, a) => sum + a.rewardCredits, 0)
+              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications]
             }
+
+            // Add achievement reward transactions
+            achievementResult.newUnlocks.forEach(achievement => {
+              const { addRewardCredits } = get()
+              addRewardCredits(achievement.rewardCredits, `Achievement unlocked: ${achievement.name}`, achievement.id)
+            })
           }
 
           return newState
@@ -268,17 +295,21 @@ export const useGameStore = create<GameState>()(
       },
 
       claimDailyReward: (reward: DailyReward) => {
+        const { addRewardCredits } = get()
+        
         set(state => {
           const loginResult = DailyRewardsEngine.processLogin(state.user.loginStreak)
           
           return {
             user: {
               ...state.user,
-              loginStreak: loginResult.updatedStreak,
-              credits: state.user.credits + reward.credits
+              loginStreak: loginResult.updatedStreak
             }
           }
         })
+
+        // Add reward transaction
+        addRewardCredits(reward.credits, `Daily login reward: Day ${reward.day}`)
       },
 
       dismissNotification: (notificationId: string) => {
@@ -311,16 +342,150 @@ export const useGameStore = create<GameState>()(
             AchievementEngine.createNotification(achievement)
           )
 
-          return {
+          const newState = {
             user: {
               ...state.user,
               fighters: updatedFighters,
               achievements: achievementResult.updatedAchievements,
-              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications],
-              credits: state.user.credits + achievementResult.newUnlocks.reduce((sum, a) => sum + a.rewardCredits, 0)
+              achievementNotifications: [...state.user.achievementNotifications, ...newNotifications]
             }
           }
+
+          // Add achievement reward transactions
+          achievementResult.newUnlocks.forEach(achievement => {
+            const { addRewardCredits } = get()
+            addRewardCredits(achievement.rewardCredits, `Achievement unlocked: ${achievement.name}`, achievement.id)
+          })
+
+          return newState
         })
+      },
+
+      // Credit system actions
+      connectWallet: async () => {
+        const walletConnection = await CreditEngine.connectWallet()
+        set(state => ({
+          user: {
+            ...state.user,
+            walletConnection
+          }
+        }))
+      },
+
+      disconnectWallet: () => {
+        const walletConnection = CreditEngine.disconnectWallet()
+        set(state => ({
+          user: {
+            ...state.user,
+            walletConnection
+          }
+        }))
+      },
+
+      purchaseCredits: async (option: CreditPurchaseOption) => {
+        const { user } = get()
+        
+        if (!user.walletConnection.connected || !user.walletConnection.address) {
+          throw new Error('Wallet not connected')
+        }
+
+        // Simulate blockchain transaction delay
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        const result = CreditEngine.processDeposit(
+          user.creditBalance,
+          user.transactions,
+          option,
+          user.walletConnection.address
+        )
+
+        // Add transaction hash simulation
+        result.transaction.transactionHash = `${Date.now()}abc123def456`
+        result.transaction.status = 'completed'
+
+        set(state => ({
+          user: {
+            ...state.user,
+            creditBalance: result.newBalance,
+            transactions: result.newTransactions
+          }
+        }))
+      },
+
+      withdrawCredits: async (amount: number, walletAddress: string) => {
+        const { user } = get()
+        
+        const result = CreditEngine.processWithdrawal(
+          user.creditBalance,
+          user.transactions,
+          amount,
+          walletAddress
+        )
+
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        // Simulate blockchain transaction delay
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        // Add transaction hash simulation
+        result.transaction.transactionHash = `${Date.now()}def456ghi789`
+        result.transaction.status = 'completed'
+
+        set(state => ({
+          user: {
+            ...state.user,
+            creditBalance: result.newBalance,
+            transactions: result.newTransactions
+          }
+        }))
+      },
+
+      spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number) => {
+        const { user } = get()
+        
+        const result = CreditEngine.processTraining(
+          user.creditBalance,
+          user.transactions,
+          fighterId,
+          fighterName,
+          baseCost
+        )
+
+        if (result.error) {
+          return false
+        }
+
+        set(state => ({
+          user: {
+            ...state.user,
+            creditBalance: result.newBalance,
+            transactions: result.newTransactions
+          }
+        }))
+
+        return true
+      },
+
+      addRewardCredits: (amount: number, description: string, relatedId?: string) => {
+        const { user } = get()
+        
+        const result = CreditEngine.processReward(
+          user.creditBalance,
+          user.transactions,
+          amount,
+          description,
+          relatedId
+        )
+
+        set(state => ({
+          user: {
+            ...state.user,
+            creditBalance: result.newBalance,
+            transactions: result.newTransactions
+          }
+        }))
       }
     }),
     {

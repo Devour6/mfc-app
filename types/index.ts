@@ -293,6 +293,67 @@ export interface LoginStreak {
   nextRewardCredits: number
 }
 
+// Credit & Transaction System Types
+export interface CreditTransaction {
+  id: string
+  type: 'deposit' | 'withdrawal' | 'training' | 'prediction' | 'tournament' | 'reward' | 'achievement'
+  amount: number
+  fee: number
+  netAmount: number
+  description: string
+  timestamp: number
+  status: 'pending' | 'completed' | 'failed' | 'cancelled'
+  relatedId?: string // fighter ID, tournament ID, etc.
+  walletAddress?: string // for deposits/withdrawals
+  transactionHash?: string // blockchain tx hash
+}
+
+export interface CreditBalance {
+  available: number
+  pending: number
+  lifetime: {
+    deposited: number
+    withdrawn: number
+    earned: number
+    spent: number
+  }
+}
+
+export interface CreditPurchaseOption {
+  id: string
+  usdcAmount: number
+  creditAmount: number
+  bonusCredits: number
+  popular?: boolean
+  bestValue?: boolean
+}
+
+export interface WithdrawalRequest {
+  id: string
+  amount: number
+  fee: number
+  netAmount: number
+  walletAddress: string
+  timestamp: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  estimatedTime: string
+}
+
+export interface PlatformFees {
+  training: number // 10%
+  predictionMaker: number // 2%
+  predictionTaker: number // 1%
+  tournament: number // 10%
+  withdrawal: number // flat fee or %
+}
+
+export interface WalletConnection {
+  connected: boolean
+  address?: string
+  balance?: number // USDC balance
+  network: 'solana-mainnet' | 'solana-devnet'
+}
+
 // Extended User interface with new features
 export interface ExtendedUser extends User {
   tournaments: TournamentBracket[]
@@ -301,4 +362,7 @@ export interface ExtendedUser extends User {
   loginStreak: LoginStreak
   totalPlayTime: number
   joinDate: number
+  creditBalance: CreditBalance
+  transactions: CreditTransaction[]
+  walletConnection: WalletConnection
 }

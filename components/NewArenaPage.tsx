@@ -11,6 +11,7 @@ import FighterEvolution from './FighterEvolution'
 import TournamentBracket from './TournamentBracket'
 import AchievementSystem from './AchievementSystem'
 import DailyRewards from './DailyRewards'
+import CreditsDashboard from './CreditsDashboard'
 import { 
   Trophy, 
   Award, 
@@ -18,12 +19,13 @@ import {
   Users, 
   Zap, 
   Crown,
-  Swords
+  Swords,
+  DollarSign
 } from 'lucide-react'
 import { soundManager } from '@/lib/sound-manager'
 
 interface NewArenaPageProps {
-  currentSection: 'live' | 'fighters' | 'rankings' | 'tournaments' | 'achievements' | 'rewards' | 'evolution'
+  currentSection: 'live' | 'fighters' | 'rankings' | 'tournaments' | 'achievements' | 'rewards' | 'evolution' | 'credits'
   onSectionChange: (section: any) => void
   onGoHome: () => void
 }
@@ -33,7 +35,20 @@ export default function NewArenaPage({
   onSectionChange, 
   onGoHome 
 }: NewArenaPageProps) {
-  const { user, currentTournament, updateAfterFight, startTournament, advanceTournament, claimDailyReward, dismissNotification } = useGameStore()
+  const { 
+    user, 
+    currentTournament, 
+    updateAfterFight, 
+    startTournament, 
+    advanceTournament, 
+    claimDailyReward, 
+    dismissNotification,
+    connectWallet,
+    disconnectWallet,
+    purchaseCredits,
+    withdrawCredits,
+    spendCreditsTraining
+  } = useGameStore()
   const [selectedFighterId, setSelectedFighterId] = useState<string | null>(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
 
@@ -131,13 +146,14 @@ export default function NewArenaPage({
     { id: 'tournaments', label: 'Tournaments', icon: <Trophy className="w-4 h-4" /> },
     { id: 'achievements', label: 'Achievements', icon: <Award className="w-4 h-4" /> },
     { id: 'rewards', label: 'Daily Rewards', icon: <Calendar className="w-4 h-4" /> },
+    { id: 'credits', label: 'Credits', icon: <DollarSign className="w-4 h-4" /> },
     { id: 'rankings', label: 'Rankings', icon: <Swords className="w-4 h-4" /> }
   ]
 
   return (
     <div className="min-h-screen bg-bg">
       <EnhancedTopBar 
-        credits={user.credits}
+        credits={user.creditBalance.available}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         onGoHome={onGoHome}
@@ -220,6 +236,7 @@ export default function NewArenaPage({
                 fighters={user.fighters}
                 onFightComplete={handleFightComplete}
                 onSelectFighter={setSelectedFighterId}
+                onTraining={spendCreditsTraining}
               />
             )}
 
@@ -375,6 +392,24 @@ export default function NewArenaPage({
                     onClaimReward={claimDailyReward}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Credits Dashboard */}
+            {currentSection === 'credits' && (
+              <div className="space-y-6">
+                <h2 className="font-pixel text-2xl text-text1 flex items-center gap-2">
+                  <DollarSign className="w-6 h-6 text-accent" />
+                  Credits & Wallet
+                </h2>
+                <CreditsDashboard 
+                  user={user}
+                  onConnectWallet={connectWallet}
+                  onDisconnectWallet={disconnectWallet}
+                  onPurchaseCredits={purchaseCredits}
+                  onWithdrawCredits={withdrawCredits}
+                  onClose={() => {}} // No close needed since it's a section
+                />
               </div>
             )}
 

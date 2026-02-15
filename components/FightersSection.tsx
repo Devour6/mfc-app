@@ -14,23 +14,32 @@ interface FightersSectionProps {
   fighters: Fighter[]
   onFightComplete: (fighterId: string, fightData: any) => void
   onSelectFighter: (fighterId: string) => void
+  onTraining?: (fighterId: string, fighterName: string, cost: number) => boolean
 }
 
 // Remove the mock data and use props instead
-export default function FightersSection({ fighters, onFightComplete, onSelectFighter }: FightersSectionProps) {
+export default function FightersSection({ fighters, onFightComplete, onSelectFighter, onTraining }: FightersSectionProps) {
   const [selectedFighter, setSelectedFighter] = useState<string | null>(null)
   const [trainingInProgress, setTrainingInProgress] = useState<string | null>(null)
 
   const handleTraining = (fighterId: string, cost: number) => {
-    setTrainingInProgress(fighterId)
-    playTradeSound(true, 0.8)
+    const fighter = fighters.find(f => f.id === fighterId)
+    if (!fighter || !onTraining) return
     
-    // Simulate training duration and improvement
-    setTimeout(() => {
-      setTrainingInProgress(null)
-      playTradeSound(true, 0.6)
-      // Training complete - could trigger stat improvements here
-    }, 3000)
+    const success = onTraining(fighterId, fighter.name, cost)
+    if (success) {
+      setTrainingInProgress(fighterId)
+      playTradeSound(true, 0.8)
+      
+      // Simulate training duration and improvement
+      setTimeout(() => {
+        setTrainingInProgress(null)
+        playTradeSound(true, 0.6)
+        // Training complete - could trigger stat improvements here
+      }, 3000)
+    } else {
+      playTradeSound(false, 0.5)
+    }
   }
 
   const handleEnterFight = (fighterId: string) => {
