@@ -1,0 +1,216 @@
+// MFC Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String @id @default(cuid())
+  auth0Id     String @unique // Auth0 user ID
+  email       String @unique
+  name        String?
+  username    String? @unique
+  credits     Float  @default(1000.0) // Starting credits
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  fighters    Fighter[]
+  trainings   Training[]
+  bets        Bet[]
+  fightResults FightResult[]
+
+  @@map("users")
+}
+
+model Fighter {
+  id            String @id @default(cuid())
+  name          String
+  emoji         String
+  class         FighterClass
+  elo           Int @default(1000)
+  isActive      Boolean @default(true)
+  trainingCost  Float @default(100.0)
+  
+  // Stats that improve with training
+  strength      Int @default(50)
+  speed         Int @default(50)
+  defense       Int @default(50)
+  stamina       Int @default(50)
+  fightIQ       Int @default(50)
+  aggression    Int @default(50)
+  
+  // Record tracking
+  wins          Int @default(0)
+  losses        Int @default(0)
+  draws         Int @default(0)
+  
+  // Training tracking
+  totalTrainingHours   Float @default(0.0)
+  totalTrainingSessions Int @default(0)
+  
+  // Momentum factors
+  winStreak     Int @default(0)
+  lossStreak    Int @default(0)
+  lastFightAt   DateTime?
+  
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  owner         User @relation(fields: [ownerId], references: [id])
+  ownerId       String
+  trainings     Training[]
+  fightsAsFighter1 Fight[] @relation("Fighter1")
+  fightsAsFighter2 Fight[] @relation("Fighter2")
+  fightResults  FightResult[]
+  bets          Bet[]
+
+  @@map("fighters")
+}
+
+model Training {
+  id          String @id @default(cuid())
+  hours       Float // How many hours trained
+  cost        Float // What it cost
+  
+  // Stat improvements from this session
+  strengthGain    Int @default(0)
+  speedGain       Int @default(0) 
+  defenseGain     Int @default(0)
+  staminaGain     Int @default(0)
+  fightIQGain     Int @default(0)
+  aggressionGain  Int @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  fighter     Fighter @relation(fields: [fighterId], references: [id])
+  fighterId   String
+  user        User @relation(fields: [userId], references: [id])
+  userId      String
+
+  @@map("trainings")
+}
+
+model Fight {
+  id              String @id @default(cuid())
+  status          FightStatus @default(SCHEDULED)
+  scheduledAt     DateTime
+  startedAt       DateTime?
+  endedAt         DateTime?
+  
+  // Fight setup
+  maxRounds       Int @default(3)
+  venue           String?
+  title           String?
+  
+  // Algorithm data (serialized fight state)
+  fightData       Json? // Stores detailed fight simulation data
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relationships
+  fighter1        Fighter @relation("Fighter1", fields: [fighter1Id], references: [id])
+  fighter1Id      String
+  fighter2        Fighter @relation("Fighter2", fields: [fighter2Id], references: [id])
+  fighter2Id      String
+  
+  result          FightResult?
+  bets            Bet[]
+
+  @@map("fights")
+}
+
+model FightResult {
+  id          String @id @default(cuid())
+  method      FightMethod // KO, TKO, Decision, etc.
+  round       Int?
+  time        String?
+  
+  // Stats from the fight
+  fighter1Stats Json // Detailed fight stats
+  fighter2Stats Json
+  
+  // ELO changes
+  fighter1EloChange Int
+  fighter2EloChange Int
+  
+  createdAt   DateTime @default(now())
+  
+  // Relationships
+  fight       Fight @relation(fields: [fightId], references: [id])
+  fightId     String @unique
+  winner      Fighter? @relation(fields: [winnerId], references: [id])
+  winnerId    String?
+  user        User @relation(fields: [userId], references: [id]) // Who created this result
+  userId      String
+
+  @@map("fight_results")
+}
+
+model Bet {
+  id          String @id @default(cuid())
+  amount      Float
+  side        BetSide // YES or NO (or FIGHTER1/FIGHTER2)
+  odds        Float // Odds when bet was placed
+  status      BetStatus @default(PENDING)
+  payout      Float?
+  
+  createdAt   DateTime @default(now())
+  settledAt   DateTime?
+  
+  // Relationships
+  user        User @relation(fields: [userId], references: [id])
+  userId      String
+  fight       Fight @relation(fields: [fightId], references: [id])
+  fightId     String
+  fighter     Fighter? @relation(fields: [fighterId], references: [id]) // If betting on specific fighter
+  fighterId   String?
+
+  @@map("bets")
+}
+
+enum FighterClass {
+  LIGHTWEIGHT
+  MIDDLEWEIGHT
+  HEAVYWEIGHT
+}
+
+enum FightStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum FightMethod {
+  KO
+  TKO
+  DECISION
+  SUBMISSION
+  DISQUALIFICATION
+  NO_CONTEST
+}
+
+enum BetSide {
+  YES
+  NO
+  FIGHTER1
+  FIGHTER2
+  OVER
+  UNDER
+}
+
+enum BetStatus {
+  PENDING
+  WON
+  LOST
+  CANCELLED
+  REFUNDED
+}

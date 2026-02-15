@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { UserProvider } from '@auth0/nextjs-auth0/client'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -37,9 +38,11 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.className} bg-bg text-text antialiased`}>
-        <div id="root" className="min-h-screen">
-          {children}
-        </div>
+        <UserProvider>
+          <div id="root" className="min-h-screen">
+            {children}
+          </div>
+        </UserProvider>
         
         {/* Toast container */}
         <div id="toast-container" className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
