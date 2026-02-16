@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Plus, Zap, Shield, Heart, Brain, Swords, Target } from 'lucide-react'
 import { Fighter } from '@/types'
 import soundManager from '@/lib/sound-manager'
+import MobileFighterCard from './MobileFighterCard'
 
 const playTradeSound = (success: boolean, volume?: number) => {
   soundManager.playTradeSound(success, volume)
@@ -96,8 +97,23 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
         <p className="text-text2">Manage your roster, train stats, and enter ranked fights.</p>
       </motion.div>
 
-      {/* Fighters Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Mobile-First Fighter Cards */}
+      <div className="space-y-4 md:hidden">
+        {fighters.map((fighter, index) => (
+          <MobileFighterCard
+            key={fighter.id}
+            fighter={fighter}
+            creditBalance={5000} // This would come from props in real app
+            onFightStart={handleEnterFight}
+            onTraining={(fighterId, fighterName, cost) => onTraining?.(fighterId, fighterName, cost) ?? false}
+            isExpanded={selectedFighter === fighter.id}
+            onToggleExpand={() => setSelectedFighter(selectedFighter === fighter.id ? null : fighter.id)}
+          />
+        ))}
+      </div>
+
+      {/* Desktop Fighters Grid */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {fighters.map((fighter, index) => (
           <motion.div
             key={fighter.id}

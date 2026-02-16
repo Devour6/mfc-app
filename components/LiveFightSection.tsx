@@ -234,8 +234,8 @@ export default function LiveFightSection({
         />
       )}
 
-      {/* Main Fight Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] overflow-hidden">
+      {/* Main Fight Layout - Improved mobile layout */}
+      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_380px] overflow-hidden">
         {/* Fight Area */}
         <div className="flex flex-col overflow-hidden">
           {/* Fight Header */}
@@ -339,8 +339,8 @@ export default function LiveFightSection({
           <CommentaryBar commentary={currentCommentary} />
         </div>
 
-        {/* Right Sidebar - Markets & Betting */}
-        <div className="flex flex-col overflow-hidden bg-surface border-l border-border">
+        {/* Right Sidebar - Markets & Betting - Mobile Responsive */}
+        <div className="lg:flex flex-col overflow-hidden bg-surface lg:border-l border-border hidden lg:block">
           {/* Live Betting Interface */}
           <div className="border-b border-border p-4">
             <LiveBettingInterface
@@ -365,6 +365,21 @@ export default function LiveFightSection({
               onTrade={handleTrade}
             />
           </div>
+        </div>
+
+        {/* Mobile Betting Drawer */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border p-4 z-10">
+          <LiveBettingInterface
+            fightState={fightState}
+            fighters={sampleFighters}
+            creditBalance={5000}
+            onPlaceBet={(bet) => {
+              console.log('Bet placed:', bet)
+            }}
+            onMarketUpdate={(marketId) => {
+              console.log('Market updated:', marketId)
+            }}
+          />
         </div>
       </div>
     </div>

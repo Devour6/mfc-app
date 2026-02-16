@@ -41,26 +41,69 @@ const mockLoginStreak: LoginStreak = {
   nextRewardCredits: 100
 }
 
-// Mock fighters data for rankings
+// Mock fighters data for rankings - Updated to match Fighter interface
 const mockFighters = [
   {
-    rank: 1,
+    id: 'titan-9',
     name: 'TITAN-9',
     emoji: '👑',
+    class: 'Heavyweight' as const,
     owner: 'DarkMatter_Labs',
     record: { wins: 22, losses: 1, draws: 0 },
     elo: 2105,
-    streak: { type: 'win', count: 12 },
-    champion: true
+    stats: {
+      strength: 95,
+      speed: 88,
+      defense: 92,
+      stamina: 89,
+      fightIQ: 94,
+      aggression: 87
+    },
+    isActive: true,
+    trainingCost: 100,
+    evolution: {
+      traits: { aggressive: 80, defensive: 70, showboat: 40, technical: 90 },
+      signatureMoves: [],
+      age: 28,
+      peakAgeStart: 25,
+      peakAgeEnd: 32,
+      fightHistory: [],
+      evolutionLevel: 5,
+      totalFights: 23,
+      winStreak: 12,
+      careerHighlights: ['Championship Belt Winner']
+    }
   },
   {
-    rank: 2,
+    id: 'shadow-boxer',
     name: 'SHADOW-BOXER',
     emoji: '🥊',
+    class: 'Heavyweight' as const,
     owner: 'Neural_Networks',
     record: { wins: 18, losses: 3, draws: 1 },
     elo: 1987,
-    streak: { type: 'win', count: 5 }
+    stats: {
+      strength: 82,
+      speed: 95,
+      defense: 78,
+      stamina: 91,
+      fightIQ: 88,
+      aggression: 93
+    },
+    isActive: true,
+    trainingCost: 85,
+    evolution: {
+      traits: { aggressive: 95, defensive: 60, showboat: 70, technical: 85 },
+      signatureMoves: [],
+      age: 26,
+      peakAgeStart: 24,
+      peakAgeEnd: 30,
+      fightHistory: [],
+      evolutionLevel: 4,
+      totalFights: 22,
+      winStreak: 5,
+      careerHighlights: ['Rising Star Award']
+    }
   }
 ]
 
