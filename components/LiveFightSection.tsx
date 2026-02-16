@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import FightCanvas from './FightCanvas'
+import EnhancedFightCanvas from './EnhancedFightCanvas'
 import MarketSidebar from './MarketSidebar'
 import FightCard from './FightCard'
 import CommentaryBar from './CommentaryBar'
@@ -182,28 +182,27 @@ export default function LiveFightSection({
   const handleTrade = (side: 'yes' | 'no', price: number, quantity: number) => {
     const cost = price * quantity
     
-    if (onSpendCredits(cost)) {
-      if (marketEngine) {
-        const trade = marketEngine.placeTrade(side, price, quantity)
+    if (marketEngine) {
+      const trade = marketEngine.placeTrade(side, price, quantity)
+      
+      if (trade.status === 'filled') {
+        soundManager.play('notification', 0.6)
+        // Simulate potential profit/loss (simplified)
+        const outcome = Math.random()
+        const won = (side === 'yes' && outcome > 0.5) || (side === 'no' && outcome <= 0.5)
         
-        if (trade.status === 'filled') {
-          soundManager.playTradeSound(true, 0.6)
-          // Simulate potential profit/loss (simplified)
-          const outcome = Math.random()
-          const won = (side === 'yes' && outcome > 0.5) || (side === 'no' && outcome <= 0.5)
-          
-          if (won) {
-            onEarnCredits(quantity) // Simplified: win full contract value
-          }
-        } else {
-          soundManager.playTradeSound(false, 0.4)
+        // For now, just play success sound - real credit integration would be added later
+        if (won) {
+          soundManager.play('bell', 0.5)
         }
-        
-        return trade
+      } else {
+        soundManager.play('punch-light', 0.4)
       }
+      
+      return trade
     }
     
-    soundManager.playTradeSound(false, 0.4)
+    soundManager.play('punch-light', 0.4)
     return null
   }
 
@@ -258,9 +257,40 @@ export default function LiveFightSection({
 
           {/* Fight Canvas */}
           <div className="flex-1 bg-bg relative overflow-hidden">
-            <FightCanvas 
+            <EnhancedFightCanvas 
               fightState={fightState} 
               fighters={sampleFighters}
+              onRoundStart={(round) => {
+                setCommentary(prev => [{
+                  id: Date.now().toString(),
+                  text: `Round ${round} begins! Both fighters looking determined.`,
+                  timestamp: Date.now(),
+                  type: 'general',
+                  priority: 'medium'
+                }, ...prev])
+                soundManager.play('bell', 0.8)
+              }}
+              onSignificantMoment={(moment, severity) => {
+                let commentText = ""
+                switch(moment) {
+                  case 'knockdown':
+                    commentText = "WHAT A DEVASTATING KNOCKDOWN! The crowd is on their feet!"
+                    break
+                  case 'fighter-hurt':
+                    commentText = "One fighter is in serious trouble here!"
+                    break
+                  default:
+                    commentText = "The intensity in the ring is building!"
+                }
+                
+                setCommentary(prev => [{
+                  id: Date.now().toString(),
+                  text: commentText,
+                  timestamp: Date.now(),
+                  type: 'action',
+                  priority: severity
+                }, ...prev])
+              }}
             />
             
             {/* KO Overlay */}
@@ -313,7 +343,6 @@ export default function LiveFightSection({
           marketState={marketState}
           fighters={sampleFighters}
           onTrade={handleTrade}
-          userCredits={userCredits}
         />
       </div>
     </div>

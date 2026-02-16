@@ -3,6 +3,7 @@ const nextConfig = {
   images: {
     domains: [],
   },
+  turbopack: {},
   webpack: (config) => {
     config.module.rules.push({
       test: /\.(mp3|wav)$/,

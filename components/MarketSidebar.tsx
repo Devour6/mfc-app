@@ -7,21 +7,19 @@ import { MarketState, Fighter, Trade } from '@/types'
 import soundManager from '@/lib/sound-manager'
 
 const playTradeSound = (success: boolean, volume?: number) => {
-  soundManager.playTradeSound(success, volume)
+  soundManager.play(success ? 'notification' : 'punch-light', volume || 0.5)
 }
 
 interface MarketSidebarProps {
   marketState: MarketState
   fighters: Fighter[]
   onTrade: (side: 'yes' | 'no', price: number, quantity: number) => Trade | null
-  userCredits: number
 }
 
 export default function MarketSidebar({
   marketState,
   fighters,
-  onTrade,
-  userCredits
+  onTrade
 }: MarketSidebarProps) {
   const [tradeSide, setTradeSide] = useState<'yes' | 'no'>('yes')
   const [tradePrice, setTradePrice] = useState(marketState.yesPrice)
@@ -62,7 +60,7 @@ export default function MarketSidebar({
 
   const tradeCost = tradePrice * tradeQuantity
   const maxPayout = tradeQuantity
-  const canAfford = tradeCost <= userCredits
+  const canAfford = true // TODO: Integrate with actual credit system
 
   const getSpread = () => {
     const bestBid = marketState.orderBook.bids[0]?.price || 0

@@ -84,11 +84,7 @@ export default function ArenaPage({ currentSection, onSectionChange, onGoHome }:
             animate="center"
             exit="exit"
           >
-            <LiveFightSection
-              userCredits={userCredits}
-              onSpendCredits={handleSpendCredits}
-              onEarnCredits={handleEarnCredits}
-            />
+            <LiveFightSection />
           </motion.div>
         )}
 
@@ -100,9 +96,10 @@ export default function ArenaPage({ currentSection, onSectionChange, onGoHome }:
             animate="center"
             exit="exit"
           >
-            <FightersSection
-              userCredits={userCredits}
-              onSpendCredits={handleSpendCredits}
+            <FightersSection 
+              fighters={[]}
+              onFightComplete={() => {}}
+              onSelectFighter={() => {}}
             />
           </motion.div>
         )}
@@ -115,7 +112,7 @@ export default function ArenaPage({ currentSection, onSectionChange, onGoHome }:
             animate="center"
             exit="exit"
           >
-            <RankingsSection />
+            <RankingsSection fighters={[]} />
           </motion.div>
         )}
       </AnimatePresence>
