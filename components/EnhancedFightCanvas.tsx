@@ -23,7 +23,7 @@ interface RoundEvent {
 
 interface VisualEffect {
   id: string
-  type: 'impact' | 'blood' | 'stars' | 'sweat' | 'sparks'
+  type: 'impact' | 'blood' | 'stars' | 'sweat' | 'sparks' | 'block_flash' | 'combo_explosion'
   x: number
   y: number
   duration: number
@@ -72,14 +72,60 @@ export default function EnhancedFightCanvas({
     }
   }, [fightState.round, lastRound, onRoundStart])
 
-  // Detect significant moments and add events
+  // Enhanced combat detection with proper visual effects
   useEffect(() => {
     if (!fightState.fighter1 || !fightState.fighter2) return
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-    // Detect knockdowns
+    // Detect punching impacts
+    if (fightState.fighter1.animation.state === 'punching') {
+      const targetX = (fightState.fighter2.position.x / 480) * canvas.width
+      addVisualEffect({
+        type: 'impact',
+        x: targetX,
+        y: canvas.height * 0.65,
+        duration: 500,
+        intensity: 0.8
+      })
+      
+      addVisualEffect({
+        type: 'sparks',
+        x: targetX,
+        y: canvas.height * 0.65,
+        duration: 800,
+        intensity: 0.6
+      })
+    }
+
+    if (fightState.fighter2.animation.state === 'punching') {
+      const targetX = (fightState.fighter1.position.x / 480) * canvas.width
+      addVisualEffect({
+        type: 'impact',
+        x: targetX,
+        y: canvas.height * 0.65,
+        duration: 500,
+        intensity: 0.8
+      })
+      
+      addVisualEffect({
+        type: 'sparks',
+        x: targetX,
+        y: canvas.height * 0.65,
+        duration: 800,
+        intensity: 0.6
+      })
+    }
+
+    // Enhanced punching impacts (includes kicks and different strike types)
+    const currentTime = Date.now()
+    const kickVariant = Math.sin(currentTime * 0.01) > 0.5 // Randomly treat some punches as kicks for variety
+
+    // Detect knockdowns with enhanced effects
     if (fightState.fighter1.animation.state === 'down' || fightState.fighter2.animation.state === 'down') {
-      const knockedFighter = fightState.fighter1.animation.state === 'down' ? 2 : 1
+      const knockedFighter = fightState.fighter1.animation.state === 'down' ? 1 : 2
       const knockerFighter = knockedFighter === 1 ? 2 : 1
+      const knockedX = (knockedFighter === 1 ? fightState.fighter1.position.x : fightState.fighter2.position.x / 480) * canvas.width
       
       addRoundEvent({
         type: 'knockdown',
@@ -88,38 +134,84 @@ export default function EnhancedFightCanvas({
         fighter: knockerFighter
       })
 
+      // Multiple impact effects for knockdown
       addVisualEffect({
         type: 'impact',
-        x: knockedFighter === 1 ? fightState.fighter1.position.x : fightState.fighter2.position.x,
-        y: 200,
+        x: knockedX,
+        y: canvas.height * 0.65,
         duration: 2000,
+        intensity: 1.0
+      })
+
+      addVisualEffect({
+        type: 'blood',
+        x: knockedX,
+        y: canvas.height * 0.60,
+        duration: 3000,
+        intensity: 0.8
+      })
+
+      addVisualEffect({
+        type: 'stars',
+        x: knockedX,
+        y: canvas.height * 0.50,
+        duration: 4000,
         intensity: 1.0
       })
 
       onSignificantMoment?.('knockdown', 'high')
     }
 
-    // Detect significant damage drops
-    const f1HealthLow = fightState.fighter1.hp < 25 && fightState.fighter1.hp > 0
-    const f2HealthLow = fightState.fighter2.hp < 25 && fightState.fighter2.hp > 0
-    
-    if (f1HealthLow || f2HealthLow) {
-      const hurtFighter = f1HealthLow ? 1 : 2
-      const otherFighter = hurtFighter === 1 ? 2 : 1
-      
-      addRoundEvent({
-        type: 'rally',
-        severity: 'medium',
-        description: `${fighters[hurtFighter - 1].name} is hurt! Can they survive?`,
-        fighter: otherFighter
+    // Detect hits with blood effects
+    if (fightState.fighter1.animation.state === 'hit' && fightState.fighter1.hp < 75) {
+      const hitX = (fightState.fighter1.position.x / 480) * canvas.width
+      addVisualEffect({
+        type: 'blood',
+        x: hitX,
+        y: canvas.height * 0.60,
+        duration: 1500,
+        intensity: 0.6
       })
-
-      onSignificantMoment?.('fighter-hurt', 'medium')
     }
 
-    // Detect combos (simplified)
+    if (fightState.fighter2.animation.state === 'hit' && fightState.fighter2.hp < 75) {
+      const hitX = (fightState.fighter2.position.x / 480) * canvas.width
+      addVisualEffect({
+        type: 'blood',
+        x: hitX,
+        y: canvas.height * 0.60,
+        duration: 1500,
+        intensity: 0.6
+      })
+    }
+
+    // Detect blocks with defensive effects
+    if (fightState.fighter1.animation.state === 'blocking') {
+      const blockX = (fightState.fighter1.position.x / 480) * canvas.width
+      addVisualEffect({
+        type: 'block_flash',
+        x: blockX,
+        y: canvas.height * 0.60,
+        duration: 300,
+        intensity: 0.7
+      })
+    }
+
+    if (fightState.fighter2.animation.state === 'blocking') {
+      const blockX = (fightState.fighter2.position.x / 480) * canvas.width
+      addVisualEffect({
+        type: 'block_flash',
+        x: blockX,
+        y: canvas.height * 0.60,
+        duration: 300,
+        intensity: 0.7
+      })
+    }
+
+    // Detect combos with enhanced effects
     if (fightState.fighter1.combo.count > 3 || fightState.fighter2.combo.count > 3) {
       const comboFighter = fightState.fighter1.combo.count > 3 ? 1 : 2
+      const comboX = (comboFighter === 1 ? fightState.fighter1.position.x : fightState.fighter2.position.x / 480) * canvas.width
       
       addRoundEvent({
         type: 'combo',
@@ -129,11 +221,11 @@ export default function EnhancedFightCanvas({
       })
 
       addVisualEffect({
-        type: 'sparks',
-        x: comboFighter === 1 ? fightState.fighter1.position.x : fightState.fighter2.position.x,
-        y: 150,
-        duration: 1000,
-        intensity: 0.8
+        type: 'combo_explosion',
+        x: comboX,
+        y: canvas.height * 0.65,
+        duration: 1200,
+        intensity: 0.9
       })
     }
 
@@ -343,164 +435,412 @@ export default function EnhancedFightCanvas({
     color: string,
     fighterNumber: 1 | 2
   ) => {
-    const scale = 5
     const floorY = height * 0.75
     
-    // Convert position to canvas coordinates
-    const x = (fighterState.position.x / 480) * width
-    const y = floorY - 30
+    // Convert position to canvas coordinates with movement physics
+    const baseX = (fighterState.position.x / 480) * width
+    const baseY = floorY - 100
+
+    // Add movement animations
+    const time = Date.now() * 0.001
+    const idleBob = Math.sin(time * 2 + fighterNumber * Math.PI) * 3
+    const circlingOffset = Math.sin(time * 0.5 + fighterNumber * Math.PI) * 15
+    
+    const x = baseX + circlingOffset
+    const y = baseY + idleBob
 
     ctx.save()
     
-    // Enhanced hit flash with screen shake effect
+    // Enhanced screen shake for heavy hits
     if (fighterState.animation.state === 'hit') {
-      const shakeIntensity = 3
+      const shakeIntensity = fighterState.hp < 25 ? 8 : 5
       ctx.translate(
         (Math.random() - 0.5) * shakeIntensity,
         (Math.random() - 0.5) * shakeIntensity
       )
       ctx.globalAlpha = 0.8
-      ctx.filter = 'brightness(1.8) hue-rotate(45deg)'
+      ctx.filter = 'brightness(2.0) saturate(1.5)'
+      
+      // Flash effect
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'
+      ctx.fillRect(0, 0, width, height)
     }
 
-    // Stamina-based transparency
-    ctx.globalAlpha *= Math.max(0.6, fighterState.stamina / 100)
+    // Camera shake for knockdowns
+    if (fighterState.animation.state === 'down') {
+      const shakeIntensity = 12
+      ctx.translate(
+        Math.sin(time * 10) * shakeIntensity,
+        Math.cos(time * 8) * shakeIntensity * 0.5
+      )
+    }
 
-    // Fighter shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'
+    // Stamina-based effects
+    ctx.globalAlpha *= Math.max(0.7, fighterState.stamina / 100)
+
+    // Enhanced dynamic shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'
     ctx.save()
-    ctx.scale(1, 0.3)
+    ctx.scale(1, 0.2)
     ctx.beginPath()
-    ctx.arc(x, (floorY + 5) / 0.3, 15, 0, Math.PI * 2)
+    ctx.arc(x, (floorY + 10) / 0.2, 25, 0, Math.PI * 2)
     ctx.fill()
     ctx.restore()
 
-    // Enhanced fighter body
-    const bodyX = x - 8 * scale
-    const bodyY = y - 20 * scale
+    // Draw humanoid fighter with proper animation state
+    const animationFrame = Math.floor(time * 10) % 4 // 4-frame animation cycle
+    drawHumanoidFighter(ctx, x, y, color, fighterState, fighterNumber, animationFrame)
 
-    // Draw enhanced animation states
-    switch (fighterState.animation.state) {
-      case 'punching':
-        drawEnhancedPunchingFighter(ctx, bodyX, bodyY, scale, color, fighterState.position.facing)
-        break
-      case 'down':
-        drawKnockedDownFighter(ctx, bodyX, bodyY + 40, scale, color)
-        break
-      default:
-        drawEnhancedIdleFighter(ctx, bodyX, bodyY, scale, color, fighterState.position.facing)
-        break
+    // Particle effects
+    if (fighterState.hp < 50) {
+      drawSweatParticles(ctx, x, y - 60)
     }
 
-    // Enhanced status effects
-    if (fighterState.modifiers.stunned > 0) {
-      drawEnhancedStarsEffect(ctx, x, y - 30 * scale)
-    }
-
-    if (fighterState.hp < 25) {
-      drawBloodSplatters(ctx, x, y - 10 * scale)
-      drawHeavyBreathing(ctx, x, y - 40 * scale)
+    if (fighterState.animation.state === 'punching') {
+      const isKickVariant = Math.sin(time * 8) > 0.6
+      drawMotionTrail(ctx, x, y, fighterState.position.facing, isKickVariant ? 'kicking' : 'punching')
     }
 
     ctx.restore()
 
     // Enhanced fighter info overlay
-    drawEnhancedFighterInfo(ctx, fighterData, fighterState, x, y - 35 * scale, color, fighterNumber)
+    drawEnhancedFighterInfo(ctx, fighterData, fighterState, x, y - 70, color, fighterNumber)
   }
 
-  const drawEnhancedIdleFighter = (ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, color: string, facing: number) => {
-    // Enhanced head with better detail
+  // Main humanoid fighter drawing function with proper anatomy
+  const drawHumanoidFighter = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    color: string,
+    fighterState: typeof fightState.fighter1,
+    fighterNumber: 1 | 2,
+    animationFrame: number
+  ) => {
+    const facing = fighterState.position.facing
+    const state = fighterState.animation.state
+    const time = Date.now() * 0.001
+    
+    ctx.save()
+    
+    // Animation-based positioning and rotations
+    let headY = y - 50
+    let torsoY = y - 35
+    let armY = y - 30
+    let legY = y - 10
+    let bodyLean = 0
+    let armExtension = 0
+    let legExtension = 0
+
+    // Add kick variation for punching state
+    const isKickVariant = Math.sin(time * 8) > 0.6 && state === 'punching'
+
+    // State-specific animations
+    switch (state) {
+      case 'punching':
+        if (isKickVariant) {
+          // Kick animation
+          legExtension = 30 + Math.sin(time * 12) * 8
+          bodyLean = -facing * 8
+          armY -= 5 // Arms up for balance
+        } else {
+          // Punch animation  
+          armExtension = 25 + Math.sin(time * 15) * 5
+          bodyLean = facing * 5
+          headY -= 2
+        }
+        break
+      case 'hit':
+        bodyLean = -facing * 12
+        headY += 3
+        break
+      case 'blocking':
+        armY -= 10
+        bodyLean = -facing * 2
+        break
+      case 'down':
+        // Lying down animation
+        drawKnockedDownHumanoid(ctx, x, y, color, animationFrame)
+        ctx.restore()
+        return
+    }
+
+    // Apply body lean
+    ctx.translate(x, y)
+    ctx.rotate(bodyLean * Math.PI / 180)
+    ctx.translate(-x, -y)
+
+    // Draw humanoid parts in proper order (back to front)
+    
+    // Back leg
+    if (facing === 1) {
+      drawLeg(ctx, x - 8, legY, color, false, legExtension, isKickVariant && Math.sin(time * 12) > 0.5)
+    } else {
+      drawLeg(ctx, x + 8, legY, color, false, legExtension, isKickVariant && Math.sin(time * 12) > 0.5)
+    }
+    
+    // Back arm
+    if (facing === 1) {
+      drawArm(ctx, x - 15, armY, color, facing, false, armExtension, state === 'punching' && !isKickVariant)
+    } else {
+      drawArm(ctx, x + 15, armY, color, facing, false, armExtension, state === 'punching' && !isKickVariant)
+    }
+    
+    // Torso with muscle definition
+    drawTorso(ctx, x, torsoY, color, state)
+    
+    // Head with facial features
+    drawHead(ctx, x, headY, color, facing, state, fighterState.hp)
+    
+    // Front arm (punching arm)
+    if (facing === 1) {
+      drawArm(ctx, x + 15, armY, color, facing, true, armExtension, state === 'punching' && !isKickVariant)
+    } else {
+      drawArm(ctx, x - 15, armY, color, facing, true, armExtension, state === 'punching' && !isKickVariant)
+    }
+    
+    // Front leg
+    if (facing === 1) {
+      drawLeg(ctx, x + 8, legY, color, true, legExtension, isKickVariant && Math.sin(time * 12) < -0.5)
+    } else {
+      drawLeg(ctx, x - 8, legY, color, true, legExtension, isKickVariant && Math.sin(time * 12) < -0.5)
+    }
+
+    ctx.restore()
+  }
+
+  // Individual body part drawing functions
+  const drawHead = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, state: string, hp: number) => {
+    // Head shape (oval)
     ctx.fillStyle = color
-    ctx.fillRect(x + 2*scale, y, 5*scale, 5*scale)
+    ctx.beginPath()
+    ctx.ellipse(x, y, 12, 15, 0, 0, Math.PI * 2)
+    ctx.fill()
     
     // Face details
-    ctx.fillStyle = '#ffffff'
-    if (facing === 1) {
-      ctx.fillRect(x + 4*scale, y + scale, scale, scale) // Right eye
-      ctx.fillRect(x + 6*scale, y + scale, scale, scale) // Left eye
+    ctx.fillStyle = '#000'
+    if (state === 'hit') {
+      // Dazed/hurt expression
+      ctx.fillText('X', x - 8, y - 3)
+      ctx.fillText('X', x + 3, y - 3)
+    } else if (hp < 25) {
+      // Tired/bloody expression
+      ctx.fillStyle = '#cc0000'
+      ctx.fillRect(x - 5, y + 8, 10, 2)
+      ctx.fillStyle = '#000'
+      ctx.fillText('~', x - 8, y - 3)
+      ctx.fillText('~', x + 3, y - 3)
     } else {
-      ctx.fillRect(x + 2*scale, y + scale, scale, scale) // Left eye
-      ctx.fillRect(x + 4*scale, y + scale, scale, scale) // Right eye
+      // Normal eyes
+      ctx.fillStyle = '#fff'
+      ctx.beginPath()
+      ctx.arc(x - 6, y - 3, 3, 0, Math.PI * 2)
+      ctx.arc(x + 6, y - 3, 3, 0, Math.PI * 2)
+      ctx.fill()
+      
+      ctx.fillStyle = '#000'
+      ctx.beginPath()
+      ctx.arc(x - 6 + facing, y - 3, 1.5, 0, Math.PI * 2)
+      ctx.arc(x + 6 + facing, y - 3, 1.5, 0, Math.PI * 2)
+      ctx.fill()
     }
-
-    // Enhanced body with muscle definition
-    ctx.fillStyle = color
-    ctx.fillRect(x + scale, y + 5*scale, 7*scale, 8*scale)
     
-    // Chest definition
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'
-    ctx.fillRect(x + 2*scale, y + 6*scale, 5*scale, 3*scale)
-
-    // Arms in guard position
-    ctx.fillStyle = color
-    if (facing === 1) {
-      ctx.fillRect(x + 8*scale, y + 4*scale, 3*scale, 5*scale)
-      ctx.fillRect(x - 2*scale, y + 5*scale, 3*scale, 5*scale)
+    // Mouth
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    if (state === 'hit') {
+      ctx.arc(x, y + 5, 4, 0, Math.PI) // Open mouth (hurt)
     } else {
-      ctx.fillRect(x - 2*scale, y + 4*scale, 3*scale, 5*scale)
-      ctx.fillRect(x + 8*scale, y + 5*scale, 3*scale, 5*scale)
+      ctx.moveTo(x - 3, y + 5)
+      ctx.lineTo(x + 3, y + 5) // Determined line
     }
-
-    // Enhanced gloves with brand logo
-    ctx.fillStyle = '#ffffff'
-    if (facing === 1) {
-      ctx.fillRect(x + 8*scale, y + 3*scale, 3*scale, 3*scale)
-      ctx.fillRect(x - 2*scale, y + 4*scale, 3*scale, 3*scale)
-    } else {
-      ctx.fillRect(x - 2*scale, y + 3*scale, 3*scale, 3*scale)
-      ctx.fillRect(x + 8*scale, y + 4*scale, 3*scale, 3*scale)
-    }
-
-    // Legs with better proportions
-    ctx.fillStyle = color
-    ctx.fillRect(x + 2*scale, y + 13*scale, 3*scale, 6*scale)
-    ctx.fillRect(x + 6*scale, y + 13*scale, 3*scale, 6*scale)
+    ctx.stroke()
   }
 
-  const drawEnhancedPunchingFighter = (ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, color: string, facing: number) => {
-    drawEnhancedIdleFighter(ctx, x, y, scale, color, facing)
-
-    // Enhanced punch with motion blur
-    ctx.save()
-    ctx.filter = 'blur(1px)'
+  const drawTorso = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, state: string) => {
+    // Main torso
     ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(x - 15, y, 30, 40, 8)
+    ctx.fill()
     
-    if (facing === 1) {
-      // Extended punching arm with motion lines
-      for (let i = 0; i < 3; i++) {
-        ctx.globalAlpha = 0.3 + (i * 0.3)
-        ctx.fillRect(x + 8*scale - i*2, y + 5*scale + i, 12*scale, 3*scale)
-      }
-      
-      // Power glove
-      ctx.globalAlpha = 1
-      ctx.fillStyle = '#ffff00'
-      ctx.fillRect(x + 18*scale, y + 4*scale, 4*scale, 4*scale)
-    } else {
-      for (let i = 0; i < 3; i++) {
-        ctx.globalAlpha = 0.3 + (i * 0.3)
-        ctx.fillRect(x - 12*scale + i*2, y + 5*scale + i, 12*scale, 3*scale)
-      }
-      
-      ctx.globalAlpha = 1
-      ctx.fillStyle = '#ffff00'
-      ctx.fillRect(x - 14*scale, y + 4*scale, 4*scale, 4*scale)
+    // Chest muscles
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'
+    ctx.beginPath()
+    ctx.ellipse(x - 7, y + 8, 6, 8, 0, 0, Math.PI * 2)
+    ctx.ellipse(x + 7, y + 8, 6, 8, 0, 0, Math.PI * 2)
+    ctx.fill()
+    
+    // Abs definition
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath()
+      ctx.ellipse(x, y + 18 + i * 6, 8, 3, 0, 0, Math.PI * 2)
+      ctx.fill()
     }
+    
+    // Shorts/trunks
+    ctx.fillStyle = state === 'hit' ? '#ff0000' : '#333'
+    ctx.fillRect(x - 12, y + 25, 24, 15)
+  }
+
+  const drawArm = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, isFront: boolean, extension: number, isPunching: boolean) => {
+    const armLength = 25 + extension
+    const angle = isFront && isPunching ? facing * 45 * Math.PI / 180 : 0
+    
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+    
+    // Upper arm
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(-4, 0, 8, armLength * 0.6, 4)
+    ctx.fill()
+    
+    // Forearm
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(-3, armLength * 0.6, 6, armLength * 0.4, 3)
+    ctx.fill()
+    
+    // Boxing glove
+    ctx.fillStyle = isPunching && isFront ? '#ffff00' : '#ffffff'
+    if (isPunching && isFront) {
+      // Add glow effect for punching glove
+      ctx.shadowBlur = 10
+      ctx.shadowColor = '#ffff00'
+    }
+    ctx.beginPath()
+    ctx.roundRect(-6, armLength - 8, 12, 12, 6)
+    ctx.fill()
+    ctx.shadowBlur = 0
     
     ctx.restore()
   }
 
-  const drawKnockedDownFighter = (ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, color: string) => {
-    // Fighter on ground
-    ctx.fillStyle = color
-    ctx.fillRect(x, y - 2*scale, 8*scale, 3*scale) // Body horizontal
-    ctx.fillRect(x + 2*scale, y - 5*scale, 4*scale, 3*scale) // Head
-    ctx.fillRect(x + 8*scale, y - scale, 4*scale, 2*scale) // Legs
+  const drawLeg = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, isFront: boolean, extension: number, isKicking: boolean) => {
+    const legLength = 35 + extension
+    const angle = isKicking && isFront ? 30 * Math.PI / 180 : 0
     
-    // Dazed eyes
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+    
+    // Thigh
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(-6, 0, 12, legLength * 0.6, 6)
+    ctx.fill()
+    
+    // Shin
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(-4, legLength * 0.6, 8, legLength * 0.4, 4)
+    ctx.fill()
+    
+    // Foot/boot
+    ctx.fillStyle = '#000'
+    ctx.beginPath()
+    ctx.roundRect(-5, legLength - 8, 15, 8, 4)
+    ctx.fill()
+    
+    ctx.restore()
+  }
+
+  const drawKnockedDownHumanoid = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, animationFrame: number) => {
+    // Fighter lying down
+    ctx.save()
+    ctx.translate(x, y + 20)
+    
+    // Body horizontal
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(-20, -8, 40, 16, 8)
+    ctx.fill()
+    
+    // Head on side
+    ctx.beginPath()
+    ctx.ellipse(-25, -5, 10, 12, Math.PI / 4, 0, Math.PI * 2)
+    ctx.fill()
+    
+    // Dazed stars
     ctx.fillStyle = '#ffff00'
-    ctx.fillRect(x + 3*scale, y - 4*scale, scale, scale)
-    ctx.fillRect(x + 5*scale, y - 4*scale, scale, scale)
+    ctx.font = '16px serif'
+    for (let i = 0; i < 3; i++) {
+      const starX = -30 + i * 15
+      const starY = -25 + Math.sin(Date.now() * 0.01 + i) * 5
+      ctx.fillText('★', starX, starY)
+    }
+    
+    // Arms and legs sprawled
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(15, -5, 20, 6, 3)  // Arm
+    ctx.roundRect(-35, -5, 20, 6, 3) // Other arm
+    ctx.roundRect(-10, 8, 6, 18, 3)  // Leg
+    ctx.roundRect(4, 8, 6, 18, 3)    // Other leg
+    ctx.fill()
+    
+    ctx.restore()
+  }
+
+  // Enhanced particle and visual effects
+  const drawSweatParticles = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    const time = Date.now() * 0.001
+    ctx.fillStyle = 'rgba(200,200,255,0.6)'
+    
+    for (let i = 0; i < 5; i++) {
+      const sweatX = x + (Math.random() - 0.5) * 30
+      const sweatY = y + Math.sin(time * 3 + i) * 10 + Math.random() * 20
+      const size = 1 + Math.random() * 2
+      
+      ctx.beginPath()
+      ctx.arc(sweatX, sweatY, size, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  const drawMotionTrail = (ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, actionType: string) => {
+    const time = Date.now() * 0.001
+    const trailCount = 5
+    
+    ctx.save()
+    
+    for (let i = 0; i < trailCount; i++) {
+      const alpha = (trailCount - i) / trailCount * 0.3
+      ctx.globalAlpha = alpha
+      
+      if (actionType === 'punching') {
+        // Punch motion trail
+        const trailX = x + facing * (15 + i * 5)
+        const trailY = y - 30 + Math.sin(time * 10 + i) * 2
+        
+        ctx.fillStyle = '#ffff00'
+        ctx.beginPath()
+        ctx.arc(trailX, trailY, 8 - i, 0, Math.PI * 2)
+        ctx.fill()
+        
+        // Motion lines
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(trailX - facing * 10, trailY)
+        ctx.lineTo(trailX + facing * 10, trailY)
+        ctx.stroke()
+      } else if (actionType === 'kicking') {
+        // Kick motion trail
+        const trailX = x + facing * (10 + i * 3)
+        const trailY = y - 15 + i * 2
+        
+        ctx.fillStyle = '#ff6600'
+        ctx.beginPath()
+        ctx.arc(trailX, trailY, 6 - i, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+    
+    ctx.restore()
   }
 
   const drawEnhancedStarsEffect = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
@@ -523,24 +863,46 @@ export default function EnhancedFightCanvas({
 
   const drawBloodSplatters = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
     ctx.fillStyle = '#cc0000'
-    for (let i = 0; i < 6; i++) {
-      const bloodX = x + (Math.random() - 0.5) * 40
-      const bloodY = y + Math.random() * 20
-      const size = 2 + Math.random() * 3
-      ctx.fillRect(bloodX, bloodY, size, size)
+    for (let i = 0; i < 8; i++) {
+      const bloodX = x + (Math.random() - 0.5) * 50
+      const bloodY = y + Math.random() * 30
+      const size = 2 + Math.random() * 4
+      
+      // Blood droplets
+      ctx.beginPath()
+      ctx.arc(bloodX, bloodY, size / 2, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Splatter effect
+      ctx.save()
+      ctx.globalAlpha = 0.6
+      for (let j = 0; j < 3; j++) {
+        const splatterX = bloodX + (Math.random() - 0.5) * 8
+        const splatterY = bloodY + (Math.random() - 0.5) * 8
+        ctx.fillRect(splatterX, splatterY, 1, 1)
+      }
+      ctx.restore()
     }
   }
 
   const drawHeavyBreathing = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-    const time = Date.now() * 0.01
-    ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.sin(time) * 0.2})`
-    ctx.font = '14px serif'
-    ctx.textAlign = 'center'
+    const time = Date.now() * 0.005
     
-    for (let i = 0; i < 3; i++) {
-      const cloudX = x + (Math.random() - 0.5) * 20
-      const cloudY = y + i * 10 + Math.sin(time + i) * 5
-      ctx.fillText('💨', cloudX, cloudY)
+    for (let i = 0; i < 4; i++) {
+      const cloudX = x + (Math.random() - 0.5) * 25
+      const cloudY = y + i * 8 + Math.sin(time + i) * 4
+      const alpha = 0.4 + Math.sin(time * 2 + i) * 0.2
+      
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = 'rgba(255,255,255,0.8)'
+      
+      // Breath cloud
+      ctx.beginPath()
+      ctx.arc(cloudX, cloudY, 4 + Math.sin(time + i) * 2, 0, Math.PI * 2)
+      ctx.fill()
+      
+      ctx.restore()
     }
   }
 
@@ -617,6 +979,15 @@ export default function EnhancedFightCanvas({
         case 'blood':
           drawBloodEffect(ctx, effect)
           break
+        case 'stars':
+          drawStarsEffect(ctx, effect)
+          break
+        case 'block_flash':
+          drawBlockFlashEffect(ctx, effect)
+          break
+        case 'combo_explosion':
+          drawComboExplosionEffect(ctx, effect)
+          break
       }
       
       ctx.restore()
@@ -624,22 +995,28 @@ export default function EnhancedFightCanvas({
   }
 
   const drawImpactEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
-    const radius = 30 * effect.intensity
+    const radius = 40 * effect.intensity
+    const time = Date.now() * 0.01
+    
+    // Main impact burst
     const gradient = ctx.createRadialGradient(effect.x, effect.y, 0, effect.x, effect.y, radius)
     gradient.addColorStop(0, `rgba(255,255,255,${effect.intensity})`)
-    gradient.addColorStop(0.5, `rgba(255,68,68,${effect.intensity * 0.7})`)
+    gradient.addColorStop(0.3, `rgba(255,200,0,${effect.intensity * 0.8})`)
+    gradient.addColorStop(0.7, `rgba(255,68,68,${effect.intensity * 0.6})`)
     gradient.addColorStop(1, 'rgba(255,68,68,0)')
     
     ctx.fillStyle = gradient
-    ctx.fillRect(effect.x - radius, effect.y - radius, radius * 2, radius * 2)
+    ctx.beginPath()
+    ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2)
+    ctx.fill()
     
-    // Impact lines
+    // Dynamic impact lines
     ctx.strokeStyle = `rgba(255,255,255,${effect.intensity})`
-    ctx.lineWidth = 2
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2
-      const startRadius = radius * 0.3
-      const endRadius = radius * 0.8
+    ctx.lineWidth = 3
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 + time * 0.1
+      const startRadius = radius * 0.2
+      const endRadius = radius * (0.6 + Math.sin(time + i) * 0.2)
       
       ctx.beginPath()
       ctx.moveTo(
@@ -652,30 +1029,157 @@ export default function EnhancedFightCanvas({
       )
       ctx.stroke()
     }
+    
+    // Screen flash effect for heavy impacts
+    if (effect.intensity > 0.8) {
+      ctx.fillStyle = `rgba(255,255,255,${(effect.intensity - 0.8) * 0.1})`
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    }
   }
 
   const drawSparksEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
-    ctx.fillStyle = `rgba(255,255,0,${effect.intensity})`
+    const time = Date.now() * 0.005
     
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 15; i++) {
       const angle = Math.random() * Math.PI * 2
-      const distance = Math.random() * 40
-      const sparkX = effect.x + Math.cos(angle) * distance
-      const sparkY = effect.y + Math.sin(angle) * distance
+      const distance = Math.random() * 50 * effect.intensity
+      const sparkX = effect.x + Math.cos(angle + time) * distance
+      const sparkY = effect.y + Math.sin(angle + time) * distance
+      const size = 1 + Math.random() * 3
       
-      ctx.fillRect(sparkX, sparkY, 2, 2)
+      // Spark trail
+      ctx.strokeStyle = `rgba(255,255,0,${effect.intensity * 0.8})`
+      ctx.lineWidth = size
+      ctx.beginPath()
+      ctx.moveTo(sparkX, sparkY)
+      ctx.lineTo(sparkX - Math.cos(angle) * 8, sparkY - Math.sin(angle) * 8)
+      ctx.stroke()
+      
+      // Spark core
+      ctx.fillStyle = `rgba(255,255,255,${effect.intensity})`
+      ctx.beginPath()
+      ctx.arc(sparkX, sparkY, size / 2, 0, Math.PI * 2)
+      ctx.fill()
     }
   }
 
   const drawBloodEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
-    ctx.fillStyle = `rgba(200,0,0,${effect.intensity})`
+    const gravity = 0.5
+    const time = (Date.now() % effect.duration) / effect.duration
     
-    for (let i = 0; i < 8; i++) {
-      const dropX = effect.x + (Math.random() - 0.5) * 30
-      const dropY = effect.y + Math.random() * 20
-      const size = 1 + Math.random() * 2
+    for (let i = 0; i < 12; i++) {
+      const initialVelX = (Math.random() - 0.5) * 8
+      const initialVelY = -Math.random() * 6
       
-      ctx.fillRect(dropX, dropY, size, size)
+      const dropX = effect.x + initialVelX * time + (Math.random() - 0.5) * 20
+      const dropY = effect.y + initialVelY * time + 0.5 * gravity * time * time * 100
+      const size = 1 + Math.random() * 3
+      
+      ctx.fillStyle = `rgba(150,0,0,${effect.intensity * (1 - time)})`
+      ctx.beginPath()
+      ctx.arc(dropX, dropY, size, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Blood trail
+      if (time > 0.2) {
+        ctx.strokeStyle = `rgba(100,0,0,${effect.intensity * 0.4})`
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(dropX, dropY)
+        ctx.lineTo(dropX, dropY - 5)
+        ctx.stroke()
+      }
+    }
+  }
+
+  const drawStarsEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
+    const time = Date.now() * 0.005
+    ctx.fillStyle = `rgba(255,255,0,${effect.intensity})`
+    ctx.font = 'bold 20px serif'
+    ctx.textAlign = 'center'
+    
+    for (let i = 0; i < 5; i++) {
+      const starX = effect.x + (i - 2) * 25 + Math.sin(time * 2 + i) * 10
+      const starY = effect.y + Math.sin(time * 3 + i) * 15
+      const rotation = time + i
+      const scale = 0.8 + Math.sin(time * 4 + i) * 0.3
+      
+      ctx.save()
+      ctx.translate(starX, starY)
+      ctx.rotate(rotation)
+      ctx.scale(scale, scale)
+      ctx.fillText('★', 0, 0)
+      ctx.restore()
+    }
+  }
+
+  const drawBlockFlashEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
+    const time = Date.now() * 0.02
+    const flashIntensity = effect.intensity * (1 - Math.sin(time))
+    
+    // Block shield effect
+    ctx.strokeStyle = `rgba(0,100,255,${flashIntensity})`
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    ctx.arc(effect.x, effect.y, 30, 0, Math.PI * 2)
+    ctx.stroke()
+    
+    // Inner glow
+    ctx.fillStyle = `rgba(200,200,255,${flashIntensity * 0.3})`
+    ctx.beginPath()
+    ctx.arc(effect.x, effect.y, 25, 0, Math.PI * 2)
+    ctx.fill()
+    
+    // Block sparks
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2
+      const sparkX = effect.x + Math.cos(angle) * 35
+      const sparkY = effect.y + Math.sin(angle) * 35
+      
+      ctx.fillStyle = `rgba(255,255,255,${flashIntensity})`
+      ctx.beginPath()
+      ctx.arc(sparkX, sparkY, 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  const drawComboExplosionEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
+    const time = Date.now() * 0.01
+    const explosionRadius = 60 * effect.intensity
+    
+    // Multiple explosion rings
+    for (let ring = 0; ring < 3; ring++) {
+      const ringRadius = explosionRadius * (0.3 + ring * 0.35)
+      const ringAlpha = effect.intensity * (1 - ring * 0.3) * Math.sin(time * 2 + ring)
+      
+      ctx.strokeStyle = `rgba(255,100,0,${ringAlpha})`
+      ctx.lineWidth = 5 - ring
+      ctx.beginPath()
+      ctx.arc(effect.x, effect.y, ringRadius, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    
+    // Combo text effect
+    ctx.fillStyle = `rgba(255,255,0,${effect.intensity})`
+    ctx.font = 'bold 24px monospace'
+    ctx.textAlign = 'center'
+    ctx.save()
+    ctx.translate(effect.x, effect.y - 40)
+    ctx.scale(1 + Math.sin(time * 5) * 0.2, 1 + Math.sin(time * 5) * 0.2)
+    ctx.fillText('COMBO!', 0, 0)
+    ctx.restore()
+    
+    // Explosion particles
+    for (let i = 0; i < 20; i++) {
+      const angle = (i / 20) * Math.PI * 2
+      const distance = explosionRadius * (0.5 + Math.sin(time * 3 + i) * 0.5)
+      const particleX = effect.x + Math.cos(angle) * distance
+      const particleY = effect.y + Math.sin(angle) * distance
+      
+      ctx.fillStyle = `rgba(255,${100 + Math.sin(time + i) * 100},0,${effect.intensity})`
+      ctx.beginPath()
+      ctx.arc(particleX, particleY, 3, 0, Math.PI * 2)
+      ctx.fill()
     }
   }
 
