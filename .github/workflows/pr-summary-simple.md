@@ -10,7 +10,7 @@ safe-outputs:
   add-comment:
     max: 1
 
-engine: copilot
+engine: claude
 ---
 
 # Simple PR Summary
