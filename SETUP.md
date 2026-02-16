@@ -1,5 +1,7 @@
 # MFC Backend Setup Guide
 
+<!-- Test PR for GitHub Agentic Workflows - minimal change -->
+
 ## 🔑 Required API Keys & Configuration
 
 The following API keys and configuration are needed for full production functionality:
