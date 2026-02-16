@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700;900&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
@@ -23,6 +27,31 @@ body {
   color: var(--text);
   font-family: var(--ui);
   overflow-x: hidden;
+}
+
+/* ── TAILWIND CUSTOM UTILITIES ── */
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 20px currentColor;
+  }
+  
+  .text-glow-lg {
+    text-shadow: 0 0 40px currentColor, 0 0 60px currentColor;
+  }
+  
+  .bg-gradient-fight {
+    background: 
+      radial-gradient(ellipse at 30% 20%, rgba(255,68,68,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(68,136,255,0.08) 0%, transparent 60%),
+      var(--bg);
+  }
+  
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
 }
 
 /* ── LANDING PAGE ── */
