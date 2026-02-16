@@ -6,6 +6,7 @@ import EnhancedFightCanvas from './EnhancedFightCanvas'
 import MarketSidebar from './MarketSidebar'
 import FightCard from './FightCard'
 import CommentaryBar from './CommentaryBar'
+import LiveBettingInterface from './LiveBettingInterface'
 import { FightEngine } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
@@ -338,12 +339,33 @@ export default function LiveFightSection({
           <CommentaryBar commentary={currentCommentary} />
         </div>
 
-        {/* Market Sidebar */}
-        <MarketSidebar
-          marketState={marketState}
-          fighters={sampleFighters}
-          onTrade={handleTrade}
-        />
+        {/* Right Sidebar - Markets & Betting */}
+        <div className="flex flex-col overflow-hidden bg-surface border-l border-border">
+          {/* Live Betting Interface */}
+          <div className="border-b border-border p-4">
+            <LiveBettingInterface
+              fightState={fightState}
+              fighters={sampleFighters}
+              creditBalance={5000}
+              onPlaceBet={(bet) => {
+                console.log('Bet placed:', bet)
+                // Add betting logic here - integrate with credit system
+              }}
+              onMarketUpdate={(marketId) => {
+                console.log('Market updated:', marketId)
+              }}
+            />
+          </div>
+
+          {/* Market Sidebar */}
+          <div className="flex-1 overflow-hidden">
+            <MarketSidebar
+              marketState={marketState}
+              fighters={sampleFighters}
+              onTrade={handleTrade}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )
