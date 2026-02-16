@@ -23,7 +23,7 @@ interface RoundEvent {
 
 interface VisualEffect {
   id: string
-  type: 'impact' | 'blood' | 'stars' | 'sweat' | 'sparks' | 'block_flash' | 'combo_explosion'
+  type: 'impact' | 'blood' | 'stars' | 'sweat' | 'sparks' | 'block_flash' | 'combo_explosion' | 'screen_shake' | 'slow_motion'
   x: number
   y: number
   duration: number
@@ -78,43 +78,69 @@ export default function EnhancedFightCanvas({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Detect punching impacts
+    // Detect punching impacts with enhanced effects
     if (fightState.fighter1.animation.state === 'punching') {
       const targetX = (fightState.fighter2.position.x / 480) * canvas.width
+      const isHeavyPunch = Math.random() > 0.7 // 30% chance of heavy punch
+      
       addVisualEffect({
         type: 'impact',
         x: targetX,
         y: canvas.height * 0.65,
-        duration: 500,
-        intensity: 0.8
+        duration: isHeavyPunch ? 800 : 500,
+        intensity: isHeavyPunch ? 1.0 : 0.8
       })
       
       addVisualEffect({
         type: 'sparks',
         x: targetX,
         y: canvas.height * 0.65,
-        duration: 800,
-        intensity: 0.6
+        duration: isHeavyPunch ? 1200 : 800,
+        intensity: isHeavyPunch ? 0.9 : 0.6
       })
+
+      // Add screen shake for heavy punches
+      if (isHeavyPunch) {
+        addVisualEffect({
+          type: 'screen_shake',
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          duration: 300,
+          intensity: 0.8
+        })
+      }
     }
 
     if (fightState.fighter2.animation.state === 'punching') {
       const targetX = (fightState.fighter1.position.x / 480) * canvas.width
+      const isHeavyPunch = Math.random() > 0.7 // 30% chance of heavy punch
+      
       addVisualEffect({
         type: 'impact',
         x: targetX,
         y: canvas.height * 0.65,
-        duration: 500,
-        intensity: 0.8
+        duration: isHeavyPunch ? 800 : 500,
+        intensity: isHeavyPunch ? 1.0 : 0.8
       })
       
       addVisualEffect({
         type: 'sparks',
         x: targetX,
         y: canvas.height * 0.65,
-        duration: 800,
-        intensity: 0.6
+        duration: isHeavyPunch ? 1200 : 800,
+        intensity: isHeavyPunch ? 0.9 : 0.6
       })
+
+      // Add screen shake for heavy punches
+      if (isHeavyPunch) {
+        addVisualEffect({
+          type: 'screen_shake',
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          duration: 300,
+          intensity: 0.8
+        })
+      }
     }
 
     // Enhanced punching impacts (includes kicks and different strike types)
@@ -406,24 +432,71 @@ export default function EnhancedFightCanvas({
   }
 
   const drawCrowdAtmosphere = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    // Crowd silhouettes in background
-    ctx.fillStyle = 'rgba(20,20,30,0.6)'
+    const time = Date.now() * 0.001
+    
+    // Dynamic crowd excitement based on fight intensity
+    const fightIntensity = 1 - (Math.min(fightState.fighter1?.hp || 100, fightState.fighter2?.hp || 100) / 100)
+    const crowdExcitement = 0.3 + fightIntensity * 0.7
+    
+    // Animated crowd silhouettes in background
+    ctx.fillStyle = `rgba(20,20,30,${0.4 + crowdExcitement * 0.3})`
     for (let i = 0; i < width; i += 20) {
-      const crowdHeight = 40 + Math.sin(i * 0.1) * 15
-      ctx.fillRect(i, height * 0.15, 15, crowdHeight)
+      const baseHeight = 40 + Math.sin(i * 0.1) * 15
+      const animatedHeight = baseHeight + Math.sin(time * 3 + i * 0.1) * crowdExcitement * 10
+      ctx.fillRect(i, height * 0.15, 15, animatedHeight)
     }
 
-    // Arena lights
+    // Stadium atmosphere - camera flashes
+    if (Math.random() < fightIntensity * 0.02) {
+      const flashX = Math.random() * width
+      const flashY = height * (0.1 + Math.random() * 0.15)
+      
+      ctx.fillStyle = `rgba(255,255,255,${0.6 + Math.random() * 0.4})`
+      ctx.beginPath()
+      ctx.arc(flashX, flashY, 2 + Math.random() * 3, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // Enhanced arena lights with excitement-based intensity
     const lightPositions = [width * 0.2, width * 0.5, width * 0.8]
     lightPositions.forEach((x, index) => {
-      const intensity = 0.8 + Math.sin(Date.now() * 0.001 + index) * 0.2
+      const baseIntensity = 0.8 + Math.sin(time + index) * 0.2
+      const excitedIntensity = baseIntensity + crowdExcitement * 0.4
       const lightGradient = ctx.createRadialGradient(x, height * 0.1, 0, x, height * 0.1, 150)
-      lightGradient.addColorStop(0, `rgba(255,255,255,${intensity * 0.3})`)
+      lightGradient.addColorStop(0, `rgba(255,255,255,${excitedIntensity * 0.4})`)
       lightGradient.addColorStop(1, 'rgba(255,255,255,0)')
       
       ctx.fillStyle = lightGradient
       ctx.fillRect(x - 150, height * 0.1, 300, height * 0.4)
+      
+      // Spotlight beams
+      if (fightIntensity > 0.6) {
+        const beamGradient = ctx.createLinearGradient(x, height * 0.1, x, height * 0.6)
+        beamGradient.addColorStop(0, `rgba(255,255,200,${excitedIntensity * 0.1})`)
+        beamGradient.addColorStop(1, 'rgba(255,255,200,0)')
+        ctx.fillStyle = beamGradient
+        ctx.fillRect(x - 30, height * 0.1, 60, height * 0.5)
+      }
     })
+
+    // Crowd noise visualization (sound waves)
+    if (fightIntensity > 0.4) {
+      ctx.strokeStyle = `rgba(255,255,255,${crowdExcitement * 0.1})`
+      ctx.lineWidth = 1
+      for (let i = 0; i < 5; i++) {
+        const waveY = height * 0.1 + i * 8
+        ctx.beginPath()
+        for (let x = 0; x < width; x += 5) {
+          const waveHeight = Math.sin((x + time * 200) * 0.02 + i) * crowdExcitement * 3
+          if (x === 0) {
+            ctx.moveTo(x, waveY + waveHeight)
+          } else {
+            ctx.lineTo(x, waveY + waveHeight)
+          }
+        }
+        ctx.stroke()
+      }
+    }
   }
 
   const drawEnhancedFighter = (
@@ -988,6 +1061,12 @@ export default function EnhancedFightCanvas({
         case 'combo_explosion':
           drawComboExplosionEffect(ctx, effect)
           break
+        case 'screen_shake':
+          drawScreenShakeEffect(ctx, effect)
+          break
+        case 'slow_motion':
+          // Slow motion effect handled by animation timing
+          break
       }
       
       ctx.restore()
@@ -1183,6 +1262,22 @@ export default function EnhancedFightCanvas({
     }
   }
 
+  const drawScreenShakeEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
+    const time = Date.now() * 0.01
+    const shakeIntensity = effect.intensity * 15
+    
+    // Apply camera shake by translating the entire canvas context
+    const offsetX = Math.sin(time * 30) * shakeIntensity * (1 - (Date.now() % effect.duration) / effect.duration)
+    const offsetY = Math.cos(time * 35) * shakeIntensity * 0.6 * (1 - (Date.now() % effect.duration) / effect.duration)
+    
+    ctx.translate(offsetX, offsetY)
+    
+    // Add a subtle flash overlay for heavy impacts
+    const flashAlpha = effect.intensity * 0.1 * (1 - (Date.now() % effect.duration) / effect.duration)
+    ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`
+    ctx.fillRect(-offsetX, -offsetY, ctx.canvas.width, ctx.canvas.height)
+  }
+
   const drawRoundProgressHUD = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const hudY = 30
     
@@ -1205,8 +1300,8 @@ export default function EnhancedFightCanvas({
   }
 
   const drawMomentumIndicator = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    const indicatorY = height - 60
-    const indicatorWidth = 200
+    const indicatorY = height - 80
+    const indicatorWidth = 250
     const indicatorX = width/2 - indicatorWidth/2
     
     // Calculate momentum based on HP difference
@@ -1214,9 +1309,46 @@ export default function EnhancedFightCanvas({
     const f2HP = fightState.fighter2?.hp || 100
     const momentum = (f1HP - f2HP) / 100 // -1 to 1 range
     
-    // Background
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'
-    ctx.fillRect(indicatorX, indicatorY - 15, indicatorWidth, 30)
+    // Calculate fight intensity
+    const avgHP = (f1HP + f2HP) / 2
+    const fightIntensity = 1 - (avgHP / 100)
+    const time = Date.now() * 0.001
+    
+    // Enhanced background with pulse
+    const bgAlpha = 0.7 + Math.sin(time * 2) * fightIntensity * 0.2
+    ctx.fillStyle = `rgba(0,0,0,${bgAlpha})`
+    ctx.fillRect(indicatorX - 10, indicatorY - 25, indicatorWidth + 20, 50)
+    
+    // Fight intensity indicator
+    ctx.fillStyle = '#ffd700'
+    ctx.font = 'bold 10px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('FIGHT INTENSITY', width/2, indicatorY - 15)
+    
+    // Intensity bar (pulsing)
+    const intensityBarWidth = indicatorWidth * 0.8
+    const intensityX = width/2 - intensityBarWidth/2
+    
+    ctx.fillStyle = 'rgba(30,30,40,0.8)'
+    ctx.fillRect(intensityX, indicatorY - 8, intensityBarWidth, 6)
+    
+    const intensityFill = intensityBarWidth * fightIntensity
+    const pulseIntensity = 1 + Math.sin(time * 8) * fightIntensity * 0.3
+    
+    // Dynamic color based on intensity
+    if (fightIntensity < 0.3) {
+      ctx.fillStyle = `rgba(100,200,100,${pulseIntensity})`
+    } else if (fightIntensity < 0.7) {
+      ctx.fillStyle = `rgba(255,200,0,${pulseIntensity})`
+    } else {
+      ctx.fillStyle = `rgba(255,50,50,${pulseIntensity})`
+      // Add glow for high intensity
+      ctx.shadowBlur = 10
+      ctx.shadowColor = '#ff3333'
+    }
+    
+    ctx.fillRect(intensityX, indicatorY - 8, intensityFill, 6)
+    ctx.shadowBlur = 0
     
     // Momentum bar
     const centerX = indicatorX + indicatorWidth/2
@@ -1224,27 +1356,46 @@ export default function EnhancedFightCanvas({
     
     if (momentum > 0) {
       ctx.fillStyle = '#44ff44'
-      ctx.fillRect(centerX, indicatorY - 5, momentumWidth, 10)
+      ctx.fillRect(centerX, indicatorY + 5, momentumWidth, 10)
     } else {
       ctx.fillStyle = '#ff4444'
-      ctx.fillRect(centerX - momentumWidth, indicatorY - 5, momentumWidth, 10)
+      ctx.fillRect(centerX - momentumWidth, indicatorY + 5, momentumWidth, 10)
     }
     
-    // Center line
-    ctx.strokeStyle = '#ffffff'
-    ctx.lineWidth = 1
+    // Center line with pulse
+    ctx.strokeStyle = `rgba(255,255,255,${0.8 + Math.sin(time * 4) * 0.2})`
+    ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.moveTo(centerX, indicatorY - 10)
-    ctx.lineTo(centerX, indicatorY + 10)
+    ctx.moveTo(centerX, indicatorY)
+    ctx.lineTo(centerX, indicatorY + 15)
     ctx.stroke()
     
-    // Labels
+    // Labels with excitement scaling
+    const labelScale = 1 + fightIntensity * 0.1
+    ctx.save()
+    ctx.scale(labelScale, labelScale)
+    
     ctx.fillStyle = '#ffffff'
-    ctx.font = '10px monospace'
+    ctx.font = 'bold 10px monospace'
     ctx.textAlign = 'left'
-    ctx.fillText(fighters[0]?.name || 'Fighter 1', indicatorX, indicatorY + 20)
+    ctx.fillText(fighters[0]?.name || 'Fighter 1', (indicatorX - 5) / labelScale, (indicatorY + 35) / labelScale)
     ctx.textAlign = 'right'
-    ctx.fillText(fighters[1]?.name || 'Fighter 2', indicatorX + indicatorWidth, indicatorY + 20)
+    ctx.fillText(fighters[1]?.name || 'Fighter 2', (indicatorX + indicatorWidth + 5) / labelScale, (indicatorY + 35) / labelScale)
+    
+    ctx.restore()
+    
+    // Add "CROWD ON THEIR FEET!" text when intensity is very high
+    if (fightIntensity > 0.8) {
+      ctx.fillStyle = `rgba(255,255,0,${Math.sin(time * 6) * 0.5 + 0.5})`
+      ctx.font = 'bold 12px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('CROWD ON THEIR FEET!', width/2, indicatorY + 55)
+    } else if (fightIntensity > 0.5) {
+      ctx.fillStyle = `rgba(255,200,0,${Math.sin(time * 4) * 0.3 + 0.7})`
+      ctx.font = '10px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('The tension is building...', width/2, indicatorY + 50)
+    }
   }
 
   return (
