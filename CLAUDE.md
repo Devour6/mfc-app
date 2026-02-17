@@ -103,12 +103,13 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | `/api/bets/[id]` | GET, PATCH | Get bet details, settle/cancel bet (credits payout/refund via transaction) |
 | `/api/training` | GET, POST | List training sessions, create session (deducts credits, applies random stat gains, caps at 100) |
 | `/api/training/[id]` | GET | Get training session details |
+| `/api/health` | GET | Health check — returns `{ status, timestamp, db }` |
 
 **Validation:** All routes use zod schemas from `lib/validations.ts` for input validation. Invalid requests return `{ error: "Validation failed", issues: [...] }` with 400 status.
 
 **Fight status transitions:** SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED. All other transitions are rejected.
 
-All routes use `lib/api-utils.ts` for consistent response formatting. Auth middleware exists (`middleware.ts`) but is currently disabled — routes are unprotected.
+All routes use `lib/api-utils.ts` for consistent response formatting. Auth middleware migrated to `proxy.ts` (Next.js 16 convention) but is currently disabled — routes are unprotected.
 
 ## What Works (Prototype Status)
 
@@ -128,8 +129,9 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth middl
 - PostgreSQL 16 connected locally, migrated, and seeded with sample data
 - API routes exist for all entities with zod validation (need auth guards)
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
-- Auth0 middleware exists but disabled
-- CI pipeline runs lint, typecheck, and build on every PR to main
+- Auth0 proxy exists but disabled (migrated from middleware.ts to proxy.ts for Next.js 16)
+- CI pipeline runs lint, typecheck, tests, and build on every PR to main
+- 44 API integration tests covering all route handlers
 
 **Not Yet Built:**
 - Auth0 authentication flow (middleware disabled, routes unprotected)
@@ -177,7 +179,8 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 1. Checkout + install deps (`npm ci`)
 2. Lint (`npm run lint`)
 3. Type check (`npm run type-check`)
-4. Build (`npm run build`)
+4. Test (`npm test`)
+5. Build (`npm run build`)
 
 All steps must pass for a PR to be mergeable.
 
@@ -191,6 +194,21 @@ These settings should be configured by the repo admin on the `main` branch:
 - Require at least 1 approval before merging
 - Dismiss stale pull request approvals when new commits are pushed
 - Do not allow bypassing the above settings
+
+## Testing
+
+Jest 30 with two projects:
+- **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
+- **api** (`node`) — API route integration tests in `__tests__/api/` (44 tests, all passing)
+
+API tests mock the Prisma client (`__tests__/api/helpers.ts`) and test route handlers directly.
+
+```
+npm test                          → Run all tests
+npm test -- --selectProjects=api  → Run only API tests
+npm run test:watch                → Watch mode
+npm run test:coverage             → With coverage
+```
 
 ## Known Lint Issues
 
