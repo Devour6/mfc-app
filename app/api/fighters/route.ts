@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, validationError, serverError } from '@/lib/api-utils'
 import { createFighterSchema, fighterQuerySchema } from '@/lib/validations'
+import { requireAuth } from '@/lib/auth-guard'
+import { ensureUser } from '@/lib/user-sync'
 
 // GET /api/fighters?ownerId=...&class=...&active=true — List fighters
 export async function GET(request: NextRequest) {
@@ -28,21 +30,24 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/fighters — Create a new fighter
+// POST /api/fighters — Create a new fighter (auth required)
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
+
     const body = await request.json()
     const parsed = createFighterSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { name, emoji, fighterClass, ownerId } = parsed.data
+    const { name, emoji, fighterClass } = parsed.data
 
     const fighter = await prisma.fighter.create({
       data: {
         name,
         emoji,
         class: fighterClass,
-        ownerId,
+        ownerId: dbUser.id,
       },
     })
 

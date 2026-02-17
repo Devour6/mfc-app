@@ -1,39 +1,37 @@
-import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { creditTransactionSchema } from '@/lib/validations'
+import { requireAuth } from '@/lib/auth-guard'
+import { ensureUser } from '@/lib/user-sync'
 
-// GET /api/user/credits?auth0Id=... — Get credit balance
-export async function GET(request: NextRequest) {
+// GET /api/user/credits — Get authenticated user's credit balance
+export async function GET() {
   try {
-    const auth0Id = request.nextUrl.searchParams.get('auth0Id')
-    if (!auth0Id) return errorResponse('auth0Id is required')
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
 
-    const user = await prisma.user.findUnique({
-      where: { auth0Id },
-      select: { id: true, credits: true },
-    })
-
-    if (!user) return notFound('User')
-    return jsonResponse({ credits: user.credits })
+    return jsonResponse({ credits: dbUser.credits })
   } catch (error) {
     return serverError(error)
   }
 }
 
 // POST /api/user/credits — Add or deduct credits
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
+
     const body = await request.json()
     const parsed = creditTransactionSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { auth0Id, amount, type, description } = parsed.data
+    const { amount, type, description } = parsed.data
 
     // Use a transaction to prevent race conditions
     const user = await prisma.$transaction(async (tx: any) => {
       const current = await tx.user.findUnique({
-        where: { auth0Id },
+        where: { id: dbUser.id },
         select: { id: true, credits: true },
       })
 
@@ -43,7 +41,7 @@ export async function POST(request: NextRequest) {
       if (newBalance < 0) throw new Error('Insufficient credits')
 
       return tx.user.update({
-        where: { auth0Id },
+        where: { id: dbUser.id },
         data: { credits: newBalance },
         select: { id: true, credits: true },
       })

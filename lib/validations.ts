@@ -15,7 +15,6 @@ export const createFighterSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(30, 'Name must be at most 30 characters'),
   emoji: z.string().min(1, 'Emoji is required'),
   fighterClass: FighterClass,
-  ownerId: z.string().min(1, 'Owner ID is required'),
 })
 
 const statValue = z.number().int().min(0).max(100)
@@ -86,7 +85,6 @@ export const submitFightResultSchema = z.object({
 // ─── Bets ───────────────────────────────────────────────────────────────────
 
 export const createBetSchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
   fightId: z.string().min(1, 'Fight ID is required'),
   fighterId: z.string().optional(),
   side: BetSide,
@@ -103,7 +101,6 @@ export const settleBetSchema = z.object({
 
 export const createTrainingSchema = z.object({
   fighterId: z.string().min(1, 'Fighter ID is required'),
-  userId: z.string().min(1, 'User ID is required'),
   hours: z.number().positive('Hours must be greater than 0').max(24, 'Max 24 hours per session'),
 })
 
@@ -116,7 +113,6 @@ export const createUserSchema = z.object({
 })
 
 export const updateUserSchema = z.object({
-  auth0Id: z.string().min(1, 'Auth0 ID is required'),
   name: z.string().min(1).max(50).optional(),
   username: z.string().min(3, 'Username must be at least 3 characters').max(20, 'Username must be at most 20 characters').regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, hyphens, and underscores').optional(),
 }).refine((data) => data.name !== undefined || data.username !== undefined, {
@@ -126,7 +122,6 @@ export const updateUserSchema = z.object({
 // ─── Credits ────────────────────────────────────────────────────────────────
 
 export const creditTransactionSchema = z.object({
-  auth0Id: z.string().min(1, 'Auth0 ID is required'),
   amount: z.number().refine((n) => n !== 0 && isFinite(n), { message: 'Amount must be a non-zero finite number' }),
   type: CreditTransactionType,
   description: z.string().max(200).optional(),

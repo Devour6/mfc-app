@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, validationError, serverError } from '@/lib/api-utils'
 import { createFightSchema, fightQuerySchema } from '@/lib/validations'
+import { requireAuth } from '@/lib/auth-guard'
 
 // GET /api/fights?status=...&limit=... — List fights
 export async function GET(request: NextRequest) {
@@ -31,9 +32,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/fights — Create a new fight
+// POST /api/fights — Create a new fight (auth required)
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth()
     const body = await request.json()
     const parsed = createFightSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)

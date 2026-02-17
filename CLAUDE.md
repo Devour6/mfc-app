@@ -15,7 +15,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 | Rendering | HTML5 Canvas (pixel-art fight visuals) |
 | Audio | Web Audio API via custom SoundManager |
 | Database | PostgreSQL 16 via Prisma 7.4 + `@prisma/adapter-pg` (connected, migrated, seeded) |
-| Auth | Auth0 (proxy.ts exists, currently disabled) |
+| Auth | Auth0 v4 (@auth0/nextjs-auth0 v4.15.0) — proxy.ts + lib/auth-guard.ts |
 | Fonts | Press Start 2P (pixel), Inter (UI) |
 | Build | Turbopack |
 
@@ -38,10 +38,13 @@ lib/                  → Core engines (~3,400 lines)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
   ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
   ├── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
+  ├── auth0.ts              → Auth0Client instance (v4, server-side)
+  ├── auth-guard.ts         → requireAuth() — throws AuthRequiredError if no session
+  ├── user-sync.ts          → ensureUser() — upsert User record on first login
   └── solana/               → Solana wallet integration
       ├── wallet-provider.tsx  → React context (ConnectionProvider + WalletProvider + WalletModalProvider)
       ├── use-wallet.ts        → Custom hook: connect/disconnect/balance/signAndSend
-      └── credit-bridge.ts     → SOL↔credits deposit/withdrawal (devnet, 1 SOL = 1000 credits)
+      └── credit-bridge.ts     → SOL↔credits deposit/withdrawal (fetches treasury from /api/solana/config)
 types/index.ts        → Comprehensive type definitions (~370 lines)
 prisma/schema.prisma  → DB models: User, Fighter, Training, Fight, FightResult, Bet
 prisma.config.ts      → Prisma 7 config (holds DATABASE_URL for migrations)
@@ -96,25 +99,33 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 
 ## API Routes
 
-| Route | Methods | Description |
-|-------|---------|-------------|
-| `/api/fighters` | GET, POST | List fighters (with filters), create fighter |
-| `/api/fighters/[id]` | GET, PATCH | Get fighter details, update fighter stats |
-| `/api/fights` | GET, POST | List fights (with status filter), create fight |
-| `/api/fights/[id]` | GET, POST, PATCH | Get fight details, submit result (with round/winner validation), update status (with legal transition enforcement) |
-| `/api/user` | GET, POST, PATCH | Get/create/update user profile (email format, username regex validation) |
-| `/api/user/credits` | GET, POST | Get credit balance, add/deduct credits (transaction-safe) |
-| `/api/bets` | GET, POST | List bets (filter by fight/user/status), place bet (deducts credits, validates fight state) |
-| `/api/bets/[id]` | GET, PATCH | Get bet details, settle/cancel bet (credits payout/refund via transaction) |
-| `/api/training` | GET, POST | List training sessions, create session (deducts credits, applies random stat gains, caps at 100) |
-| `/api/training/[id]` | GET | Get training session details |
-| `/api/health` | GET | Health check — returns `{ status, timestamp, db }` |
+| Route | Methods | Auth | Description |
+|-------|---------|------|-------------|
+| `/api/fighters` | GET | Public | List fighters (with filters) |
+| `/api/fighters` | POST | Required | Create fighter (owner set from session) |
+| `/api/fighters/[id]` | GET | Public | Get fighter details |
+| `/api/fighters/[id]` | PATCH | Required | Update fighter stats (must own fighter) |
+| `/api/fights` | GET | Public | List fights (with status filter) |
+| `/api/fights` | POST | Required | Create fight |
+| `/api/fights/[id]` | GET | Public | Get fight details |
+| `/api/fights/[id]` | POST | Required | Submit fight result |
+| `/api/fights/[id]` | PATCH | Required | Update fight status |
+| `/api/user` | GET, POST, PATCH | Required | Get/sync/update user profile (uses session, auto-creates on first login) |
+| `/api/user/credits` | GET, POST | Required | Get credit balance, add/deduct credits (transaction-safe) |
+| `/api/bets` | GET, POST | Required | List user's bets, place bet (deducts credits) |
+| `/api/bets/[id]` | GET, PATCH | Required | Get bet details, settle/cancel bet |
+| `/api/training` | GET, POST | Required | List user's training sessions, create session |
+| `/api/training/[id]` | GET | Required | Get training session details |
+| `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
+| `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
+
+**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts`. Unauthenticated requests get 401. User identity comes from the Auth0 session — no more `auth0Id`/`userId` in request bodies. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`.
 
 **Validation:** All routes use zod schemas from `lib/validations.ts` for input validation. Invalid requests return `{ error: "Validation failed", issues: [...] }` with 400 status.
 
 **Fight status transitions:** SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED. All other transitions are rejected.
 
-All routes use `lib/api-utils.ts` for consistent response formatting. Auth middleware migrated to `proxy.ts` (Next.js 16 convention) but is currently disabled — routes are unprotected.
+All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 middleware active in `proxy.ts`. Protect API routes with `requireAuth()` from `lib/auth-guard.ts`.
 
 ## What Works (Prototype Status)
 
@@ -132,14 +143,15 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth middl
 
 **Backend (In Progress):**
 - PostgreSQL 16 connected locally, migrated, and seeded with sample data
-- API routes exist for all entities with zod validation (need auth guards)
+- API routes exist for all entities with zod validation and auth guards
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
-- Auth0 proxy exists but disabled (migrated from middleware.ts to proxy.ts for Next.js 16)
+- Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
 - 44 API integration tests covering all route handlers
 
 **Not Yet Built:**
-- Auth0 authentication flow (middleware disabled, routes unprotected)
+- Solana provider wired into app layout
+- Frontend API client updated for session-based auth (no more auth0Id in request bodies)
 - Stripe payment integration
 - Solana wallet integration (scaffold built: provider, hook, credit bridge — needs frontend wiring + mainnet config)
 - Multiplayer (mock data only)

@@ -1,39 +1,36 @@
 /**
  * @jest-environment node
  */
-import { mockPrisma, createRequest } from './helpers'
+import { mockPrisma, mockEnsureUser, mockRequireAuth, createRequest } from './helpers'
 
 import { GET, POST } from '@/app/api/user/credits/route'
 
 beforeEach(() => {
   jest.clearAllMocks()
+  // Restore default auth mocks after clearAllMocks (which only clears calls, not implementations)
+  mockRequireAuth.mockResolvedValue({ user: { sub: 'auth0|test-user' } })
+  mockEnsureUser.mockResolvedValue({ id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser' })
 })
 
 // ─── GET /api/user/credits ──────────────────────────────────────────────────
 
 describe('GET /api/user/credits', () => {
-  it('returns credit balance', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', credits: 500 })
+  it('returns credit balance from authenticated session', async () => {
+    mockEnsureUser.mockResolvedValue({ id: 'u1', auth0Id: 'auth0|123', credits: 500, username: 'testuser' })
 
-    const res = await GET(createRequest('/api/user/credits?auth0Id=auth0|123'))
+    const res = await GET()
     const data = await res.json()
 
     expect(res.status).toBe(200)
     expect(data.credits).toBe(500)
   })
 
-  it('returns 400 if auth0Id missing', async () => {
-    const res = await GET(createRequest('/api/user/credits'))
+  it('returns 500 if auth fails', async () => {
+    mockRequireAuth.mockRejectedValue(new Error('Unauthorized'))
 
-    expect(res.status).toBe(400)
-  })
+    const res = await GET()
 
-  it('returns 404 if user not found', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue(null)
-
-    const res = await GET(createRequest('/api/user/credits?auth0Id=auth0|nope'))
-
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(500)
   })
 })
 
@@ -49,7 +46,6 @@ describe('POST /api/user/credits', () => {
       createRequest('/api/user/credits', {
         method: 'POST',
         body: JSON.stringify({
-          auth0Id: 'auth0|123',
           amount: 100,
           type: 'deposit',
         }),
@@ -72,7 +68,6 @@ describe('POST /api/user/credits', () => {
       createRequest('/api/user/credits', {
         method: 'POST',
         body: JSON.stringify({
-          auth0Id: 'auth0|123',
           amount: -50,
           type: 'withdrawal',
         }),
@@ -92,7 +87,6 @@ describe('POST /api/user/credits', () => {
       createRequest('/api/user/credits', {
         method: 'POST',
         body: JSON.stringify({
-          auth0Id: 'auth0|123',
           amount: -100,
           type: 'withdrawal',
         }),
@@ -109,7 +103,6 @@ describe('POST /api/user/credits', () => {
       createRequest('/api/user/credits', {
         method: 'POST',
         body: JSON.stringify({
-          auth0Id: 'auth0|123',
           amount: 0,
           type: 'deposit',
         }),
@@ -121,7 +114,7 @@ describe('POST /api/user/credits', () => {
     expect(data.error).toBe('Validation failed')
   })
 
-  it('returns 404 if user not found', async () => {
+  it('returns 404 if user not found in transaction', async () => {
     mockPrisma.$transaction.mockImplementation(async (fn: Function) => fn(mockPrisma))
     mockPrisma.user.findUnique.mockResolvedValue(null)
 
@@ -129,7 +122,6 @@ describe('POST /api/user/credits', () => {
       createRequest('/api/user/credits', {
         method: 'POST',
         body: JSON.stringify({
-          auth0Id: 'auth0|nope',
           amount: 100,
           type: 'deposit',
         }),

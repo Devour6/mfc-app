@@ -26,6 +26,10 @@ export function unauthorized() {
 }
 
 export function serverError(error: unknown) {
+  // Pass through auth errors as 401 responses
+  if (error && typeof error === 'object' && 'response' in error && error.response instanceof NextResponse) {
+    return error.response
+  }
   const message = error instanceof Error ? error.message : 'Internal server error'
   console.error('[API Error]', error)
   return errorResponse(message, 500)

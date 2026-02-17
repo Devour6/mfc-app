@@ -111,7 +111,7 @@ describe('GET /api/fighters/:id', () => {
 
 describe('PATCH /api/fighters/:id', () => {
   it('updates fighter stats', async () => {
-    mockPrisma.fighter.findUnique.mockResolvedValue({ id: 'f1', name: 'Iron Mike' })
+    mockPrisma.fighter.findUnique.mockResolvedValue({ id: 'f1', name: 'Iron Mike', ownerId: 'u1' })
     mockPrisma.fighter.update.mockResolvedValue({ id: 'f1', name: 'Iron Mike', elo: 1250 })
 
     const res = await PATCH(
