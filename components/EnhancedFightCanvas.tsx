@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FightState, Fighter } from '@/types'
+import { COLORS, ARENA, CROWD, FIGHTER, BARS, HUD, FX, rgba } from '@/lib/canvas-colors'
 
 interface EnhancedFightCanvasProps {
   fightState: FightState
@@ -56,10 +57,10 @@ export default function EnhancedFightCanvas({
       setShowRoundCard(true)
       setLastRound(fightState.round)
       onRoundStart?.(fightState.round)
-      
+
       // Auto-hide round card after 3 seconds
       setTimeout(() => setShowRoundCard(false), 3000)
-      
+
       // Initialize round stats
       setRoundStats(prev => ({
         ...prev,
@@ -82,7 +83,7 @@ export default function EnhancedFightCanvas({
     if (fightState.fighter1.animation.state === 'punching') {
       const targetX = (fightState.fighter2.position.x / 480) * canvas.width
       const isHeavyPunch = Math.random() > 0.7 // 30% chance of heavy punch
-      
+
       addVisualEffect({
         type: 'impact',
         x: targetX,
@@ -90,7 +91,7 @@ export default function EnhancedFightCanvas({
         duration: isHeavyPunch ? 800 : 500,
         intensity: isHeavyPunch ? 1.0 : 0.8
       })
-      
+
       addVisualEffect({
         type: 'sparks',
         x: targetX,
@@ -114,7 +115,7 @@ export default function EnhancedFightCanvas({
     if (fightState.fighter2.animation.state === 'punching') {
       const targetX = (fightState.fighter1.position.x / 480) * canvas.width
       const isHeavyPunch = Math.random() > 0.7 // 30% chance of heavy punch
-      
+
       addVisualEffect({
         type: 'impact',
         x: targetX,
@@ -122,7 +123,7 @@ export default function EnhancedFightCanvas({
         duration: isHeavyPunch ? 800 : 500,
         intensity: isHeavyPunch ? 1.0 : 0.8
       })
-      
+
       addVisualEffect({
         type: 'sparks',
         x: targetX,
@@ -152,7 +153,7 @@ export default function EnhancedFightCanvas({
       const knockedFighter = fightState.fighter1.animation.state === 'down' ? 1 : 2
       const knockerFighter = knockedFighter === 1 ? 2 : 1
       const knockedX = (knockedFighter === 1 ? fightState.fighter1.position.x : fightState.fighter2.position.x / 480) * canvas.width
-      
+
       addRoundEvent({
         type: 'knockdown',
         severity: 'high',
@@ -238,7 +239,7 @@ export default function EnhancedFightCanvas({
     if (fightState.fighter1.combo.count > 3 || fightState.fighter2.combo.count > 3) {
       const comboFighter = fightState.fighter1.combo.count > 3 ? 1 : 2
       const comboX = (comboFighter === 1 ? fightState.fighter1.position.x : fightState.fighter2.position.x / 480) * canvas.width
-      
+
       addRoundEvent({
         type: 'combo',
         severity: 'medium',
@@ -298,14 +299,14 @@ export default function EnhancedFightCanvas({
       timestamp: Date.now(),
       ...event
     }
-    
+
     setRoundEvents(prev => [newEvent, ...prev.slice(0, 9)]) // Keep last 10 events
-    
+
     // Update round stats
     setRoundStats(prev => {
       const currentRoundStats = prev[fightState.round] || { fighter1Strikes: 0, fighter2Strikes: 0, significantMoments: 0 }
       const fighterKey = event.fighter === 1 ? 'fighter1Strikes' : 'fighter2Strikes'
-      
+
       return {
         ...prev,
         [fightState.round]: {
@@ -322,9 +323,9 @@ export default function EnhancedFightCanvas({
       id: Date.now().toString(),
       ...effect
     }
-    
+
     setVisualEffects(prev => [...prev, newEffect])
-    
+
     // Remove effect after duration
     setTimeout(() => {
       setVisualEffects(prev => prev.filter(e => e.id !== newEffect.id))
@@ -334,31 +335,31 @@ export default function EnhancedFightCanvas({
   const drawEnhancedFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     // Clear canvas with gradient background
     const gradient = ctx.createLinearGradient(0, 0, 0, height)
-    gradient.addColorStop(0, '#000814')
-    gradient.addColorStop(0.6, '#001d3d') 
-    gradient.addColorStop(1, '#003566')
-    
+    gradient.addColorStop(0, ARENA.bgTop)
+    gradient.addColorStop(0.6, ARENA.bgMid)
+    gradient.addColorStop(1, ARENA.bgBottom)
+
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, width, height)
-    
+
     // Draw enhanced ring
     drawEnhancedRing(ctx, width, height)
-    
+
     // Draw crowd atmosphere
     drawCrowdAtmosphere(ctx, width, height)
-    
+
     // Draw fighters with enhanced animations
     if (fightState.fighter1 && fightState.fighter2) {
-      drawEnhancedFighter(ctx, fightState.fighter1, fighters[0], width, height, '#ff4444', 1)
-      drawEnhancedFighter(ctx, fightState.fighter2, fighters[1], width, height, '#4488ff', 2)
+      drawEnhancedFighter(ctx, fightState.fighter1, fighters[0], width, height, FIGHTER.red, 1)
+      drawEnhancedFighter(ctx, fightState.fighter2, fighters[1], width, height, FIGHTER.blue, 2)
     }
-    
+
     // Draw visual effects
     drawVisualEffects(ctx)
-    
+
     // Draw round progress HUD
     drawRoundProgressHUD(ctx, width, height)
-    
+
     // Draw momentum indicator
     drawMomentumIndicator(ctx, width, height)
   }
@@ -369,29 +370,29 @@ export default function EnhancedFightCanvas({
     const ringX = width * 0.05
 
     // Ring shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'
+    ctx.fillStyle = ARENA.ringShadow
     ctx.fillRect(ringX + 5, floorY + 5, ringWidth, height * 0.2)
 
     // Ring floor with texture
     const floorGradient = ctx.createLinearGradient(ringX, floorY, ringX, floorY + height * 0.2)
-    floorGradient.addColorStop(0, '#2a1810')
-    floorGradient.addColorStop(0.5, '#1a1008')
-    floorGradient.addColorStop(1, '#0f0504')
-    
+    floorGradient.addColorStop(0, ARENA.floorTop)
+    floorGradient.addColorStop(0.5, ARENA.floorMid)
+    floorGradient.addColorStop(1, ARENA.floorBottom)
+
     ctx.fillStyle = floorGradient
     ctx.fillRect(ringX, floorY, ringWidth, height * 0.2)
 
     // Ring canvas texture
-    ctx.fillStyle = 'rgba(255,255,255,0.02)'
+    ctx.fillStyle = ARENA.floorTexture
     for (let i = 0; i < 10; i++) {
       ctx.fillRect(ringX + (ringWidth / 10) * i, floorY, 1, height * 0.2)
     }
 
     // Enhanced ropes with glow
-    const ropeColors = ['#ff4444', '#ffaa44', '#44ff44']
+    const ropeColors = [ARENA.rope1, ARENA.rope2, ARENA.rope3]
     for (let i = 1; i <= 3; i++) {
       const ropeY = floorY - i * (height * 0.08)
-      
+
       ctx.shadowBlur = 10
       ctx.shadowColor = ropeColors[i - 1]
       ctx.strokeStyle = ropeColors[i - 1]
@@ -401,16 +402,16 @@ export default function EnhancedFightCanvas({
       ctx.lineTo(ringX + ringWidth, ropeY)
       ctx.stroke()
     }
-    
+
     ctx.shadowBlur = 0
 
     // Corner posts with LED strips
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = ARENA.postFill
     ctx.fillRect(ringX - 8, floorY - height * 0.26, 8, height * 0.26)
     ctx.fillRect(ringX + ringWidth, floorY - height * 0.26, 8, height * 0.26)
-    
+
     // LED effect on posts
-    ctx.fillStyle = '#00ff88'
+    ctx.fillStyle = ARENA.postLED
     for (let i = 0; i < 5; i++) {
       const ledY = floorY - height * 0.24 + i * (height * 0.04)
       ctx.fillRect(ringX - 6, ledY, 4, 2)
@@ -420,26 +421,26 @@ export default function EnhancedFightCanvas({
     // Enhanced MFC logo with glow
     ctx.save()
     ctx.shadowBlur = 20
-    ctx.shadowColor = '#ff4444'
-    ctx.font = 'bold 36px monospace'
-    ctx.fillStyle = 'rgba(255,68,68,0.1)'
+    ctx.shadowColor = ARENA.logoGlow
+    ctx.font = 'bold 36px "Press Start 2P"'
+    ctx.fillStyle = ARENA.logoFill
     ctx.textAlign = 'center'
     ctx.fillText('MFC', width / 2, floorY + height * 0.1)
-    
-    ctx.font = 'bold 12px monospace'
+
+    ctx.font = 'bold 12px "Press Start 2P"'
     ctx.fillText('FIGHTING CHAMPIONSHIP', width / 2, floorY + height * 0.15)
     ctx.restore()
   }
 
   const drawCrowdAtmosphere = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const time = Date.now() * 0.001
-    
+
     // Dynamic crowd excitement based on fight intensity
     const fightIntensity = 1 - (Math.min(fightState.fighter1?.hp || 100, fightState.fighter2?.hp || 100) / 100)
     const crowdExcitement = 0.3 + fightIntensity * 0.7
-    
+
     // Animated crowd silhouettes in background
-    ctx.fillStyle = `rgba(20,20,30,${0.4 + crowdExcitement * 0.3})`
+    ctx.fillStyle = CROWD.silhouette(crowdExcitement)
     for (let i = 0; i < width; i += 20) {
       const baseHeight = 40 + Math.sin(i * 0.1) * 15
       const animatedHeight = baseHeight + Math.sin(time * 3 + i * 0.1) * crowdExcitement * 10
@@ -450,8 +451,8 @@ export default function EnhancedFightCanvas({
     if (Math.random() < fightIntensity * 0.02) {
       const flashX = Math.random() * width
       const flashY = height * (0.1 + Math.random() * 0.15)
-      
-      ctx.fillStyle = `rgba(255,255,255,${0.6 + Math.random() * 0.4})`
+
+      ctx.fillStyle = CROWD.cameraFlash(Math.random())
       ctx.beginPath()
       ctx.arc(flashX, flashY, 2 + Math.random() * 3, 0, Math.PI * 2)
       ctx.fill()
@@ -463,17 +464,17 @@ export default function EnhancedFightCanvas({
       const baseIntensity = 0.8 + Math.sin(time + index) * 0.2
       const excitedIntensity = baseIntensity + crowdExcitement * 0.4
       const lightGradient = ctx.createRadialGradient(x, height * 0.1, 0, x, height * 0.1, 150)
-      lightGradient.addColorStop(0, `rgba(255,255,255,${excitedIntensity * 0.4})`)
-      lightGradient.addColorStop(1, 'rgba(255,255,255,0)')
-      
+      lightGradient.addColorStop(0, CROWD.lightGlow(excitedIntensity))
+      lightGradient.addColorStop(1, CROWD.lightGlowEnd)
+
       ctx.fillStyle = lightGradient
       ctx.fillRect(x - 150, height * 0.1, 300, height * 0.4)
-      
+
       // Spotlight beams
       if (fightIntensity > 0.6) {
         const beamGradient = ctx.createLinearGradient(x, height * 0.1, x, height * 0.6)
-        beamGradient.addColorStop(0, `rgba(255,255,200,${excitedIntensity * 0.1})`)
-        beamGradient.addColorStop(1, 'rgba(255,255,200,0)')
+        beamGradient.addColorStop(0, CROWD.spotlightBeam(excitedIntensity))
+        beamGradient.addColorStop(1, CROWD.spotlightEnd)
         ctx.fillStyle = beamGradient
         ctx.fillRect(x - 30, height * 0.1, 60, height * 0.5)
       }
@@ -481,7 +482,7 @@ export default function EnhancedFightCanvas({
 
     // Crowd noise visualization (sound waves)
     if (fightIntensity > 0.4) {
-      ctx.strokeStyle = `rgba(255,255,255,${crowdExcitement * 0.1})`
+      ctx.strokeStyle = CROWD.soundWave(crowdExcitement)
       ctx.lineWidth = 1
       for (let i = 0; i < 5; i++) {
         const waveY = height * 0.1 + i * 8
@@ -509,7 +510,7 @@ export default function EnhancedFightCanvas({
     fighterNumber: 1 | 2
   ) => {
     const floorY = height * 0.75
-    
+
     // Convert position to canvas coordinates with movement physics
     const baseX = (fighterState.position.x / 480) * width
     const baseY = floorY - 100
@@ -518,12 +519,12 @@ export default function EnhancedFightCanvas({
     const time = Date.now() * 0.001
     const idleBob = Math.sin(time * 2 + fighterNumber * Math.PI) * 3
     const circlingOffset = Math.sin(time * 0.5 + fighterNumber * Math.PI) * 15
-    
+
     const x = baseX + circlingOffset
     const y = baseY + idleBob
 
     ctx.save()
-    
+
     // Enhanced screen shake for heavy hits
     if (fighterState.animation.state === 'hit') {
       const shakeIntensity = fighterState.hp < 25 ? 8 : 5
@@ -533,9 +534,9 @@ export default function EnhancedFightCanvas({
       )
       ctx.globalAlpha = 0.8
       ctx.filter = 'brightness(2.0) saturate(1.5)'
-      
+
       // Flash effect
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'
+      ctx.fillStyle = FIGHTER.hitFlash
       ctx.fillRect(0, 0, width, height)
     }
 
@@ -552,7 +553,7 @@ export default function EnhancedFightCanvas({
     ctx.globalAlpha *= Math.max(0.7, fighterState.stamina / 100)
 
     // Enhanced dynamic shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'
+    ctx.fillStyle = FIGHTER.shadow
     ctx.save()
     ctx.scale(1, 0.2)
     ctx.beginPath()
@@ -593,9 +594,9 @@ export default function EnhancedFightCanvas({
     const facing = fighterState.position.facing
     const state = fighterState.animation.state
     const time = Date.now() * 0.001
-    
+
     ctx.save()
-    
+
     // Animation-based positioning and rotations
     let headY = y - 50
     let torsoY = y - 35
@@ -617,7 +618,7 @@ export default function EnhancedFightCanvas({
           bodyLean = -facing * 8
           armY -= 5 // Arms up for balance
         } else {
-          // Punch animation  
+          // Punch animation
           armExtension = 25 + Math.sin(time * 15) * 5
           bodyLean = facing * 5
           headY -= 2
@@ -644,34 +645,34 @@ export default function EnhancedFightCanvas({
     ctx.translate(-x, -y)
 
     // Draw humanoid parts in proper order (back to front)
-    
+
     // Back leg
     if (facing === 1) {
       drawLeg(ctx, x - 8, legY, color, false, legExtension, isKickVariant && Math.sin(time * 12) > 0.5)
     } else {
       drawLeg(ctx, x + 8, legY, color, false, legExtension, isKickVariant && Math.sin(time * 12) > 0.5)
     }
-    
+
     // Back arm
     if (facing === 1) {
       drawArm(ctx, x - 15, armY, color, facing, false, armExtension, state === 'punching' && !isKickVariant)
     } else {
       drawArm(ctx, x + 15, armY, color, facing, false, armExtension, state === 'punching' && !isKickVariant)
     }
-    
+
     // Torso with muscle definition
     drawTorso(ctx, x, torsoY, color, state)
-    
+
     // Head with facial features
     drawHead(ctx, x, headY, color, facing, state, fighterState.hp)
-    
+
     // Front arm (punching arm)
     if (facing === 1) {
       drawArm(ctx, x + 15, armY, color, facing, true, armExtension, state === 'punching' && !isKickVariant)
     } else {
       drawArm(ctx, x - 15, armY, color, facing, true, armExtension, state === 'punching' && !isKickVariant)
     }
-    
+
     // Front leg
     if (facing === 1) {
       drawLeg(ctx, x + 8, legY, color, true, legExtension, isKickVariant && Math.sin(time * 12) < -0.5)
@@ -689,37 +690,37 @@ export default function EnhancedFightCanvas({
     ctx.beginPath()
     ctx.ellipse(x, y, 12, 15, 0, 0, Math.PI * 2)
     ctx.fill()
-    
+
     // Face details
-    ctx.fillStyle = '#000'
+    ctx.fillStyle = FIGHTER.pupils
     if (state === 'hit') {
       // Dazed/hurt expression
       ctx.fillText('X', x - 8, y - 3)
       ctx.fillText('X', x + 3, y - 3)
     } else if (hp < 25) {
       // Tired/bloody expression
-      ctx.fillStyle = '#cc0000'
+      ctx.fillStyle = FIGHTER.bloodyMouth
       ctx.fillRect(x - 5, y + 8, 10, 2)
-      ctx.fillStyle = '#000'
+      ctx.fillStyle = FIGHTER.pupils
       ctx.fillText('~', x - 8, y - 3)
       ctx.fillText('~', x + 3, y - 3)
     } else {
       // Normal eyes
-      ctx.fillStyle = '#fff'
+      ctx.fillStyle = FIGHTER.eyes
       ctx.beginPath()
       ctx.arc(x - 6, y - 3, 3, 0, Math.PI * 2)
       ctx.arc(x + 6, y - 3, 3, 0, Math.PI * 2)
       ctx.fill()
-      
-      ctx.fillStyle = '#000'
+
+      ctx.fillStyle = FIGHTER.pupils
       ctx.beginPath()
       ctx.arc(x - 6 + facing, y - 3, 1.5, 0, Math.PI * 2)
       ctx.arc(x + 6 + facing, y - 3, 1.5, 0, Math.PI * 2)
       ctx.fill()
     }
-    
+
     // Mouth
-    ctx.strokeStyle = '#000'
+    ctx.strokeStyle = FIGHTER.mouth
     ctx.lineWidth = 2
     ctx.beginPath()
     if (state === 'hit') {
@@ -737,87 +738,87 @@ export default function EnhancedFightCanvas({
     ctx.beginPath()
     ctx.roundRect(x - 15, y, 30, 40, 8)
     ctx.fill()
-    
+
     // Chest muscles
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'
+    ctx.fillStyle = FIGHTER.chestHighlight
     ctx.beginPath()
     ctx.ellipse(x - 7, y + 8, 6, 8, 0, 0, Math.PI * 2)
     ctx.ellipse(x + 7, y + 8, 6, 8, 0, 0, Math.PI * 2)
     ctx.fill()
-    
+
     // Abs definition
     for (let i = 0; i < 3; i++) {
       ctx.beginPath()
       ctx.ellipse(x, y + 18 + i * 6, 8, 3, 0, 0, Math.PI * 2)
       ctx.fill()
     }
-    
+
     // Shorts/trunks
-    ctx.fillStyle = state === 'hit' ? '#ff0000' : '#333'
+    ctx.fillStyle = state === 'hit' ? FIGHTER.shortsHit : FIGHTER.shorts
     ctx.fillRect(x - 12, y + 25, 24, 15)
   }
 
   const drawArm = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, isFront: boolean, extension: number, isPunching: boolean) => {
     const armLength = 25 + extension
     const angle = isFront && isPunching ? facing * 45 * Math.PI / 180 : 0
-    
+
     ctx.save()
     ctx.translate(x, y)
     ctx.rotate(angle)
-    
+
     // Upper arm
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.roundRect(-4, 0, 8, armLength * 0.6, 4)
     ctx.fill()
-    
+
     // Forearm
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.roundRect(-3, armLength * 0.6, 6, armLength * 0.4, 3)
     ctx.fill()
-    
+
     // Boxing glove
-    ctx.fillStyle = isPunching && isFront ? '#ffff00' : '#ffffff'
+    ctx.fillStyle = isPunching && isFront ? FIGHTER.glovePunch : FIGHTER.gloves
     if (isPunching && isFront) {
       // Add glow effect for punching glove
       ctx.shadowBlur = 10
-      ctx.shadowColor = '#ffff00'
+      ctx.shadowColor = FIGHTER.gloveGlow
     }
     ctx.beginPath()
     ctx.roundRect(-6, armLength - 8, 12, 12, 6)
     ctx.fill()
     ctx.shadowBlur = 0
-    
+
     ctx.restore()
   }
 
   const drawLeg = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, isFront: boolean, extension: number, isKicking: boolean) => {
     const legLength = 35 + extension
     const angle = isKicking && isFront ? 30 * Math.PI / 180 : 0
-    
+
     ctx.save()
     ctx.translate(x, y)
     ctx.rotate(angle)
-    
+
     // Thigh
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.roundRect(-6, 0, 12, legLength * 0.6, 6)
     ctx.fill()
-    
+
     // Shin
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.roundRect(-4, legLength * 0.6, 8, legLength * 0.4, 4)
     ctx.fill()
-    
+
     // Foot/boot
-    ctx.fillStyle = '#000'
+    ctx.fillStyle = FIGHTER.boots
     ctx.beginPath()
     ctx.roundRect(-5, legLength - 8, 15, 8, 4)
     ctx.fill()
-    
+
     ctx.restore()
   }
 
@@ -825,27 +826,27 @@ export default function EnhancedFightCanvas({
     // Fighter lying down
     ctx.save()
     ctx.translate(x, y + 20)
-    
+
     // Body horizontal
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.roundRect(-20, -8, 40, 16, 8)
     ctx.fill()
-    
+
     // Head on side
     ctx.beginPath()
     ctx.ellipse(-25, -5, 10, 12, Math.PI / 4, 0, Math.PI * 2)
     ctx.fill()
-    
+
     // Dazed stars
-    ctx.fillStyle = '#ffff00'
-    ctx.font = '16px serif'
+    ctx.fillStyle = FX.starSimple
+    ctx.font = '16px "Press Start 2P"'
     for (let i = 0; i < 3; i++) {
       const starX = -30 + i * 15
       const starY = -25 + Math.sin(Date.now() * 0.01 + i) * 5
       ctx.fillText('★', starX, starY)
     }
-    
+
     // Arms and legs sprawled
     ctx.fillStyle = color
     ctx.beginPath()
@@ -854,20 +855,20 @@ export default function EnhancedFightCanvas({
     ctx.roundRect(-10, 8, 6, 18, 3)  // Leg
     ctx.roundRect(4, 8, 6, 18, 3)    // Other leg
     ctx.fill()
-    
+
     ctx.restore()
   }
 
   // Enhanced particle and visual effects
   const drawSweatParticles = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
     const time = Date.now() * 0.001
-    ctx.fillStyle = 'rgba(200,200,255,0.6)'
-    
+    ctx.fillStyle = FX.sweatDrops
+
     for (let i = 0; i < 5; i++) {
       const sweatX = x + (Math.random() - 0.5) * 30
       const sweatY = y + Math.sin(time * 3 + i) * 10 + Math.random() * 20
       const size = 1 + Math.random() * 2
-      
+
       ctx.beginPath()
       ctx.arc(sweatX, sweatY, size, 0, Math.PI * 2)
       ctx.fill()
@@ -877,25 +878,25 @@ export default function EnhancedFightCanvas({
   const drawMotionTrail = (ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, actionType: string) => {
     const time = Date.now() * 0.001
     const trailCount = 5
-    
+
     ctx.save()
-    
+
     for (let i = 0; i < trailCount; i++) {
       const alpha = (trailCount - i) / trailCount * 0.3
       ctx.globalAlpha = alpha
-      
+
       if (actionType === 'punching') {
         // Punch motion trail
         const trailX = x + facing * (15 + i * 5)
         const trailY = y - 30 + Math.sin(time * 10 + i) * 2
-        
-        ctx.fillStyle = '#ffff00'
+
+        ctx.fillStyle = FX.punchTrail
         ctx.beginPath()
         ctx.arc(trailX, trailY, 8 - i, 0, Math.PI * 2)
         ctx.fill()
-        
+
         // Motion lines
-        ctx.strokeStyle = '#ffffff'
+        ctx.strokeStyle = COLORS.white
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.moveTo(trailX - facing * 10, trailY)
@@ -905,27 +906,27 @@ export default function EnhancedFightCanvas({
         // Kick motion trail
         const trailX = x + facing * (10 + i * 3)
         const trailY = y - 15 + i * 2
-        
-        ctx.fillStyle = '#ff6600'
+
+        ctx.fillStyle = FX.kickTrail
         ctx.beginPath()
         ctx.arc(trailX, trailY, 6 - i, 0, Math.PI * 2)
         ctx.fill()
       }
     }
-    
+
     ctx.restore()
   }
 
   const drawEnhancedStarsEffect = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-    ctx.fillStyle = '#ffff00'
-    ctx.font = 'bold 16px serif'
+    ctx.fillStyle = FX.starSimple
+    ctx.font = 'bold 16px "Press Start 2P"'
     ctx.textAlign = 'center'
-    
+
     for (let i = 0; i < 4; i++) {
       const starX = x + (i - 1.5) * 20
       const starY = y + Math.sin(Date.now() * 0.01 + i) * 8
       const rotation = Date.now() * 0.005 + i
-      
+
       ctx.save()
       ctx.translate(starX, starY)
       ctx.rotate(rotation)
@@ -935,17 +936,17 @@ export default function EnhancedFightCanvas({
   }
 
   const drawBloodSplatters = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-    ctx.fillStyle = '#cc0000'
+    ctx.fillStyle = FX.bloodSimple
     for (let i = 0; i < 8; i++) {
       const bloodX = x + (Math.random() - 0.5) * 50
       const bloodY = y + Math.random() * 30
       const size = 2 + Math.random() * 4
-      
+
       // Blood droplets
       ctx.beginPath()
       ctx.arc(bloodX, bloodY, size / 2, 0, Math.PI * 2)
       ctx.fill()
-      
+
       // Splatter effect
       ctx.save()
       ctx.globalAlpha = 0.6
@@ -960,21 +961,21 @@ export default function EnhancedFightCanvas({
 
   const drawHeavyBreathing = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
     const time = Date.now() * 0.005
-    
+
     for (let i = 0; i < 4; i++) {
       const cloudX = x + (Math.random() - 0.5) * 25
       const cloudY = y + i * 8 + Math.sin(time + i) * 4
       const alpha = 0.4 + Math.sin(time * 2 + i) * 0.2
-      
+
       ctx.save()
       ctx.globalAlpha = alpha
-      ctx.fillStyle = 'rgba(255,255,255,0.8)'
-      
+      ctx.fillStyle = rgba(COLORS.white, 0.8)
+
       // Breath cloud
       ctx.beginPath()
       ctx.arc(cloudX, cloudY, 4 + Math.sin(time + i) * 2, 0, Math.PI * 2)
       ctx.fill()
-      
+
       ctx.restore()
     }
   }
@@ -990,11 +991,11 @@ export default function EnhancedFightCanvas({
   ) => {
     // Enhanced name plate with background
     const nameWidth = ctx.measureText(fighter.name).width + 20
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'
+    ctx.fillStyle = BARS.namePlate
     ctx.fillRect(x - nameWidth/2, y - 25, nameWidth, 20)
-    
+
     ctx.fillStyle = color
-    ctx.font = 'bold 12px monospace'
+    ctx.font = '12px "Press Start 2P"'
     ctx.textAlign = 'center'
     ctx.fillText(fighter.name, x, y - 10)
 
@@ -1005,7 +1006,7 @@ export default function EnhancedFightCanvas({
     const hpY = y - 5
 
     // Background
-    ctx.fillStyle = '#1a1a26'
+    ctx.fillStyle = BARS.hpBackground
     ctx.fillRect(barX, hpY, barWidth, barHeight)
 
     // HP segments (each segment = 20 HP)
@@ -1013,11 +1014,11 @@ export default function EnhancedFightCanvas({
       const segmentWidth = barWidth / 5
       const segmentX = barX + i * segmentWidth
       const segmentHP = Math.max(0, fighterState.hp - i * 20)
-      
+
       if (segmentHP > 0) {
         const segmentFill = Math.min(1, segmentHP / 20)
-        const segmentColor = segmentHP > 10 ? color : '#ff4444'
-        
+        const segmentColor = segmentHP > 10 ? color : BARS.hpLow
+
         ctx.fillStyle = segmentColor
         ctx.fillRect(segmentX + 1, hpY + 1, (segmentWidth - 2) * segmentFill, barHeight - 2)
       }
@@ -1030,18 +1031,18 @@ export default function EnhancedFightCanvas({
 
     // Stamina bar (smaller, below HP)
     const stamY = hpY + barHeight + 3
-    ctx.fillStyle = '#333'
+    ctx.fillStyle = BARS.staminaBackground
     ctx.fillRect(barX, stamY, barWidth, 4)
-    
+
     const stamWidth = (fighterState.stamina / 100) * barWidth
-    ctx.fillStyle = '#44aaff'
+    ctx.fillStyle = BARS.staminaFill
     ctx.fillRect(barX, stamY, stamWidth, 4)
   }
 
   const drawVisualEffects = (ctx: CanvasRenderingContext2D) => {
     visualEffects.forEach(effect => {
       ctx.save()
-      
+
       switch (effect.type) {
         case 'impact':
           drawImpactEffect(ctx, effect)
@@ -1068,7 +1069,7 @@ export default function EnhancedFightCanvas({
           // Slow motion effect handled by animation timing
           break
       }
-      
+
       ctx.restore()
     })
   }
@@ -1076,27 +1077,27 @@ export default function EnhancedFightCanvas({
   const drawImpactEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const radius = 40 * effect.intensity
     const time = Date.now() * 0.01
-    
+
     // Main impact burst
     const gradient = ctx.createRadialGradient(effect.x, effect.y, 0, effect.x, effect.y, radius)
-    gradient.addColorStop(0, `rgba(255,255,255,${effect.intensity})`)
-    gradient.addColorStop(0.3, `rgba(255,200,0,${effect.intensity * 0.8})`)
-    gradient.addColorStop(0.7, `rgba(255,68,68,${effect.intensity * 0.6})`)
-    gradient.addColorStop(1, 'rgba(255,68,68,0)')
-    
+    gradient.addColorStop(0, FX.impactCenter(effect.intensity))
+    gradient.addColorStop(0.3, FX.impactMid(effect.intensity))
+    gradient.addColorStop(0.7, FX.impactOuter(effect.intensity))
+    gradient.addColorStop(1, FX.impactEdge)
+
     ctx.fillStyle = gradient
     ctx.beginPath()
     ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2)
     ctx.fill()
-    
+
     // Dynamic impact lines
-    ctx.strokeStyle = `rgba(255,255,255,${effect.intensity})`
+    ctx.strokeStyle = FX.impactLines(effect.intensity)
     ctx.lineWidth = 3
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2 + time * 0.1
       const startRadius = radius * 0.2
       const endRadius = radius * (0.6 + Math.sin(time + i) * 0.2)
-      
+
       ctx.beginPath()
       ctx.moveTo(
         effect.x + Math.cos(angle) * startRadius,
@@ -1108,34 +1109,34 @@ export default function EnhancedFightCanvas({
       )
       ctx.stroke()
     }
-    
+
     // Screen flash effect for heavy impacts
     if (effect.intensity > 0.8) {
-      ctx.fillStyle = `rgba(255,255,255,${(effect.intensity - 0.8) * 0.1})`
+      ctx.fillStyle = FX.impactFlash(effect.intensity)
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
     }
   }
 
   const drawSparksEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const time = Date.now() * 0.005
-    
+
     for (let i = 0; i < 15; i++) {
       const angle = Math.random() * Math.PI * 2
       const distance = Math.random() * 50 * effect.intensity
       const sparkX = effect.x + Math.cos(angle + time) * distance
       const sparkY = effect.y + Math.sin(angle + time) * distance
       const size = 1 + Math.random() * 3
-      
+
       // Spark trail
-      ctx.strokeStyle = `rgba(255,255,0,${effect.intensity * 0.8})`
+      ctx.strokeStyle = FX.sparkTrail(effect.intensity)
       ctx.lineWidth = size
       ctx.beginPath()
       ctx.moveTo(sparkX, sparkY)
       ctx.lineTo(sparkX - Math.cos(angle) * 8, sparkY - Math.sin(angle) * 8)
       ctx.stroke()
-      
+
       // Spark core
-      ctx.fillStyle = `rgba(255,255,255,${effect.intensity})`
+      ctx.fillStyle = FX.sparkCore(effect.intensity)
       ctx.beginPath()
       ctx.arc(sparkX, sparkY, size / 2, 0, Math.PI * 2)
       ctx.fill()
@@ -1145,23 +1146,23 @@ export default function EnhancedFightCanvas({
   const drawBloodEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const gravity = 0.5
     const time = (Date.now() % effect.duration) / effect.duration
-    
+
     for (let i = 0; i < 12; i++) {
       const initialVelX = (Math.random() - 0.5) * 8
       const initialVelY = -Math.random() * 6
-      
+
       const dropX = effect.x + initialVelX * time + (Math.random() - 0.5) * 20
       const dropY = effect.y + initialVelY * time + 0.5 * gravity * time * time * 100
       const size = 1 + Math.random() * 3
-      
-      ctx.fillStyle = `rgba(150,0,0,${effect.intensity * (1 - time)})`
+
+      ctx.fillStyle = FX.bloodDrop(effect.intensity, time)
       ctx.beginPath()
       ctx.arc(dropX, dropY, size, 0, Math.PI * 2)
       ctx.fill()
-      
+
       // Blood trail
       if (time > 0.2) {
-        ctx.strokeStyle = `rgba(100,0,0,${effect.intensity * 0.4})`
+        ctx.strokeStyle = FX.bloodTrail(effect.intensity)
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(dropX, dropY)
@@ -1173,16 +1174,16 @@ export default function EnhancedFightCanvas({
 
   const drawStarsEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const time = Date.now() * 0.005
-    ctx.fillStyle = `rgba(255,255,0,${effect.intensity})`
-    ctx.font = 'bold 20px serif'
+    ctx.fillStyle = FX.starColor(effect.intensity)
+    ctx.font = 'bold 20px "Press Start 2P"'
     ctx.textAlign = 'center'
-    
+
     for (let i = 0; i < 5; i++) {
       const starX = effect.x + (i - 2) * 25 + Math.sin(time * 2 + i) * 10
       const starY = effect.y + Math.sin(time * 3 + i) * 15
       const rotation = time + i
-      const scale = 0.8 + Math.sin(time * 4 + i) * 0.3
-      
+      const scale = Math.round(0.8 + Math.sin(time * 4 + i) * 0.3)
+
       ctx.save()
       ctx.translate(starX, starY)
       ctx.rotate(rotation)
@@ -1195,27 +1196,27 @@ export default function EnhancedFightCanvas({
   const drawBlockFlashEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const time = Date.now() * 0.02
     const flashIntensity = effect.intensity * (1 - Math.sin(time))
-    
+
     // Block shield effect
-    ctx.strokeStyle = `rgba(0,100,255,${flashIntensity})`
+    ctx.strokeStyle = FX.blockShield(flashIntensity)
     ctx.lineWidth = 4
     ctx.beginPath()
     ctx.arc(effect.x, effect.y, 30, 0, Math.PI * 2)
     ctx.stroke()
-    
+
     // Inner glow
-    ctx.fillStyle = `rgba(200,200,255,${flashIntensity * 0.3})`
+    ctx.fillStyle = FX.blockGlow(flashIntensity)
     ctx.beginPath()
     ctx.arc(effect.x, effect.y, 25, 0, Math.PI * 2)
     ctx.fill()
-    
+
     // Block sparks
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2
       const sparkX = effect.x + Math.cos(angle) * 35
       const sparkY = effect.y + Math.sin(angle) * 35
-      
-      ctx.fillStyle = `rgba(255,255,255,${flashIntensity})`
+
+      ctx.fillStyle = FX.blockSparks(flashIntensity)
       ctx.beginPath()
       ctx.arc(sparkX, sparkY, 2, 0, Math.PI * 2)
       ctx.fill()
@@ -1225,37 +1226,38 @@ export default function EnhancedFightCanvas({
   const drawComboExplosionEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const time = Date.now() * 0.01
     const explosionRadius = 60 * effect.intensity
-    
+
     // Multiple explosion rings
     for (let ring = 0; ring < 3; ring++) {
       const ringRadius = explosionRadius * (0.3 + ring * 0.35)
       const ringAlpha = effect.intensity * (1 - ring * 0.3) * Math.sin(time * 2 + ring)
-      
-      ctx.strokeStyle = `rgba(255,100,0,${ringAlpha})`
+
+      ctx.strokeStyle = FX.comboRing(ringAlpha)
       ctx.lineWidth = 5 - ring
       ctx.beginPath()
       ctx.arc(effect.x, effect.y, ringRadius, 0, Math.PI * 2)
       ctx.stroke()
     }
-    
+
     // Combo text effect
-    ctx.fillStyle = `rgba(255,255,0,${effect.intensity})`
-    ctx.font = 'bold 24px monospace'
+    ctx.fillStyle = FX.comboText(effect.intensity)
+    ctx.font = 'bold 24px "Press Start 2P"'
     ctx.textAlign = 'center'
     ctx.save()
     ctx.translate(effect.x, effect.y - 40)
-    ctx.scale(1 + Math.sin(time * 5) * 0.2, 1 + Math.sin(time * 5) * 0.2)
+    const comboScale = Math.round(1 + Math.sin(time * 5) * 0.2)
+    ctx.scale(comboScale, comboScale)
     ctx.fillText('COMBO!', 0, 0)
     ctx.restore()
-    
+
     // Explosion particles
     for (let i = 0; i < 20; i++) {
       const angle = (i / 20) * Math.PI * 2
       const distance = explosionRadius * (0.5 + Math.sin(time * 3 + i) * 0.5)
       const particleX = effect.x + Math.cos(angle) * distance
       const particleY = effect.y + Math.sin(angle) * distance
-      
-      ctx.fillStyle = `rgba(255,${100 + Math.sin(time + i) * 100},0,${effect.intensity})`
+
+      ctx.fillStyle = FX.comboParticle(effect.intensity, Math.sin(time + i))
       ctx.beginPath()
       ctx.arc(particleX, particleY, 3, 0, Math.PI * 2)
       ctx.fill()
@@ -1265,34 +1267,34 @@ export default function EnhancedFightCanvas({
   const drawScreenShakeEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const time = Date.now() * 0.01
     const shakeIntensity = effect.intensity * 15
-    
+
     // Apply camera shake by translating the entire canvas context
     const offsetX = Math.sin(time * 30) * shakeIntensity * (1 - (Date.now() % effect.duration) / effect.duration)
     const offsetY = Math.cos(time * 35) * shakeIntensity * 0.6 * (1 - (Date.now() % effect.duration) / effect.duration)
-    
+
     ctx.translate(offsetX, offsetY)
-    
+
     // Add a subtle flash overlay for heavy impacts
     const flashAlpha = effect.intensity * 0.1 * (1 - (Date.now() % effect.duration) / effect.duration)
-    ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`
+    ctx.fillStyle = FX.shakeFlash(flashAlpha)
     ctx.fillRect(-offsetX, -offsetY, ctx.canvas.width, ctx.canvas.height)
   }
 
   const drawRoundProgressHUD = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const hudY = 30
-    
+
     // Round timer background
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'
+    ctx.fillStyle = HUD.roundTimerBg
     ctx.fillRect(width/2 - 80, hudY - 15, 160, 30)
-    
+
     // Round number and time
-    ctx.fillStyle = '#ffd700'
-    ctx.font = 'bold 16px monospace'
+    ctx.fillStyle = HUD.roundNumber
+    ctx.font = 'bold 16px "Press Start 2P"'
     ctx.textAlign = 'center'
     ctx.fillText(`ROUND ${fightState.round}`, width/2, hudY - 2)
-    
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '14px monospace'
+
+    ctx.fillStyle = HUD.timerText
+    ctx.font = '14px "Inter"'
     const timeLeft = Math.max(0, 180 - fightState.clock) // 3 minute rounds
     const minutes = Math.floor(timeLeft / 60)
     const seconds = timeLeft % 60
@@ -1303,96 +1305,96 @@ export default function EnhancedFightCanvas({
     const indicatorY = height - 80
     const indicatorWidth = 250
     const indicatorX = width/2 - indicatorWidth/2
-    
+
     // Calculate momentum based on HP difference
     const f1HP = fightState.fighter1?.hp || 100
     const f2HP = fightState.fighter2?.hp || 100
     const momentum = (f1HP - f2HP) / 100 // -1 to 1 range
-    
+
     // Calculate fight intensity
     const avgHP = (f1HP + f2HP) / 2
     const fightIntensity = 1 - (avgHP / 100)
     const time = Date.now() * 0.001
-    
+
     // Enhanced background with pulse
     const bgAlpha = 0.7 + Math.sin(time * 2) * fightIntensity * 0.2
-    ctx.fillStyle = `rgba(0,0,0,${bgAlpha})`
+    ctx.fillStyle = rgba(COLORS.black, bgAlpha)
     ctx.fillRect(indicatorX - 10, indicatorY - 25, indicatorWidth + 20, 50)
-    
+
     // Fight intensity indicator
-    ctx.fillStyle = '#ffd700'
-    ctx.font = 'bold 10px monospace'
+    ctx.fillStyle = HUD.intensityLabel
+    ctx.font = 'bold 10px "Inter"'
     ctx.textAlign = 'center'
     ctx.fillText('FIGHT INTENSITY', width/2, indicatorY - 15)
-    
+
     // Intensity bar (pulsing)
     const intensityBarWidth = indicatorWidth * 0.8
     const intensityX = width/2 - intensityBarWidth/2
-    
-    ctx.fillStyle = 'rgba(30,30,40,0.8)'
+
+    ctx.fillStyle = HUD.intensityBarBg
     ctx.fillRect(intensityX, indicatorY - 8, intensityBarWidth, 6)
-    
+
     const intensityFill = intensityBarWidth * fightIntensity
     const pulseIntensity = 1 + Math.sin(time * 8) * fightIntensity * 0.3
-    
+
     // Dynamic color based on intensity
     if (fightIntensity < 0.3) {
-      ctx.fillStyle = `rgba(100,200,100,${pulseIntensity})`
+      ctx.fillStyle = HUD.intensityLow(pulseIntensity)
     } else if (fightIntensity < 0.7) {
-      ctx.fillStyle = `rgba(255,200,0,${pulseIntensity})`
+      ctx.fillStyle = HUD.intensityMid(pulseIntensity)
     } else {
-      ctx.fillStyle = `rgba(255,50,50,${pulseIntensity})`
+      ctx.fillStyle = HUD.intensityHigh(pulseIntensity)
       // Add glow for high intensity
       ctx.shadowBlur = 10
-      ctx.shadowColor = '#ff3333'
+      ctx.shadowColor = HUD.intensityGlow
     }
-    
+
     ctx.fillRect(intensityX, indicatorY - 8, intensityFill, 6)
     ctx.shadowBlur = 0
-    
+
     // Momentum bar
     const centerX = indicatorX + indicatorWidth/2
     const momentumWidth = Math.abs(momentum) * (indicatorWidth/2)
-    
+
     if (momentum > 0) {
-      ctx.fillStyle = '#44ff44'
+      ctx.fillStyle = HUD.momentumPositive
       ctx.fillRect(centerX, indicatorY + 5, momentumWidth, 10)
     } else {
-      ctx.fillStyle = '#ff4444'
+      ctx.fillStyle = HUD.momentumNegative
       ctx.fillRect(centerX - momentumWidth, indicatorY + 5, momentumWidth, 10)
     }
-    
+
     // Center line with pulse
-    ctx.strokeStyle = `rgba(255,255,255,${0.8 + Math.sin(time * 4) * 0.2})`
+    ctx.strokeStyle = HUD.centerLine(Math.sin(time * 4))
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.moveTo(centerX, indicatorY)
     ctx.lineTo(centerX, indicatorY + 15)
     ctx.stroke()
-    
+
     // Labels with excitement scaling
     const labelScale = 1 + fightIntensity * 0.1
     ctx.save()
     ctx.scale(labelScale, labelScale)
-    
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 10px monospace'
+
+    ctx.fillStyle = HUD.labelText
+    ctx.font = 'bold 10px "Inter"'
     ctx.textAlign = 'left'
     ctx.fillText(fighters[0]?.name || 'Fighter 1', (indicatorX - 5) / labelScale, (indicatorY + 35) / labelScale)
     ctx.textAlign = 'right'
     ctx.fillText(fighters[1]?.name || 'Fighter 2', (indicatorX + indicatorWidth + 5) / labelScale, (indicatorY + 35) / labelScale)
-    
+
     ctx.restore()
-    
+
     // Add "CROWD ON THEIR FEET!" text when intensity is very high
     if (fightIntensity > 0.8) {
-      ctx.fillStyle = `rgba(255,255,0,${Math.sin(time * 6) * 0.5 + 0.5})`
-      ctx.font = 'bold 12px monospace'
+      ctx.fillStyle = HUD.crowdTextHigh(Math.sin(time * 6) * 0.5 + 0.5)
+      ctx.font = 'bold 12px "Press Start 2P"'
       ctx.textAlign = 'center'
       ctx.fillText('CROWD ON THEIR FEET!', width/2, indicatorY + 55)
     } else if (fightIntensity > 0.5) {
-      ctx.fillStyle = `rgba(255,200,0,${Math.sin(time * 4) * 0.3 + 0.7})`
-      ctx.font = '10px monospace'
+      ctx.fillStyle = HUD.crowdTextMid(Math.sin(time * 4) * 0.3 + 0.7)
+      ctx.font = '10px "Inter"'
       ctx.textAlign = 'center'
       ctx.fillText('The tension is building...', width/2, indicatorY + 50)
     }
@@ -1405,7 +1407,7 @@ export default function EnhancedFightCanvas({
         className="w-full h-full block"
         style={{ imageRendering: 'pixelated' }}
       />
-      
+
       {/* Round Card Overlay */}
       <AnimatePresence>
         {showRoundCard && (
@@ -1416,7 +1418,7 @@ export default function EnhancedFightCanvas({
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gradient-to-br from-red-600 to-red-800 text-white p-8 rounded-lg text-center shadow-2xl"
+              className="bg-gradient-to-br from-red-600 to-red-800 text-white p-8 text-center shadow-2xl"
               initial={{ scale: 0, rotate: -10 }}
               animate={{ scale: 1, rotate: 0 }}
               exit={{ scale: 0, rotate: 10 }}
@@ -1435,7 +1437,7 @@ export default function EnhancedFightCanvas({
           {roundEvents.slice(0, 3).map((event, index) => (
             <motion.div
               key={event.id}
-              className={`mb-2 p-2 rounded text-sm font-pixel ${
+              className={`mb-2 p-2 text-sm font-pixel ${
                 event.severity === 'high' ? 'bg-red-600/80 text-white' :
                 event.severity === 'medium' ? 'bg-yellow-600/80 text-white' :
                 'bg-gray-600/80 text-white'
@@ -1452,7 +1454,7 @@ export default function EnhancedFightCanvas({
       </div>
 
       {/* Round Stats Display */}
-      <div className="absolute top-20 right-4 bg-black/70 text-white p-3 rounded text-xs font-mono">
+      <div className="absolute top-20 right-4 bg-black/70 text-white p-3 text-xs font-pixel">
         <div className="font-pixel text-sm mb-2">ROUND STATS</div>
         {Object.entries(roundStats).slice(-3).map(([round, stats]) => (
           <div key={round} className="mb-1">
