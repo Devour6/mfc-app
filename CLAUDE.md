@@ -15,7 +15,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 | Rendering | HTML5 Canvas (pixel-art fight visuals) |
 | Audio | Web Audio API via custom SoundManager |
 | Database | PostgreSQL 16 via Prisma 7.4 + `@prisma/adapter-pg` (connected, migrated, seeded) |
-| Auth | Auth0 (middleware exists, currently disabled) |
+| Auth | Auth0 (proxy.ts exists, currently disabled) |
 | Fonts | Press Start 2P (pixel), Inter (UI) |
 | Build | Turbopack |
 
@@ -204,11 +204,7 @@ These settings should be configured by the repo admin on the `main` branch:
 
 Jest 30 with two projects:
 - **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
-<<<<<<< HEAD
 - **api** (`node`) — API route integration tests in `__tests__/api/` (44 tests, all passing)
-=======
-- **api** (`node`) — API route integration tests in `__tests__/api/` (42 tests, all passing)
->>>>>>> d26a26d (feat: Scaffold Solana wallet adapter + credit bridge)
 
 API tests mock the Prisma client (`__tests__/api/helpers.ts`) and test route handlers directly.
 
