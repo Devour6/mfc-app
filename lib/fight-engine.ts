@@ -7,6 +7,8 @@ export class FightEngine {
   private onCommentary?: (comment: Commentary) => void
   private simulationSpeed: number = 80 // ms between ticks
   private intervalId?: NodeJS.Timeout
+  private tickCounter: number = 0
+  private ticksPerSecond: number = 12 // 1000ms / 80ms ≈ 12.5, round to 12
 
   constructor(
     fighter1: Fighter,
@@ -66,6 +68,7 @@ export class FightEngine {
     this.fightState.fighter2.stamina = 100
     this.resetFighterState(this.fightState.fighter1)
     this.resetFighterState(this.fightState.fighter2)
+    this.tickCounter = 0
     this.commentary = []
     this.start()
   }
@@ -425,8 +428,12 @@ export class FightEngine {
   }
 
   private checkFightEnd(): void {
-    this.fightState.clock--
-    
+    this.tickCounter++
+    if (this.tickCounter >= this.ticksPerSecond) {
+      this.tickCounter = 0
+      this.fightState.clock--
+    }
+
     if (this.fightState.clock <= 0) {
       if (this.fightState.round < this.fightState.maxRounds) {
         this.nextRound()
@@ -439,6 +446,7 @@ export class FightEngine {
   private nextRound(): void {
     this.fightState.round++
     this.fightState.clock = 180
+    this.tickCounter = 0
     
     // Rest between rounds
     this.fightState.fighter1.stamina = Math.min(100, this.fightState.fighter1.stamina + 30)

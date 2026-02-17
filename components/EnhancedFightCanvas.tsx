@@ -438,12 +438,17 @@ export default function EnhancedFightCanvas({
     const fightIntensity = 1 - (Math.min(fightState.fighter1?.hp || 100, fightState.fighter2?.hp || 100) / 100)
     const crowdExcitement = 0.3 + fightIntensity * 0.7
     
-    // Animated crowd silhouettes in background
-    ctx.fillStyle = `rgba(20,20,30,${0.4 + crowdExcitement * 0.3})`
+    // Animated crowd silhouettes in background — smooth gradient to avoid blocky artifacts
     for (let i = 0; i < width; i += 20) {
       const baseHeight = 40 + Math.sin(i * 0.1) * 15
       const animatedHeight = baseHeight + Math.sin(time * 3 + i * 0.1) * crowdExcitement * 10
-      ctx.fillRect(i, height * 0.15, 15, animatedHeight)
+      const crowdY = height * 0.35
+      const alpha = 0.15 + crowdExcitement * 0.15
+      const crowdGrad = ctx.createLinearGradient(i, crowdY, i, crowdY + animatedHeight)
+      crowdGrad.addColorStop(0, `rgba(20,20,30,${alpha})`)
+      crowdGrad.addColorStop(1, 'rgba(20,20,30,0)')
+      ctx.fillStyle = crowdGrad
+      ctx.fillRect(i, crowdY, 15, animatedHeight)
     }
 
     // Stadium atmosphere - camera flashes
@@ -532,11 +537,6 @@ export default function EnhancedFightCanvas({
         (Math.random() - 0.5) * shakeIntensity
       )
       ctx.globalAlpha = 0.8
-      ctx.filter = 'brightness(2.0) saturate(1.5)'
-      
-      // Flash effect
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'
-      ctx.fillRect(0, 0, width, height)
     }
 
     // Camera shake for knockdowns
@@ -1293,7 +1293,7 @@ export default function EnhancedFightCanvas({
     
     ctx.fillStyle = '#ffffff'
     ctx.font = '14px monospace'
-    const timeLeft = Math.max(0, 180 - fightState.clock) // 3 minute rounds
+    const timeLeft = Math.max(0, fightState.clock) // countdown from 180
     const minutes = Math.floor(timeLeft / 60)
     const seconds = timeLeft % 60
     ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')}`, width/2, hudY + 12)
