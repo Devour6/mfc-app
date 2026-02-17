@@ -36,7 +36,8 @@ lib/                  → Core engines (~3,400 lines)
   ├── store.ts              → Zustand state management
   ├── prisma.ts             → Prisma client singleton (uses pg adapter)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
-  └── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
+  ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
+  └── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
 types/index.ts        → Comprehensive type definitions (~370 lines)
 prisma/schema.prisma  → DB models: User, Fighter, Training, Fight, FightResult, Bet
 prisma.config.ts      → Prisma 7 config (holds DATABASE_URL for migrations)
