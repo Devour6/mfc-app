@@ -41,6 +41,7 @@ lib/                  → Core engines (~3,400 lines)
   ├── auth0.ts              → Auth0Client instance (v4, server-side)
   ├── auth-guard.ts         → requireAuth() — throws AuthRequiredError if no session
   ├── user-sync.ts          → ensureUser() — upsert User record on first login
+  ├── rate-limit.ts         → In-memory sliding window rate limiter (RateLimiter class + helpers)
   └── solana/               → Solana wallet integration
       ├── wallet-provider.tsx  → React context (ConnectionProvider + WalletProvider + WalletModalProvider)
       ├── use-wallet.ts        → Custom hook: connect/disconnect/balance/signAndSend
