@@ -15,7 +15,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 | Rendering | HTML5 Canvas (pixel-art fight visuals) |
 | Audio | Web Audio API via custom SoundManager |
 | Database | PostgreSQL 16 via Prisma 7.4 + `@prisma/adapter-pg` (connected, migrated, seeded) |
-| Auth | Auth0 (proxy.ts exists, currently disabled) |
+| Auth | Auth0 v4 (@auth0/nextjs-auth0 v4.15.0) — proxy.ts + lib/auth-guard.ts |
 | Fonts | Press Start 2P (pixel), Inter (UI) |
 | Build | Turbopack |
 
@@ -38,6 +38,9 @@ lib/                  → Core engines (~3,400 lines)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
   ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
   ├── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
+  ├── auth0.ts              → Auth0Client instance (v4, server-side)
+  ├── auth-guard.ts         → requireAuth() — throws AuthRequiredError if no session
+  ├── user-sync.ts          → ensureUser() — upsert User record on first login
   └── solana/               → Solana wallet integration
       ├── wallet-provider.tsx  → React context (ConnectionProvider + WalletProvider + WalletModalProvider)
       ├── use-wallet.ts        → Custom hook: connect/disconnect/balance/signAndSend
@@ -114,7 +117,7 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 
 **Fight status transitions:** SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED. All other transitions are rejected.
 
-All routes use `lib/api-utils.ts` for consistent response formatting. Auth middleware migrated to `proxy.ts` (Next.js 16 convention) but is currently disabled — routes are unprotected.
+All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 middleware active in `proxy.ts`. Protect API routes with `requireAuth()` from `lib/auth-guard.ts`.
 
 ## What Works (Prototype Status)
 
@@ -132,14 +135,14 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth middl
 
 **Backend (In Progress):**
 - PostgreSQL 16 connected locally, migrated, and seeded with sample data
-- API routes exist for all entities with zod validation (need auth guards)
+- API routes exist for all entities with zod validation
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
-- Auth0 proxy exists but disabled (migrated from middleware.ts to proxy.ts for Next.js 16)
+- Auth0 v4 integrated: proxy.ts active, requireAuth() guard ready, user-sync upsert ready
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
 - 44 API integration tests covering all route handlers
 
 **Not Yet Built:**
-- Auth0 authentication flow (middleware disabled, routes unprotected)
+- Auth0 auth guards on individual API routes (requireAuth() is ready but not yet applied to route handlers)
 - Stripe payment integration
 - Solana wallet integration (scaffold built: provider, hook, credit bridge — needs frontend wiring + mainnet config)
 - Multiplayer (mock data only)
