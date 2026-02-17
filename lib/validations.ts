@@ -127,6 +127,14 @@ export const creditTransactionSchema = z.object({
   description: z.string().max(200).optional(),
 })
 
+// ─── Agents ────────────────────────────────────────────────────────────────
+
+export const registerAgentSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be at most 50 characters'),
+  description: z.string().max(500).optional(),
+  moltbookToken: z.string().optional(),
+})
+
 // ─── Stripe ────────────────────────────────────────────────────────────────
 
 export const checkoutSessionSchema = z.object({

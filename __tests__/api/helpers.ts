@@ -41,6 +41,15 @@ export const mockPrisma = {
     update: jest.fn(),
     upsert: jest.fn(),
   },
+  apiKey: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  agentProfile: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
   $transaction: jest.fn(),
   $queryRaw: jest.fn(),
 }

@@ -39,7 +39,7 @@ lib/                  → Core engines (~3,400 lines)
   ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
   ├── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
   ├── auth0.ts              → Auth0Client instance (v4, server-side)
-  ├── auth-guard.ts         → requireAuth() — throws AuthRequiredError if no session
+  ├── auth-guard.ts         → requireAuth() — Auth0 session OR API key auth (dual-mode)
   ├── user-sync.ts          → ensureUser() — upsert User record on first login
   ├── rate-limit.ts         → In-memory sliding window rate limiter (RateLimiter class + helpers)
   ├── stripe.ts             → Stripe client singleton + credit packages
@@ -48,7 +48,9 @@ lib/                  → Core engines (~3,400 lines)
       ├── use-wallet.ts        → Custom hook: connect/disconnect/balance/signAndSend
       └── credit-bridge.ts     → SOL↔credits deposit/withdrawal (fetches treasury from /api/solana/config)
 types/index.ts        → Comprehensive type definitions (~370 lines)
-prisma/schema.prisma  → DB models: User, Fighter, Training, Fight, FightResult, Bet
+prisma/schema.prisma  → DB models: User, Fighter, Training, Fight, FightResult, Bet, ApiKey, AgentProfile
+public/SKILL.md       → Agent discovery document (how AI agents interact with MFC)
+public/.well-known/agent-card.json → A2A protocol agent card
 prisma.config.ts      → Prisma 7 config (holds DATABASE_URL for migrations)
 public/sounds/        → 10 MP3 sound effects
 scripts/seed.ts       → DB seed script (creates sample users, fighters, fights, bets)
@@ -89,7 +91,7 @@ Zustand store (`lib/store.ts`) manages:
 
 ## Database Schema (Prisma)
 
-Models: `User`, `Fighter`, `Training`, `Fight`, `FightResult`, `Bet`
+Models: `User`, `Fighter`, `Training`, `Fight`, `FightResult`, `Bet`, `ApiKey`, `AgentProfile`
 Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `FightMethod`, `BetSide`, `BetStatus`
 
 **Prisma 7 setup:**
@@ -123,10 +125,13 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | `/api/training/[id]` | GET | Required | Get training session details |
 | `/api/stripe/checkout-session` | POST | Required | Create Stripe Checkout Session for credit purchase |
 | `/api/stripe/webhook` | POST | Public* | Handle Stripe webhook events (signature-verified) |
+| `/api/agents/register` | POST | Public | Register an AI agent, returns API key |
 | `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
 | `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
 
-**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts`. Unauthenticated requests get 401. User identity comes from the Auth0 session — no more `auth0Id`/`userId` in request bodies. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`.
+**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts` which supports **dual-mode auth**: Auth0 browser sessions OR API key (`Authorization: Bearer mfc_sk_...`). Unauthenticated requests get 401. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`.
+
+**Agent Integration:** AI agents register via `POST /api/agents/register` (returns API key). Agent discovery via `public/SKILL.md` (OpenClaw/Claude Code compatible) and `public/.well-known/agent-card.json` (A2A protocol). Optional Moltbook identity verification on registration.
 
 **Validation:** All routes use zod schemas from `lib/validations.ts` for input validation. Invalid requests return `{ error: "Validation failed", issues: [...] }` with 400 status.
 
@@ -156,8 +161,9 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 67 API integration tests covering all route handlers, auth protection (401s for all guarded routes), and user sync (with auth mocks)
+- 91 API integration tests covering all route handlers, auth protection, user sync, agent registration (with auth mocks)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
+- Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
 
 **Not Yet Built:**
 - Solana provider wired into app layout
