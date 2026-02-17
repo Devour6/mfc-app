@@ -79,8 +79,9 @@ app/api/              → API routes (see API Routes section below)
 Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
-- Currently uses mock data (2 sample fighters on startup)
-- Persists to localStorage
+- API-reactive: `hydrateFromApi()` fetches user/fighters/credits from backend on init
+- Falls back to sample fighters + localStorage when API unavailable
+- Persists to localStorage (offline-first)
 
 ## Database Schema (Prisma)
 
