@@ -234,10 +234,10 @@ export default function LiveFightSection({
         />
       )}
 
-      {/* Main Fight Layout - Improved mobile layout */}
-      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_380px] overflow-hidden">
+      {/* Main Fight Layout - Responsive: stacked on mobile, sidebar on desktop */}
+      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_380px] overflow-y-auto lg:overflow-hidden">
         {/* Fight Area */}
-        <div className="flex flex-col overflow-hidden">
+        <div className="flex flex-col min-h-[50vh] lg:min-h-0 lg:overflow-hidden">
           {/* Fight Header */}
           <div className="bg-surface border-b border-border px-4 py-3 flex items-center justify-between">
             <div className="font-pixel text-xs text-gold">
@@ -339,8 +339,8 @@ export default function LiveFightSection({
           <CommentaryBar commentary={currentCommentary} />
         </div>
 
-        {/* Right Sidebar - Markets & Betting - Mobile Responsive */}
-        <div className="lg:flex flex-col overflow-hidden bg-surface lg:border-l border-border hidden lg:block">
+        {/* Right Sidebar - Markets & Betting - Always visible */}
+        <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
           {/* Live Betting Interface */}
           <div className="border-b border-border p-4">
             <LiveBettingInterface
@@ -367,20 +367,6 @@ export default function LiveFightSection({
           </div>
         </div>
 
-        {/* Mobile Betting Drawer */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border p-4 z-10">
-          <LiveBettingInterface
-            fightState={fightState}
-            fighters={sampleFighters}
-            creditBalance={5000}
-            onPlaceBet={(bet) => {
-              console.log('Bet placed:', bet)
-            }}
-            onMarketUpdate={(marketId) => {
-              console.log('Market updated:', marketId)
-            }}
-          />
-        </div>
       </div>
     </div>
   )
