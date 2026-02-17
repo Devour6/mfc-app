@@ -14,9 +14,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const fight = await prisma.fight.findUnique({
       where: { id },
       include: {
-        fighter1: true,
-        fighter2: true,
-        result: true,
+        fighter1: { select: { id: true, name: true, emoji: true, elo: true, class: true, wins: true, losses: true, draws: true } },
+        fighter2: { select: { id: true, name: true, emoji: true, elo: true, class: true, wins: true, losses: true, draws: true } },
+        result: { select: { id: true, method: true, round: true, time: true, winnerId: true, fighter1EloChange: true, fighter2EloChange: true } },
         bets: { select: { id: true, side: true, amount: true, status: true } },
       },
     })
