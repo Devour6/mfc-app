@@ -264,6 +264,7 @@ export default function EnhancedFightCanvas({
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    ctx.imageSmoothingEnabled = false
 
     const resizeCanvas = () => {
       const parent = canvas.parentElement

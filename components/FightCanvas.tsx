@@ -18,6 +18,7 @@ export default function FightCanvas({ fightState, fighters }: FightCanvasProps) 
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    ctx.imageSmoothingEnabled = false
 
     const resizeCanvas = () => {
       const parent = canvas.parentElement
@@ -42,6 +43,7 @@ export default function FightCanvas({ fightState, fighters }: FightCanvasProps) 
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
+    ctx.imageSmoothingEnabled = false
 
     const animate = () => {
       drawFrame(ctx, canvas.width, canvas.height)
