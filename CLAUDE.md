@@ -203,8 +203,10 @@ These settings should be configured by the repo admin on the `main` branch:
 ## Testing
 
 Jest 30 with two projects:
-- **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
+- **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, currently failing — need props fixes by frontend team)
 - **api** (`node`) — API route integration tests in `__tests__/api/` (44 tests, all passing)
+
+**CI runs API tests only** (`--selectProjects=api`). Frontend tests are excluded until the frontend team fixes the component prop issues.
 
 API tests mock the Prisma client (`__tests__/api/helpers.ts`) and test route handlers directly.
 

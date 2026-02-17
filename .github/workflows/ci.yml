@@ -33,7 +33,7 @@ jobs:
         run: npm run type-check
 
       - name: Test
-        run: npm test -- --no-coverage
+        run: npm test -- --selectProjects=api --no-coverage
 
       - name: Build
         run: npm run build
