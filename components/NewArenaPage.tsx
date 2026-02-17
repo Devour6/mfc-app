@@ -205,7 +205,7 @@ export default function NewArenaPage({
                   >
                     <Award className="w-4 h-4" />
                   </button>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white font-mono">
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white font-ui">
                     {user.achievementNotifications.filter(n => !n.seen).length}
                   </div>
                 </div>

@@ -296,7 +296,7 @@ export default function FightCanvas({ fightState, fighters }: FightCanvasProps) 
 
   const drawStarsEffect = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
     ctx.fillStyle = '#ffff00'
-    ctx.font = '16px serif'
+    ctx.font = '16px "Press Start 2P"'
     ctx.textAlign = 'center'
     
     for (let i = 0; i < 3; i++) {
@@ -316,7 +316,7 @@ export default function FightCanvas({ fightState, fighters }: FightCanvasProps) 
   ) => {
     // Name
     ctx.fillStyle = color
-    ctx.font = '12px monospace'
+    ctx.font = '12px "Press Start 2P"'
     ctx.textAlign = 'center'
     ctx.fillText(fighter.name, x, y - 15)
 
@@ -349,7 +349,7 @@ export default function FightCanvas({ fightState, fighters }: FightCanvasProps) 
     ctx.fillRect(0, statsY, width, 40)
 
     ctx.fillStyle = '#e8e8f0'
-    ctx.font = '14px monospace'
+    ctx.font = '14px "Inter"'
     ctx.textAlign = 'center'
 
     const f1Stats = `${fighters[0].name}: ${fightState.fighter1.stats.strikes}/${fightState.fighter1.stats.landed} strikes`

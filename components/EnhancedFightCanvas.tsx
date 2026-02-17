@@ -422,12 +422,12 @@ export default function EnhancedFightCanvas({
     ctx.save()
     ctx.shadowBlur = 20
     ctx.shadowColor = '#ff4444'
-    ctx.font = 'bold 36px monospace'
+    ctx.font = 'bold 36px "Press Start 2P"'
     ctx.fillStyle = 'rgba(255,68,68,0.1)'
     ctx.textAlign = 'center'
     ctx.fillText('MFC', width / 2, floorY + height * 0.1)
-    
-    ctx.font = 'bold 12px monospace'
+
+    ctx.font = 'bold 12px "Press Start 2P"'
     ctx.fillText('FIGHTING CHAMPIONSHIP', width / 2, floorY + height * 0.15)
     ctx.restore()
   }
@@ -1029,7 +1029,7 @@ export default function EnhancedFightCanvas({
     ctx.fillRect(x - nameWidth/2, y - 25, nameWidth, 20)
     
     ctx.fillStyle = color
-    ctx.font = 'bold 12px monospace'
+    ctx.font = '12px "Press Start 2P"'
     ctx.textAlign = 'center'
     ctx.fillText(fighter.name, x, y - 10)
 
@@ -1209,7 +1209,7 @@ export default function EnhancedFightCanvas({
   const drawStarsEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
     const time = Date.now() * 0.005
     ctx.fillStyle = `rgba(255,255,0,${effect.intensity})`
-    ctx.font = 'bold 20px serif'
+    ctx.font = 'bold 20px "Press Start 2P"'
     ctx.textAlign = 'center'
     
     for (let i = 0; i < 5; i++) {
@@ -1275,7 +1275,7 @@ export default function EnhancedFightCanvas({
     
     // Combo text effect
     ctx.fillStyle = `rgba(255,255,0,${effect.intensity})`
-    ctx.font = 'bold 24px monospace'
+    ctx.font = 'bold 24px "Press Start 2P"'
     ctx.textAlign = 'center'
     ctx.save()
     ctx.translate(effect.x, effect.y - 40)
@@ -1322,12 +1322,12 @@ export default function EnhancedFightCanvas({
     
     // Round number and time
     ctx.fillStyle = '#ffd700'
-    ctx.font = 'bold 16px monospace'
+    ctx.font = 'bold 16px "Press Start 2P"'
     ctx.textAlign = 'center'
     ctx.fillText(`ROUND ${fightState.round}`, width/2, hudY - 2)
-    
+
     ctx.fillStyle = '#ffffff'
-    ctx.font = '14px monospace'
+    ctx.font = '14px "Inter"'
     const timeLeft = Math.max(0, fightState.clock) // countdown from 180
     const minutes = Math.floor(timeLeft / 60)
     const seconds = timeLeft % 60
@@ -1356,7 +1356,7 @@ export default function EnhancedFightCanvas({
     
     // Fight intensity indicator
     ctx.fillStyle = '#ffd700'
-    ctx.font = 'bold 10px monospace'
+    ctx.font = 'bold 10px "Inter"'
     ctx.textAlign = 'center'
     ctx.fillText('FIGHT INTENSITY', width/2, indicatorY - 15)
     
@@ -1411,7 +1411,7 @@ export default function EnhancedFightCanvas({
     ctx.scale(labelScale, labelScale)
     
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 10px monospace'
+    ctx.font = 'bold 10px "Inter"'
     ctx.textAlign = 'left'
     ctx.fillText(fighters[0]?.name || 'Fighter 1', (indicatorX - 5) / labelScale, (indicatorY + 35) / labelScale)
     ctx.textAlign = 'right'
@@ -1422,12 +1422,12 @@ export default function EnhancedFightCanvas({
     // Add "CROWD ON THEIR FEET!" text when intensity is very high
     if (fightIntensity > 0.8) {
       ctx.fillStyle = `rgba(255,255,0,${Math.sin(time * 6) * 0.5 + 0.5})`
-      ctx.font = 'bold 12px monospace'
+      ctx.font = 'bold 12px "Press Start 2P"'
       ctx.textAlign = 'center'
       ctx.fillText('CROWD ON THEIR FEET!', width/2, indicatorY + 55)
     } else if (fightIntensity > 0.5) {
       ctx.fillStyle = `rgba(255,200,0,${Math.sin(time * 4) * 0.3 + 0.7})`
-      ctx.font = '10px monospace'
+      ctx.font = '10px "Inter"'
       ctx.textAlign = 'center'
       ctx.fillText('The tension is building...', width/2, indicatorY + 50)
     }
@@ -1487,7 +1487,7 @@ export default function EnhancedFightCanvas({
       </div>
 
       {/* Round Stats Display */}
-      <div className="absolute top-20 right-4 bg-black/70 text-white p-3 rounded text-xs font-mono">
+      <div className="absolute top-20 right-4 bg-black/70 text-white p-3 rounded text-xs font-ui">
         <div className="font-pixel text-sm mb-2">ROUND STATS</div>
         {Object.entries(roundStats).slice(-3).map(([round, stats]) => (
           <div key={round} className="mb-1">

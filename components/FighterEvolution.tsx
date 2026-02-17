@@ -59,7 +59,7 @@ export default function FighterEvolution({
           {traitIcons[trait]}
           <span className="capitalize">{trait}</span>
         </div>
-        <span className="text-text1 font-mono">{value}</span>
+        <span className="text-text1 font-ui">{value}</span>
       </div>
       <div className="w-full bg-surface2 rounded-full h-2">
         <motion.div
@@ -106,7 +106,7 @@ export default function FighterEvolution({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 text-text2">
             <Calendar className="w-4 h-4" />
-            <span className="font-mono">{evolution.age} years old</span>
+            <span className="font-ui">{evolution.age} years old</span>
           </div>
           {isPrime && (
             <div className="flex items-center gap-1 text-orange-400">
@@ -128,7 +128,7 @@ export default function FighterEvolution({
             <TrendingUp className="w-4 h-4 text-accent" />
             <span className="font-pixel text-sm text-text1">Evolution</span>
           </div>
-          <div className="text-2xl font-mono text-accent mb-1">
+          <div className="text-2xl font-ui text-accent mb-1">
             Level {evolution.evolutionLevel}
           </div>
           <div className="text-xs text-text2">
@@ -141,7 +141,7 @@ export default function FighterEvolution({
             <Trophy className="w-4 h-4 text-accent" />
             <span className="font-pixel text-sm text-text1">Win Streak</span>
           </div>
-          <div className="text-2xl font-mono text-accent mb-1">
+          <div className="text-2xl font-ui text-accent mb-1">
             {evolution.winStreak}
           </div>
           <div className="text-xs text-text2">
@@ -214,7 +214,7 @@ export default function FighterEvolution({
             {Object.entries(modifiedStats).map(([stat, value]) => (
               <div key={stat} className="text-center">
                 <div className="text-text2 capitalize">{stat}</div>
-                <div className="text-text1 font-mono">{value}</div>
+                <div className="text-text1 font-ui">{value}</div>
               </div>
             ))}
           </div>

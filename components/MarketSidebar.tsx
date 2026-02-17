@@ -162,7 +162,7 @@ export default function MarketSidebar({
                   className="absolute inset-0 bg-red/10 origin-right"
                   style={{ transform: `scaleX(${(ask.percentage || 0) / 100})` }}
                 />
-                <span className="text-red font-mono relative z-10">{ask.price.toFixed(3)}</span>
+                <span className="text-red font-ui relative z-10">{ask.price.toFixed(3)}</span>
                 <span className="text-text2 text-xs relative z-10">{ask.quantity}</span>
               </motion.div>
             ))}
@@ -189,7 +189,7 @@ export default function MarketSidebar({
                   className="absolute inset-0 bg-green/10 origin-right"
                   style={{ transform: `scaleX(${(bid.percentage || 0) / 100})` }}
                 />
-                <span className="text-green font-mono relative z-10">{bid.price.toFixed(3)}</span>
+                <span className="text-green font-ui relative z-10">{bid.price.toFixed(3)}</span>
                 <span className="text-text2 text-xs relative z-10">{bid.quantity}</span>
               </motion.div>
             ))}

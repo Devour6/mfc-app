@@ -124,7 +124,7 @@ export default function CreditsDashboard({
             </div>
           </div>
         </div>
-        <div className={`font-mono text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+        <div className={`font-ui text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
           {isPositive ? '+' : ''}{CreditEngine.formatCredits(transaction.amount)}
         </div>
       </div>
@@ -203,7 +203,7 @@ export default function CreditsDashboard({
                       {card.title}
                     </div>
                   </div>
-                  <div className={`text-2xl font-mono mb-1 ${card.color}`}>
+                  <div className={`text-2xl font-ui mb-1 ${card.color}`}>
                     {card.value}
                   </div>
                   <div className="text-xs text-text2">
@@ -246,19 +246,19 @@ export default function CreditsDashboard({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                 <div>
                   <div className="text-text2">Training</div>
-                  <div className="text-text1 font-mono">{(CreditEngine.PLATFORM_FEES.training * 100).toFixed(0)}%</div>
+                  <div className="text-text1 font-ui">{(CreditEngine.PLATFORM_FEES.training * 100).toFixed(0)}%</div>
                 </div>
                 <div>
                   <div className="text-text2">Predictions</div>
-                  <div className="text-text1 font-mono">1-2%</div>
+                  <div className="text-text1 font-ui">1-2%</div>
                 </div>
                 <div>
                   <div className="text-text2">Tournaments</div>
-                  <div className="text-text1 font-mono">{(CreditEngine.PLATFORM_FEES.tournament * 100).toFixed(0)}%</div>
+                  <div className="text-text1 font-ui">{(CreditEngine.PLATFORM_FEES.tournament * 100).toFixed(0)}%</div>
                 </div>
                 <div>
                   <div className="text-text2">Withdrawals</div>
-                  <div className="text-text1 font-mono">${CreditEngine.PLATFORM_FEES.withdrawal}</div>
+                  <div className="text-text1 font-ui">${CreditEngine.PLATFORM_FEES.withdrawal}</div>
                 </div>
               </div>
               <p className="text-xs text-text2 mt-2">

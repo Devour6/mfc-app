@@ -121,7 +121,7 @@ export default function AchievementSystem({
           <div className="mb-3">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-text2">Progress</span>
-              <span className="font-mono text-text1">
+              <span className="font-ui text-text1">
                 {achievement.progress}/{achievement.maxProgress}
               </span>
             </div>
@@ -140,7 +140,7 @@ export default function AchievementSystem({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs">
             <Gift className="w-3 h-3" />
-            <span className="text-accent font-mono">+{achievement.rewardCredits}</span>
+            <span className="text-accent font-ui">+{achievement.rewardCredits}</span>
             <span className="text-text2">credits</span>
           </div>
           
@@ -180,7 +180,7 @@ export default function AchievementSystem({
           </p>
           <div className="flex items-center gap-1 text-xs">
             <Gift className="w-3 h-3 text-accent" />
-            <span className="text-accent font-mono">+{notification.achievement.rewardCredits} credits</span>
+            <span className="text-accent font-ui">+{notification.achievement.rewardCredits} credits</span>
           </div>
         </div>
         
@@ -214,25 +214,25 @@ export default function AchievementSystem({
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="text-center">
-            <div className="text-2xl font-mono text-accent mb-1">
+            <div className="text-2xl font-ui text-accent mb-1">
               {stats.unlocked}/{stats.total}
             </div>
             <div className="text-xs text-text2">Completed</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-mono text-accent mb-1">
+            <div className="text-2xl font-ui text-accent mb-1">
               {stats.percentage}%
             </div>
             <div className="text-xs text-text2">Progress</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-mono text-accent mb-1">
+            <div className="text-2xl font-ui text-accent mb-1">
               {totalRewards}
             </div>
             <div className="text-xs text-text2">Credits Earned</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-mono text-accent mb-1">
+            <div className="text-2xl font-ui text-accent mb-1">
               {Object.values(stats.byRarity).reduce((acc, rarity) => acc + rarity.unlocked, 0)}
             </div>
             <div className="text-xs text-text2">Total Unlocked</div>
@@ -258,7 +258,7 @@ export default function AchievementSystem({
               {getRarityIcon(rarity as any)}
               <span className="font-pixel text-xs capitalize">{rarity}</span>
             </div>
-            <div className="font-mono text-lg">{data.unlocked}/{data.total}</div>
+            <div className="font-ui text-lg">{data.unlocked}/{data.total}</div>
           </div>
         ))}
       </div>
