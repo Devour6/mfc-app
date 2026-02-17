@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Deduct credits via transaction
-    const bet = await prisma.$transaction(async (tx) => {
+    const bet = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
         select: { id: true, credits: true },

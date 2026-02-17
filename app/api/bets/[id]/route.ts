@@ -50,7 +50,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Use transaction to settle bet and credit payout
-    const bet = await prisma.$transaction(async (tx) => {
+    const bet = await prisma.$transaction(async (tx: any) => {
       const updated = await tx.bet.update({
         where: { id },
         data: {

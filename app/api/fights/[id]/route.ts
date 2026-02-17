@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { submitFightResultSchema, updateFightStatusSchema, isLegalStatusTransition } from '@/lib/validations'
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Use transaction: create result + update fight status + update fighter records
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const fightResult = await tx.fightResult.create({
         data: {
           fightId: id,
@@ -62,8 +61,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           round,
           time,
           winnerId,
-          fighter1Stats: (fighter1Stats ?? {}) as Prisma.InputJsonValue,
-          fighter2Stats: (fighter2Stats ?? {}) as Prisma.InputJsonValue,
+          fighter1Stats: (fighter1Stats ?? {}) as any,
+          fighter2Stats: (fighter2Stats ?? {}) as any,
           fighter1EloChange: fighter1EloChange ?? 0,
           fighter2EloChange: fighter2EloChange ?? 0,
           userId,
@@ -134,7 +133,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         status,
         ...(status === 'LIVE' && { startedAt: new Date() }),
         ...(status === 'COMPLETED' && { endedAt: new Date() }),
-        ...(fightData !== undefined && { fightData: (fightData ?? Prisma.JsonNull) as Prisma.InputJsonValue }),
+        ...(fightData !== undefined && { fightData: (fightData ?? null) as any }),
       },
     })
 

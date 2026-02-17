@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const gains = distributeStatGains(gainPool)
 
     // Transaction: deduct credits, create training, update fighter stats
-    const training = await prisma.$transaction(async (tx) => {
+    const training = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
         select: { id: true, credits: true },
