@@ -37,7 +37,11 @@ lib/                  → Core engines (~3,400 lines)
   ├── prisma.ts             → Prisma client singleton (uses pg adapter)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
   ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
-  └── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
+  ├── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
+  └── solana/               → Solana wallet integration
+      ├── wallet-provider.tsx  → React context (ConnectionProvider + WalletProvider + WalletModalProvider)
+      ├── use-wallet.ts        → Custom hook: connect/disconnect/balance/signAndSend
+      └── credit-bridge.ts     → SOL↔credits deposit/withdrawal (devnet, 1 SOL = 1000 credits)
 types/index.ts        → Comprehensive type definitions (~370 lines)
 prisma/schema.prisma  → DB models: User, Fighter, Training, Fight, FightResult, Bet
 prisma.config.ts      → Prisma 7 config (holds DATABASE_URL for migrations)
@@ -137,7 +141,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth middl
 **Not Yet Built:**
 - Auth0 authentication flow (middleware disabled, routes unprotected)
 - Stripe payment integration
-- Solana wallet integration (component shell only)
+- Solana wallet integration (scaffold built: provider, hook, credit bridge — needs frontend wiring + mainnet config)
 - Multiplayer (mock data only)
 - Deployment/environment setup
 
@@ -200,7 +204,11 @@ These settings should be configured by the repo admin on the `main` branch:
 
 Jest 30 with two projects:
 - **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
+<<<<<<< HEAD
 - **api** (`node`) — API route integration tests in `__tests__/api/` (44 tests, all passing)
+=======
+- **api** (`node`) — API route integration tests in `__tests__/api/` (42 tests, all passing)
+>>>>>>> d26a26d (feat: Scaffold Solana wallet adapter + credit bridge)
 
 API tests mock the Prisma client (`__tests__/api/helpers.ts`) and test route handlers directly.
 
