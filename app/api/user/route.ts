@@ -16,6 +16,7 @@ export async function GET() {
         fighters: {
           where: { isActive: true },
           orderBy: { elo: 'desc' },
+          select: { id: true, name: true, emoji: true, class: true, elo: true, wins: true, losses: true, draws: true },
         },
       },
     })
