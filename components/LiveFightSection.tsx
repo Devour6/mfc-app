@@ -12,6 +12,7 @@ import { MarketEngine } from '@/lib/market-engine'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
 import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
+import { useGameStore } from '@/lib/store'
 
 interface LiveFightSectionProps {
   onFightComplete?: (fighterId: string, fightData: any) => void
@@ -72,6 +73,16 @@ export default function LiveFightSection({
   const [marketEngine, setMarketEngine] = useState<MarketEngine | null>(null)
   const [showFightCard, setShowFightCard] = useState(true)
   const [autoRestartEnabled, setAutoRestartEnabled] = useState(true)
+
+  // Connect to game store for reactive credits
+  const credits = useGameStore(state => state.user.credits)
+  const placeBetAndDeduct = useGameStore(state => state.placeBetAndDeduct)
+  const fetchCredits = useGameStore(state => state.fetchCredits)
+
+  // Try to fetch credits from API on mount
+  useEffect(() => {
+    fetchCredits()
+  }, [fetchCredits])
 
   // Initialize fight and market engines
   useEffect(() => {
@@ -346,10 +357,12 @@ export default function LiveFightSection({
             <LiveBettingInterface
               fightState={fightState}
               fighters={sampleFighters}
-              creditBalance={5000}
+              creditBalance={credits}
               onPlaceBet={(bet) => {
-                console.log('Bet placed:', bet)
-                // Add betting logic here - integrate with credit system
+                const success = placeBetAndDeduct(bet.amount, `Bet: ${bet.marketId}`)
+                if (!success) {
+                  console.warn('Insufficient credits for bet')
+                }
               }}
               onMarketUpdate={(marketId) => {
                 console.log('Market updated:', marketId)
@@ -372,9 +385,12 @@ export default function LiveFightSection({
           <LiveBettingInterface
             fightState={fightState}
             fighters={sampleFighters}
-            creditBalance={5000}
+            creditBalance={credits}
             onPlaceBet={(bet) => {
-              console.log('Bet placed:', bet)
+              const success = placeBetAndDeduct(bet.amount, `Bet: ${bet.marketId}`)
+              if (!success) {
+                console.warn('Insufficient credits for bet')
+              }
             }}
             onMarketUpdate={(marketId) => {
               console.log('Market updated:', marketId)

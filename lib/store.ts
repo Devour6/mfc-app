@@ -22,10 +22,13 @@ import { CreditEngine } from './credit-engine'
 interface GameState {
   // User data
   user: ExtendedUser
-  
+
   // Game state
   currentTournament: TournamentBracket | null
-  
+
+  // Live fight state
+  isApiAvailable: boolean
+
   // Actions
   initializeUser: (name: string) => void
   updateAfterFight: (fighterId: string, fightData: any) => void
@@ -34,7 +37,7 @@ interface GameState {
   claimDailyReward: (reward: DailyReward) => void
   dismissNotification: (notificationId: string) => void
   addFighter: (fighter: Omit<Fighter, 'evolution'>) => void
-  
+
   // Credit system actions
   connectWallet: () => Promise<void>
   disconnectWallet: () => void
@@ -42,6 +45,10 @@ interface GameState {
   withdrawCredits: (amount: number, walletAddress: string) => Promise<void>
   spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number) => boolean
   addRewardCredits: (amount: number, description: string, relatedId?: string) => void
+
+  // API-reactive actions
+  fetchCredits: () => Promise<void>
+  placeBetAndDeduct: (amount: number, description: string) => boolean
 }
 
 // Sample fighters with evolution data
@@ -114,6 +121,7 @@ export const useGameStore = create<GameState>()(
       },
       
       currentTournament: null,
+      isApiAvailable: false,
 
       initializeUser: (name: string) => {
         set(state => ({
@@ -470,7 +478,7 @@ export const useGameStore = create<GameState>()(
 
       addRewardCredits: (amount: number, description: string, relatedId?: string) => {
         const { user } = get()
-        
+
         const result = CreditEngine.processReward(
           user.creditBalance,
           user.transactions,
@@ -486,6 +494,39 @@ export const useGameStore = create<GameState>()(
             transactions: result.newTransactions
           }
         }))
+      },
+
+      // API-reactive: try to fetch credits from backend, fall back to local
+      fetchCredits: async () => {
+        try {
+          const res = await fetch('/api/user/credits')
+          if (res.ok) {
+            const data = await res.json()
+            set(state => ({
+              isApiAvailable: true,
+              user: {
+                ...state.user,
+                credits: data.credits ?? state.user.credits
+              }
+            }))
+          }
+        } catch {
+          // API not available — keep local data
+        }
+      },
+
+      // Deduct credits locally for betting (API call can follow separately)
+      placeBetAndDeduct: (amount: number, description: string) => {
+        const { user } = get()
+        if (user.credits < amount) return false
+
+        set(state => ({
+          user: {
+            ...state.user,
+            credits: state.user.credits - amount
+          }
+        }))
+        return true
       }
     }),
     {
