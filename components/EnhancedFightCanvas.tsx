@@ -682,300 +682,334 @@ export default function EnhancedFightCanvas({
     ctx.restore()
   }
 
-  // Individual body part drawing functions
+  // Pixel size constant for 16-bit sprite look
+  const P = 4
+
+  // Helper: draw a single pixel block with optional outline
+  const px = (ctx: CanvasRenderingContext2D, x: number, y: number, c: string) => {
+    ctx.fillStyle = c
+    ctx.fillRect(x, y, P, P)
+  }
+
+  // Helper: draw a pixel block with dark outline
+  const pxo = (ctx: CanvasRenderingContext2D, x: number, y: number, c: string) => {
+    ctx.fillStyle = '#111'
+    ctx.fillRect(x - 1, y - 1, P + 2, P + 2)
+    ctx.fillStyle = c
+    ctx.fillRect(x, y, P, P)
+  }
+
+  // Helper: draw pixel sprite from grid (2D array of colors, '' = skip)
+  const drawSprite = (ctx: CanvasRenderingContext2D, ox: number, oy: number, grid: string[][]) => {
+    for (let row = 0; row < grid.length; row++) {
+      for (let col = 0; col < grid[row].length; col++) {
+        const c = grid[row][col]
+        if (c) px(ctx, ox + col * P, oy + row * P, c)
+      }
+    }
+  }
+
+  // Helper: darken a hex color for shading
+  const shade = (hex: string): string => {
+    const r = Math.max(0, parseInt(hex.slice(1, 3), 16) - 40)
+    const g = Math.max(0, parseInt(hex.slice(3, 5), 16) - 40)
+    const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 40)
+    return `rgb(${r},${g},${b})`
+  }
+
+  // Helper: lighten a hex color for highlights
+  const highlight = (hex: string): string => {
+    const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + 50)
+    const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + 50)
+    const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + 50)
+    return `rgb(${r},${g},${b})`
+  }
+
+  // Individual body part drawing functions — pixel-block style (Street Fighter II)
   const drawHead = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, state: string, hp: number) => {
-    // Head shape (oval)
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.ellipse(x, y, 12, 15, 0, 0, Math.PI * 2)
-    ctx.fill()
-    
-    // Face details
-    ctx.fillStyle = '#000'
+    const s = shade(color)
+    const h = highlight(color)
+    const ox = x - P * 3 // center the 6-wide head
+    const oy = y - P * 4 // top of head
+
+    // Head outline + fill (6 wide x 7 tall pixel grid)
+    const O = '#111' // outline
+    const C = color
+    const S = s
+    const H = h
+    const SK = '#f0c8a0' // skin tone
+    const W = '#fff'
+
+    // Base head shape
+    const head: string[][] = [
+      ['',  O,  O,  O,  O, ''],
+      [ O,  H,  C,  C,  S,  O],
+      [ O,  C,  C,  C,  C,  O],
+      [ O,  C,  C,  C,  C,  O],
+      [ O,  C,  C,  C,  C,  O],
+      ['',  O,  C,  C,  O, ''],
+      ['', '',  O,  O, '', ''],
+    ]
+    drawSprite(ctx, ox, oy, head)
+
+    // Eyes and mouth drawn directly
     if (state === 'hit') {
-      // Dazed/hurt expression
-      ctx.fillText('X', x - 8, y - 3)
-      ctx.fillText('X', x + 3, y - 3)
+      // X eyes for hit
+      px(ctx, ox + P * 1, oy + P * 2, '#ff0')
+      px(ctx, ox + P * 4, oy + P * 2, '#ff0')
+      px(ctx, ox + P * 2, oy + P * 4, '#c00') // open mouth
+      px(ctx, ox + P * 3, oy + P * 4, '#c00')
     } else if (hp < 25) {
-      // Tired/bloody expression
-      ctx.fillStyle = '#cc0000'
-      ctx.fillRect(x - 5, y + 8, 10, 2)
-      ctx.fillStyle = '#000'
-      ctx.fillText('~', x - 8, y - 3)
-      ctx.fillText('~', x + 3, y - 3)
+      // Tired squint eyes
+      px(ctx, ox + P * 1, oy + P * 2, '#800')
+      px(ctx, ox + P * 4, oy + P * 2, '#800')
+      px(ctx, ox + P * 2, oy + P * 4, '#c00') // blood from mouth
     } else {
-      // Normal eyes
-      ctx.fillStyle = '#fff'
-      ctx.beginPath()
-      ctx.arc(x - 6, y - 3, 3, 0, Math.PI * 2)
-      ctx.arc(x + 6, y - 3, 3, 0, Math.PI * 2)
-      ctx.fill()
-      
-      ctx.fillStyle = '#000'
-      ctx.beginPath()
-      ctx.arc(x - 6 + facing, y - 3, 1.5, 0, Math.PI * 2)
-      ctx.arc(x + 6 + facing, y - 3, 1.5, 0, Math.PI * 2)
-      ctx.fill()
+      // Normal eyes: white with black pupil
+      px(ctx, ox + P * 1, oy + P * 2, W)
+      px(ctx, ox + P * 4, oy + P * 2, W)
+      // Pupils follow facing
+      const pupilOffset = facing > 0 ? 1 : 0
+      px(ctx, ox + P * (1 + pupilOffset), oy + P * 2, '#000')
+      px(ctx, ox + P * (4 + pupilOffset), oy + P * 2, '#000')
+      // Determined mouth
+      px(ctx, ox + P * 2, oy + P * 4, '#000')
+      px(ctx, ox + P * 3, oy + P * 4, '#000')
     }
-    
-    // Mouth
-    ctx.strokeStyle = '#000'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    if (state === 'hit') {
-      ctx.arc(x, y + 5, 4, 0, Math.PI) // Open mouth (hurt)
-    } else {
-      ctx.moveTo(x - 3, y + 5)
-      ctx.lineTo(x + 3, y + 5) // Determined line
-    }
-    ctx.stroke()
   }
 
   const drawTorso = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, state: string) => {
-    // Main torso
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.roundRect(x - 15, y, 30, 40, 8)
-    ctx.fill()
-    
-    // Chest muscles
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'
-    ctx.beginPath()
-    ctx.ellipse(x - 7, y + 8, 6, 8, 0, 0, Math.PI * 2)
-    ctx.ellipse(x + 7, y + 8, 6, 8, 0, 0, Math.PI * 2)
-    ctx.fill()
-    
-    // Abs definition
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath()
-      ctx.ellipse(x, y + 18 + i * 6, 8, 3, 0, 0, Math.PI * 2)
-      ctx.fill()
-    }
-    
-    // Shorts/trunks
-    ctx.fillStyle = state === 'hit' ? '#ff0000' : '#333'
-    ctx.fillRect(x - 12, y + 25, 24, 15)
+    const s = shade(color)
+    const h = highlight(color)
+    const O = '#111'
+    const C = color
+    const S = s
+    const H = h
+    const T = state === 'hit' ? '#cc0000' : '#222' // trunks
+
+    const ox = x - P * 4
+    const oy = y
+
+    // Torso: 8 wide x 10 tall
+    const torso: string[][] = [
+      ['',  O,  O,  C,  C,  O,  O, ''],
+      [ O,  H,  C,  C,  C,  C,  S,  O],
+      [ O,  C,  H,  C,  C,  S,  C,  O],
+      [ O,  C,  C,  C,  C,  C,  C,  O],
+      [ O,  C,  C,  S,  S,  C,  C,  O],
+      [ O,  C,  C,  C,  C,  C,  C,  O],
+      ['',  O,  T,  T,  T,  T,  O, ''],
+      ['',  O,  T,  T,  T,  T,  O, ''],
+      ['', '',  O,  T,  T,  O, '', ''],
+      ['', '',  O,  O,  O,  O, '', ''],
+    ]
+    drawSprite(ctx, ox, oy, torso)
   }
 
   const drawArm = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, isFront: boolean, extension: number, isPunching: boolean) => {
-    const armLength = 25 + extension
-    const angle = isFront && isPunching ? facing * 45 * Math.PI / 180 : 0
-    
+    const s = shade(color)
+    const O = '#111'
+    const C = color
+    const G = isPunching && isFront ? '#ffdd00' : '#eee' // glove color
+    const GS = isPunching && isFront ? '#cc9900' : '#bbb'
+
     ctx.save()
     ctx.translate(x, y)
-    ctx.rotate(angle)
-    
-    // Upper arm
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.roundRect(-4, 0, 8, armLength * 0.6, 4)
-    ctx.fill()
-    
-    // Forearm
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.roundRect(-3, armLength * 0.6, 6, armLength * 0.4, 3)
-    ctx.fill()
-    
-    // Boxing glove
-    ctx.fillStyle = isPunching && isFront ? '#ffff00' : '#ffffff'
-    if (isPunching && isFront) {
-      // Add glow effect for punching glove
-      ctx.shadowBlur = 10
-      ctx.shadowColor = '#ffff00'
+    if (isFront && isPunching) {
+      ctx.rotate(facing * 45 * Math.PI / 180)
     }
-    ctx.beginPath()
-    ctx.roundRect(-6, armLength - 8, 12, 12, 6)
-    ctx.fill()
-    ctx.shadowBlur = 0
-    
+
+    const armLen = Math.floor((25 + extension) / P)
+    const ox = -P
+
+    // Upper arm pixels
+    for (let i = 0; i < Math.floor(armLen * 0.5); i++) {
+      pxo(ctx, ox, i * P, C)
+      pxo(ctx, ox + P, i * P, s)
+    }
+
+    // Forearm pixels
+    const forearmStart = Math.floor(armLen * 0.5) * P
+    for (let i = 0; i < Math.floor(armLen * 0.4); i++) {
+      pxo(ctx, ox, forearmStart + i * P, C)
+      pxo(ctx, ox + P, forearmStart + i * P, s)
+    }
+
+    // Glove (3x3 pixel block)
+    const gloveY = (armLen - 2) * P
+    for (let gy = 0; gy < 3; gy++) {
+      for (let gx = 0; gx < 3; gx++) {
+        const gc = (gy === 0 || gx === 0) ? G : GS
+        pxo(ctx, ox - P + gx * P, gloveY + gy * P, gc)
+      }
+    }
+
+    // Punching glove glow
+    if (isPunching && isFront) {
+      ctx.fillStyle = 'rgba(255,221,0,0.3)'
+      ctx.fillRect(ox - P * 2, gloveY - P, P * 5, P * 5)
+    }
+
     ctx.restore()
   }
 
   const drawLeg = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, isFront: boolean, extension: number, isKicking: boolean) => {
-    const legLength = 35 + extension
-    const angle = isKicking && isFront ? 30 * Math.PI / 180 : 0
-    
+    const s = shade(color)
+    const O = '#111'
+    const C = color
+
     ctx.save()
     ctx.translate(x, y)
-    ctx.rotate(angle)
-    
-    // Thigh
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.roundRect(-6, 0, 12, legLength * 0.6, 6)
-    ctx.fill()
-    
-    // Shin
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.roundRect(-4, legLength * 0.6, 8, legLength * 0.4, 4)
-    ctx.fill()
-    
-    // Foot/boot
-    ctx.fillStyle = '#000'
-    ctx.beginPath()
-    ctx.roundRect(-5, legLength - 8, 15, 8, 4)
-    ctx.fill()
-    
+    if (isKicking && isFront) {
+      ctx.rotate(30 * Math.PI / 180)
+    }
+
+    const legLen = Math.floor((35 + extension) / P)
+    const ox = -P
+
+    // Thigh pixels
+    for (let i = 0; i < Math.floor(legLen * 0.5); i++) {
+      pxo(ctx, ox, i * P, C)
+      pxo(ctx, ox + P, i * P, s)
+      if (i < 2) pxo(ctx, ox + P * 2, i * P, s) // thicker at top
+    }
+
+    // Shin pixels
+    const shinStart = Math.floor(legLen * 0.5) * P
+    for (let i = 0; i < Math.floor(legLen * 0.4); i++) {
+      pxo(ctx, ox, shinStart + i * P, C)
+      pxo(ctx, ox + P, shinStart + i * P, s)
+    }
+
+    // Boot (3x2 pixel block)
+    const bootY = (legLen - 2) * P
+    pxo(ctx, ox - P, bootY, '#111')
+    pxo(ctx, ox, bootY, '#222')
+    pxo(ctx, ox + P, bootY, '#222')
+    pxo(ctx, ox + P * 2, bootY, '#111')
+    pxo(ctx, ox - P, bootY + P, '#111')
+    pxo(ctx, ox, bootY + P, '#111')
+    pxo(ctx, ox + P, bootY + P, '#111')
+    pxo(ctx, ox + P * 2, bootY + P, '#111')
+
     ctx.restore()
   }
 
   const drawKnockedDownHumanoid = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, animationFrame: number) => {
-    // Fighter lying down
+    const s = shade(color)
     ctx.save()
     ctx.translate(x, y + 20)
-    
-    // Body horizontal
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.roundRect(-20, -8, 40, 16, 8)
-    ctx.fill()
-    
-    // Head on side
-    ctx.beginPath()
-    ctx.ellipse(-25, -5, 10, 12, Math.PI / 4, 0, Math.PI * 2)
-    ctx.fill()
-    
-    // Dazed stars
-    ctx.fillStyle = '#ffff00'
-    ctx.font = '16px serif'
-    for (let i = 0; i < 3; i++) {
-      const starX = -30 + i * 15
-      const starY = -25 + Math.sin(Date.now() * 0.01 + i) * 5
-      ctx.fillText('★', starX, starY)
+
+    // Body horizontal — pixel blocks
+    for (let i = -5; i <= 5; i++) {
+      pxo(ctx, i * P, -P, i < 0 ? shade(color) : color)
+      pxo(ctx, i * P, 0, color)
     }
-    
-    // Arms and legs sprawled
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.roundRect(15, -5, 20, 6, 3)  // Arm
-    ctx.roundRect(-35, -5, 20, 6, 3) // Other arm
-    ctx.roundRect(-10, 8, 6, 18, 3)  // Leg
-    ctx.roundRect(4, 8, 6, 18, 3)    // Other leg
-    ctx.fill()
-    
+
+    // Head on side
+    for (let gy = -2; gy <= 1; gy++) {
+      for (let gx = -8; gx <= -6; gx++) {
+        pxo(ctx, gx * P, gy * P, color)
+      }
+    }
+    // Dazed X eyes
+    px(ctx, -8 * P, -P, '#ff0')
+    px(ctx, -6 * P, -P, '#ff0')
+
+    // Pixel stars spinning above
+    const time = Date.now() * 0.003
+    for (let i = 0; i < 3; i++) {
+      const starX = -7 * P + i * P * 4
+      const starY = -4 * P + Math.sin(time + i * 2) * P * 2
+      px(ctx, starX, starY, '#ffdd00')
+      px(ctx, starX + P, starY, '#ffdd00')
+      px(ctx, starX, starY + P, '#ffdd00')
+      px(ctx, starX + P, starY + P, '#ffdd00')
+    }
+
+    // Sprawled arms + legs as pixel blocks
+    for (let i = 0; i < 4; i++) {
+      pxo(ctx, 6 * P + i * P, -P, s) // arm
+      pxo(ctx, -9 * P - i * P, 0, s) // other arm
+    }
+    pxo(ctx, -2 * P, 2 * P, s) // leg
+    pxo(ctx, -2 * P, 3 * P, s)
+    pxo(ctx, -2 * P, 4 * P, '#111') // boot
+    pxo(ctx, P, 2 * P, s) // other leg
+    pxo(ctx, P, 3 * P, s)
+    pxo(ctx, P, 4 * P, '#111') // boot
+
     ctx.restore()
   }
 
-  // Enhanced particle and visual effects
+  // Pixel-style particle effects
   const drawSweatParticles = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
     const time = Date.now() * 0.001
-    ctx.fillStyle = 'rgba(200,200,255,0.6)'
-    
     for (let i = 0; i < 5; i++) {
-      const sweatX = x + (Math.random() - 0.5) * 30
-      const sweatY = y + Math.sin(time * 3 + i) * 10 + Math.random() * 20
-      const size = 1 + Math.random() * 2
-      
-      ctx.beginPath()
-      ctx.arc(sweatX, sweatY, size, 0, Math.PI * 2)
-      ctx.fill()
+      const sx = x + Math.floor((Math.sin(time * 2 + i * 1.3) * 15) / P) * P
+      const sy = y + Math.floor((Math.sin(time * 3 + i) * 10 + i * 6) / P) * P
+      px(ctx, sx, sy, 'rgba(150,200,255,0.6)')
     }
   }
 
   const drawMotionTrail = (ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, actionType: string) => {
     const time = Date.now() * 0.001
     const trailCount = 5
-    
+
     ctx.save()
-    
     for (let i = 0; i < trailCount; i++) {
-      const alpha = (trailCount - i) / trailCount * 0.3
-      ctx.globalAlpha = alpha
-      
+      ctx.globalAlpha = (trailCount - i) / trailCount * 0.4
+
       if (actionType === 'punching') {
-        // Punch motion trail
-        const trailX = x + facing * (15 + i * 5)
-        const trailY = y - 30 + Math.sin(time * 10 + i) * 2
-        
-        ctx.fillStyle = '#ffff00'
-        ctx.beginPath()
-        ctx.arc(trailX, trailY, 8 - i, 0, Math.PI * 2)
-        ctx.fill()
-        
-        // Motion lines
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.moveTo(trailX - facing * 10, trailY)
-        ctx.lineTo(trailX + facing * 10, trailY)
-        ctx.stroke()
+        const tx = x + facing * (P * 3 + i * P * 2)
+        const ty = y - P * 7 + Math.floor(Math.sin(time * 10 + i) * P)
+        // Pixel speed lines
+        px(ctx, tx, ty, '#ffdd00')
+        px(ctx, tx + facing * P, ty, '#fff')
+        px(ctx, tx + facing * P * 2, ty, '#fff')
       } else if (actionType === 'kicking') {
-        // Kick motion trail
-        const trailX = x + facing * (10 + i * 3)
-        const trailY = y - 15 + i * 2
-        
-        ctx.fillStyle = '#ff6600'
-        ctx.beginPath()
-        ctx.arc(trailX, trailY, 6 - i, 0, Math.PI * 2)
-        ctx.fill()
+        const tx = x + facing * (P * 2 + i * P)
+        const ty = y - P * 3 + i * P
+        px(ctx, tx, ty, '#ff6600')
+        px(ctx, tx + facing * P, ty, '#ff8800')
       }
     }
-    
     ctx.restore()
   }
 
   const drawEnhancedStarsEffect = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-    ctx.fillStyle = '#ffff00'
-    ctx.font = 'bold 16px serif'
-    ctx.textAlign = 'center'
-    
+    const time = Date.now() * 0.003
     for (let i = 0; i < 4; i++) {
-      const starX = x + (i - 1.5) * 20
-      const starY = y + Math.sin(Date.now() * 0.01 + i) * 8
-      const rotation = Date.now() * 0.005 + i
-      
-      ctx.save()
-      ctx.translate(starX, starY)
-      ctx.rotate(rotation)
-      ctx.fillText('★', 0, 0)
-      ctx.restore()
+      const sx = x + Math.floor((i - 1.5) * P * 5)
+      const sy = y + Math.floor(Math.sin(time + i * 1.5) * P * 2)
+      // Pixel star: 3x3 cross pattern
+      px(ctx, sx + P, sy, '#ffdd00')
+      px(ctx, sx, sy + P, '#ffdd00')
+      px(ctx, sx + P, sy + P, '#fff')
+      px(ctx, sx + P * 2, sy + P, '#ffdd00')
+      px(ctx, sx + P, sy + P * 2, '#ffdd00')
     }
   }
 
   const drawBloodSplatters = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-    ctx.fillStyle = '#cc0000'
-    for (let i = 0; i < 8; i++) {
-      const bloodX = x + (Math.random() - 0.5) * 50
-      const bloodY = y + Math.random() * 30
-      const size = 2 + Math.random() * 4
-      
-      // Blood droplets
-      ctx.beginPath()
-      ctx.arc(bloodX, bloodY, size / 2, 0, Math.PI * 2)
-      ctx.fill()
-      
-      // Splatter effect
-      ctx.save()
-      ctx.globalAlpha = 0.6
-      for (let j = 0; j < 3; j++) {
-        const splatterX = bloodX + (Math.random() - 0.5) * 8
-        const splatterY = bloodY + (Math.random() - 0.5) * 8
-        ctx.fillRect(splatterX, splatterY, 1, 1)
-      }
-      ctx.restore()
+    const time = Date.now() * 0.001
+    for (let i = 0; i < 6; i++) {
+      const bx = x + Math.floor((Math.sin(time + i * 0.7) * 20) / P) * P
+      const by = y + Math.floor((i * 5) / P) * P
+      px(ctx, bx, by, '#cc0000')
+      if (i % 2 === 0) px(ctx, bx + P, by, '#990000')
     }
   }
 
   const drawHeavyBreathing = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-    const time = Date.now() * 0.005
-    
-    for (let i = 0; i < 4; i++) {
-      const cloudX = x + (Math.random() - 0.5) * 25
-      const cloudY = y + i * 8 + Math.sin(time + i) * 4
-      const alpha = 0.4 + Math.sin(time * 2 + i) * 0.2
-      
-      ctx.save()
-      ctx.globalAlpha = alpha
-      ctx.fillStyle = 'rgba(255,255,255,0.8)'
-      
-      // Breath cloud
-      ctx.beginPath()
-      ctx.arc(cloudX, cloudY, 4 + Math.sin(time + i) * 2, 0, Math.PI * 2)
-      ctx.fill()
-      
-      ctx.restore()
+    const time = Date.now() * 0.003
+    for (let i = 0; i < 3; i++) {
+      const cx = x + P * 3 + i * P * 2
+      const cy = y + Math.floor(Math.sin(time + i) * P)
+      ctx.globalAlpha = 0.3 + Math.sin(time * 2 + i) * 0.15
+      px(ctx, cx, cy, '#ddf')
+      px(ctx, cx + P, cy, '#ddf')
+      ctx.globalAlpha = 1
     }
   }
 
