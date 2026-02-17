@@ -310,7 +310,7 @@ export default function EnhancedTrainingInterface({
   }
 
   return (
-    <div className="p-6 bg-surface rounded-lg border border-border">
+    <div className="p-6 bg-surface border border-border">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
@@ -329,7 +329,7 @@ export default function EnhancedTrainingInterface({
       <AnimatePresence>
         {activeSession && (
           <motion.div
-            className="mb-6 p-4 bg-bg border border-accent rounded-lg"
+            className="mb-6 p-4 bg-bg border border-accent"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -361,9 +361,9 @@ export default function EnhancedTrainingInterface({
                 <span>Progress</span>
                 <span>{Math.floor(trainingProgress)}%</span>
               </div>
-              <div className="w-full bg-border rounded-full h-2">
+              <div className="w-full bg-border h-2">
                 <motion.div
-                  className="bg-accent rounded-full h-2"
+                  className="bg-accent h-2"
                   style={{ width: `${trainingProgress}%` }}
                   initial={{ width: 0 }}
                   animate={{ width: `${trainingProgress}%` }}
@@ -376,7 +376,7 @@ export default function EnhancedTrainingInterface({
             {/* Training Results */}
             {sessionResults && (
               <motion.div
-                className="mt-4 p-3 bg-accent/10 border border-accent rounded-lg"
+                className="mt-4 p-3 bg-accent/10 border border-accent"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
               >
@@ -417,7 +417,7 @@ export default function EnhancedTrainingInterface({
                 <motion.button
                   key={stat}
                   onClick={() => setSelectedStat(stat as keyof typeof fighter.stats)}
-                  className={`p-3 border rounded-lg transition-all ${
+                  className={`p-3 border transition-all ${
                     selectedStat === stat
                       ? 'bg-accent text-white border-accent'
                       : 'bg-transparent text-text2 border-border hover:text-text hover:border-text2'
@@ -455,7 +455,7 @@ export default function EnhancedTrainingInterface({
               return (
                 <motion.div
                   key={session.id}
-                  className={`p-4 border rounded-lg transition-all ${
+                  className={`p-4 border transition-all ${
                     canAfford && meetsRequirements
                       ? 'border-border hover:border-text2 cursor-pointer'
                       : 'border-border opacity-60'

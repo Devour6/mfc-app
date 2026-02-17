@@ -112,9 +112,9 @@ export default function CreditsDashboard({
     )
 
     return (
-      <div className="flex items-center justify-between p-3 hover:bg-surface2/50 rounded-lg transition-colors">
+      <div className="flex items-center justify-between p-3 hover:bg-surface2/50 transition-colors">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-surface2 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 bg-surface2 flex items-center justify-center">
             {icon}
           </div>
           <div>
@@ -135,7 +135,7 @@ export default function CreditsDashboard({
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
         <motion.div
-          className="bg-surface1 border border-border rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-surface1 border border-border max-w-6xl w-full max-h-[90vh] overflow-y-auto"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
@@ -144,7 +144,7 @@ export default function CreditsDashboard({
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-accent/10 flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-accent" />
                 </div>
                 <div>
@@ -158,7 +158,7 @@ export default function CreditsDashboard({
                 <button
                   onClick={() => setActiveModal('wallet')}
                   className={`
-                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
+                    flex items-center gap-2 px-3 py-2 text-sm transition-all
                     ${walletConnection.connected 
                       ? 'bg-green-400/10 text-green-400 border border-green-400/30' 
                       : 'bg-surface2 text-text2 border border-border hover:border-accent'
@@ -190,13 +190,13 @@ export default function CreditsDashboard({
               {balanceCards.map((card, index) => (
                 <motion.div
                   key={card.title}
-                  className="bg-surface2 border border-border rounded-lg p-6"
+                  className="bg-surface2 border border-border p-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className={`w-10 h-10 rounded-lg bg-current/10 flex items-center justify-center ${card.color}`}>
+                    <div className={`w-10 h-10 bg-current/10 flex items-center justify-center ${card.color}`}>
                       {card.icon}
                     </div>
                     <div className="text-xs text-text2">
@@ -221,7 +221,7 @@ export default function CreditsDashboard({
                   onClick={() => setActiveModal(button.id as any)}
                   disabled={button.disabled}
                   className={`
-                    flex flex-col items-center gap-3 p-6 rounded-lg transition-all
+                    flex flex-col items-center gap-3 p-6 transition-all
                     ${button.color}
                     ${button.disabled ? 'opacity-50 cursor-not-allowed' : ''}
                   `}
@@ -238,7 +238,7 @@ export default function CreditsDashboard({
             </div>
 
             {/* Platform Fees Info */}
-            <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-4 mb-8">
+            <div className="bg-yellow-400/10 border border-yellow-400/30 p-4 mb-8">
               <div className="flex items-center gap-2 mb-3">
                 <Shield className="w-4 h-4 text-yellow-400" />
                 <span className="font-pixel text-sm text-text1">Platform Fees</span>
@@ -281,7 +281,7 @@ export default function CreditsDashboard({
               </div>
 
               {recentTransactions.length > 0 ? (
-                <div className="bg-surface2 border border-border rounded-lg divide-y divide-border">
+                <div className="bg-surface2 border border-border divide-y divide-border">
                   {recentTransactions.map(transaction => (
                     <RecentTransaction key={transaction.id} transaction={transaction} />
                   ))}

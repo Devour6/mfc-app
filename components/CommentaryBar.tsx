@@ -17,7 +17,7 @@ export default function CommentaryBar({ commentary, commentaryHistory = [] }: Co
       <div className="flex items-center gap-3 w-full">
         {/* Live indicator */}
         <motion.div
-          className="w-2 h-2 bg-accent rounded-full flex-shrink-0"
+          className="w-2 h-2 bg-accent flex-shrink-0"
           animate={{ opacity: [1, 0.3, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
         />
@@ -85,7 +85,7 @@ export default function CommentaryBar({ commentary, commentaryHistory = [] }: Co
       <AnimatePresence>
         {showHistory && commentaryHistory.length > 0 && (
           <motion.div
-            className="absolute bottom-full left-0 right-0 bg-background border border-accent/20 rounded-t-md shadow-lg z-50 max-h-48 overflow-y-auto"
+            className="absolute bottom-full left-0 right-0 bg-background border border-accent/20 shadow-lg z-50 max-h-48 overflow-y-auto"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}

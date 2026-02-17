@@ -43,7 +43,7 @@ export default function MobileNav({
       <div className="md:hidden fixed top-4 left-4 z-50">
         <motion.button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-3 bg-surface border border-border rounded-lg shadow-lg"
+          className="p-3 bg-surface border border-border shadow-lg"
           whileTap={{ scale: 0.95 }}
         >
           {isOpen ? (
@@ -90,7 +90,7 @@ export default function MobileNav({
               </div>
               
               {/* Credits Display */}
-              <div className="bg-surface2 rounded-lg p-3">
+              <div className="bg-surface2 p-3">
                 <div className="text-xs text-text2 mb-1">Available Credits</div>
                 <div className="font-pixel text-lg text-gold">
                   {credits.toLocaleString()} MFC
@@ -107,7 +107,7 @@ export default function MobileNav({
                     onGoHome()
                     setIsOpen(false)
                   }}
-                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-surface2 rounded-lg transition-colors mb-2"
+                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-surface2 transition-colors mb-2"
                   whileTap={{ scale: 0.98 }}
                 >
                   <Home className="w-5 h-5 text-text2" />
@@ -121,7 +121,7 @@ export default function MobileNav({
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
                   className={`
-                    w-full flex items-center gap-4 p-4 text-left rounded-lg transition-colors mb-2
+                    w-full flex items-center gap-4 p-4 text-left transition-colors mb-2
                     ${currentSection === item.id 
                       ? 'bg-accent/10 text-accent border border-accent/20' 
                       : 'hover:bg-surface2 text-text'
@@ -136,7 +136,7 @@ export default function MobileNav({
                   
                   {currentSection === item.id && (
                     <motion.div
-                      className="ml-auto w-2 h-2 bg-accent rounded-full"
+                      className="ml-auto w-2 h-2 bg-accent"
                       layoutId="activeIndicator"
                     />
                   )}
@@ -153,7 +153,7 @@ export default function MobileNav({
                     onToggleSound()
                     setIsOpen(false)
                   }}
-                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-surface2 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-surface2 transition-colors"
                   whileTap={{ scale: 0.98 }}
                 >
                   {soundEnabled ? (
@@ -187,7 +187,7 @@ export default function MobileNav({
               key={item.id}
               onClick={() => onSectionChange(item.id)}
               className={`
-                p-3 rounded-lg text-center transition-colors
+                p-3 text-center transition-colors
                 ${currentSection === item.id 
                   ? 'bg-accent/10 text-accent' 
                   : 'text-text2 hover:text-text'

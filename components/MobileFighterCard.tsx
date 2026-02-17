@@ -76,7 +76,7 @@ export default function MobileFighterCard({
 
   return (
     <motion.div
-      className="bg-surface border border-border rounded-lg overflow-hidden"
+      className="bg-surface border border-border overflow-hidden"
       layout
       initial={false}
     >
@@ -112,7 +112,7 @@ export default function MobileFighterCard({
                   ) : getEloTrend() === 'falling' ? (
                     <TrendingDown className="w-3 h-3 text-red" />
                   ) : (
-                    <div className="w-3 h-3 bg-text2 rounded-full" />
+                    <div className="w-3 h-3 bg-text2" />
                   )}
                   <span className={
                     getEloTrend() === 'rising' ? 'text-green' : 
@@ -192,9 +192,9 @@ export default function MobileFighterCard({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-16 bg-border rounded-full h-1">
+                      <div className="w-16 bg-border h-1">
                         <div 
-                          className="bg-accent rounded-full h-1 transition-all duration-300"
+                          className="bg-accent h-1 transition-all duration-300"
                           style={{ width: `${value}%` }}
                         />
                       </div>

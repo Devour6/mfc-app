@@ -114,9 +114,9 @@ export default function FighterProfileModal({
   }
 
   const getStatBar = (value: number, maxValue: number = 100) => (
-    <div className="w-full bg-surface2 rounded-full h-2">
+    <div className="w-full bg-surface2 h-2">
       <motion.div
-        className="h-full bg-gradient-to-r from-accent to-accent2 rounded-full"
+        className="h-full bg-gradient-to-r from-accent to-accent2"
         initial={{ width: 0 }}
         animate={{ width: `${(value / maxValue) * 100}%` }}
         transition={{ duration: 1, delay: 0.2 }}
@@ -149,7 +149,7 @@ export default function FighterProfileModal({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-surface border border-border rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden"
+            className="bg-surface border border-border w-full max-w-4xl max-h-[90vh] overflow-hidden"
           >
             {/* Header */}
             <div className="bg-bg border-b border-border p-6 flex items-start justify-between">

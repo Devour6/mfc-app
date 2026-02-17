@@ -80,7 +80,7 @@ export default function CreditPurchase({
     return (
       <motion.div
         className={`
-          relative border rounded-xl p-6 cursor-pointer transition-all
+          relative border p-6 cursor-pointer transition-all
           ${option.popular 
             ? 'border-accent bg-accent/5 shadow-lg' 
             : option.bestValue 
@@ -95,7 +95,7 @@ export default function CreditPurchase({
         {/* Popular/Best Value Badge */}
         {(option.popular || option.bestValue) && (
           <div className={`
-            absolute -top-3 left-1/2 transform -translate-x-1/2 px-3 py-1 rounded-full text-xs font-pixel
+            absolute -top-3 left-1/2 transform -translate-x-1/2 px-3 py-1 text-xs font-pixel
             ${option.popular ? 'bg-accent text-bg' : 'bg-green-400 text-bg'}
           `}>
             {option.popular ? 'MOST POPULAR' : 'BEST VALUE'}
@@ -142,11 +142,11 @@ export default function CreditPurchase({
   }
 
   const WalletStatus = () => (
-    <div className="bg-surface2 border border-border rounded-lg p-4 mb-6">
+    <div className="bg-surface2 border border-border p-4 mb-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`
-            w-10 h-10 rounded-full flex items-center justify-center
+            w-10 h-10 flex items-center justify-center
             ${walletConnection.connected ? 'bg-green-400/20' : 'bg-surface1'}
           `}>
             <Wallet className={`w-5 h-5 ${walletConnection.connected ? 'text-green-400' : 'text-text2'}`} />
@@ -188,7 +188,7 @@ export default function CreditPurchase({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
-        className="bg-surface1 border border-border rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-surface1 border border-border max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -197,7 +197,7 @@ export default function CreditPurchase({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-accent/10 flex items-center justify-center">
                 <CreditCard className="w-6 h-6 text-accent" />
               </div>
               <div>
@@ -228,7 +228,7 @@ export default function CreditPurchase({
                 <WalletStatus />
 
                 {/* Security Notice */}
-                <div className="bg-blue-400/10 border border-blue-400/30 rounded-lg p-4 mb-6">
+                <div className="bg-blue-400/10 border border-blue-400/30 p-4 mb-6">
                   <div className="flex items-center gap-2 mb-2">
                     <Shield className="w-4 h-4 text-blue-400" />
                     <span className="font-pixel text-sm text-text1">Secure & Fast</span>
@@ -263,7 +263,7 @@ export default function CreditPurchase({
                   <p className="text-text2 text-sm">Review your order before proceeding</p>
                 </div>
 
-                <div className="bg-surface2 border border-border rounded-lg p-6 mb-6">
+                <div className="bg-surface2 border border-border p-6 mb-6">
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span className="text-text2">Credits</span>
@@ -298,14 +298,14 @@ export default function CreditPurchase({
                 <div className="flex gap-3">
                   <button
                     onClick={() => setStep('select')}
-                    className="flex-1 py-3 border border-border rounded-lg font-pixel text-sm text-text2 hover:text-text1 transition-colors"
+                    className="flex-1 py-3 border border-border font-pixel text-sm text-text2 hover:text-text1 transition-colors"
                   >
                     Back
                   </button>
                   <button
                     onClick={handleConfirmPurchase}
                     disabled={isPurchasing}
-                    className="flex-1 py-3 bg-accent text-bg rounded-lg font-pixel text-sm hover:bg-accent/90 transition-colors disabled:opacity-50"
+                    className="flex-1 py-3 bg-accent text-bg font-pixel text-sm hover:bg-accent/90 transition-colors disabled:opacity-50"
                   >
                     {isPurchasing ? 'Processing...' : 'Confirm Purchase'}
                   </button>
@@ -321,7 +321,7 @@ export default function CreditPurchase({
                 animate={{ opacity: 1 }}
                 className="text-center py-12"
               >
-                <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 bg-accent/10 flex items-center justify-center mx-auto mb-6">
                   <Loader className="w-8 h-8 text-accent animate-spin" />
                 </div>
                 <h3 className="font-pixel text-lg text-text1 mb-2">Processing Payment</h3>
@@ -342,7 +342,7 @@ export default function CreditPurchase({
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-12"
               >
-                <div className="w-16 h-16 bg-green-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 bg-green-400/10 flex items-center justify-center mx-auto mb-6">
                   <Check className="w-8 h-8 text-green-400" />
                 </div>
                 <h3 className="font-pixel text-lg text-text1 mb-2">Purchase Complete!</h3>
@@ -351,7 +351,7 @@ export default function CreditPurchase({
                 </p>
                 <button
                   onClick={onClose}
-                  className="px-6 py-3 bg-accent text-bg rounded-lg font-pixel text-sm hover:bg-accent/90 transition-colors"
+                  className="px-6 py-3 bg-accent text-bg font-pixel text-sm hover:bg-accent/90 transition-colors"
                 >
                   Continue
                 </button>

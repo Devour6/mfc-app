@@ -272,7 +272,7 @@ export default function LiveFightSection({
               </button>
               <div className="flex items-center gap-2">
                 <motion.div
-                  className="w-2 h-2 bg-green rounded-full"
+                  className="w-2 h-2 bg-green"
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />

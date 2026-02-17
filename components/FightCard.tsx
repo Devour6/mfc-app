@@ -20,7 +20,7 @@ export default function FightCard({ fighters, onDismiss }: FightCardProps) {
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="bg-surface border border-border rounded-lg p-8 max-w-2xl w-full relative"
+        className="bg-surface border border-border p-8 max-w-2xl w-full relative"
         initial={{ scale: 0.8, y: 50 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ delay: 0.2 }}
@@ -149,7 +149,7 @@ export default function FightCard({ fighters, onDismiss }: FightCardProps) {
 
         {/* Auto-dismiss timer */}
         <motion.div
-          className="mt-6 h-1 bg-surface2 rounded-full overflow-hidden"
+          className="mt-6 h-1 bg-surface2 overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}

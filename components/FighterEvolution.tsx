@@ -61,9 +61,9 @@ export default function FighterEvolution({
         </div>
         <span className="text-text1 font-ui">{value}</span>
       </div>
-      <div className="w-full bg-surface2 rounded-full h-2">
+      <div className="w-full bg-surface2 h-2">
         <motion.div
-          className={`h-2 rounded-full ${traitColors[trait].split(' ')[1]}`}
+          className={`h-2 ${traitColors[trait].split(' ')[1]}`}
           initial={{ width: 0 }}
           animate={{ width: `${value}%` }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -74,7 +74,7 @@ export default function FighterEvolution({
 
   const SignatureMoveCard = ({ move }: { move: SignatureMove }) => (
     <motion.div
-      className="bg-surface2 border border-border rounded-lg p-3 space-y-2"
+      className="bg-surface2 border border-border p-3 space-y-2"
       whileHover={{ scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 300 }}
     >
@@ -116,14 +116,14 @@ export default function FighterEvolution({
           )}
         </div>
         
-        <div className={`px-2 py-1 rounded-full text-xs font-pixel ${stageColors[careerStage]}`}>
+        <div className={`px-2 py-1 text-xs font-pixel ${stageColors[careerStage]}`}>
           {careerStage.toUpperCase()}
         </div>
       </div>
 
       {/* Evolution Level and Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-surface2 border border-border rounded-lg p-3">
+        <div className="bg-surface2 border border-border p-3">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-accent" />
             <span className="font-pixel text-sm text-text1">Evolution</span>
@@ -136,7 +136,7 @@ export default function FighterEvolution({
           </div>
         </div>
 
-        <div className="bg-surface2 border border-border rounded-lg p-3">
+        <div className="bg-surface2 border border-border p-3">
           <div className="flex items-center gap-2 mb-2">
             <Trophy className="w-4 h-4 text-accent" />
             <span className="font-pixel text-sm text-text1">Win Streak</span>

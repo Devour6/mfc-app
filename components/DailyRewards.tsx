@@ -68,7 +68,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
     return (
       <motion.div
         className={`
-          relative border rounded-lg p-3 text-center transition-all
+          relative border p-3 text-center transition-all
           ${isCurrent && canClaim 
             ? 'border-accent bg-accent/10 shadow-lg' 
             : isUnlocked 
@@ -82,7 +82,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
         {/* Glow effect for current day */}
         {isCurrent && canClaim && (
           <motion.div
-            className="absolute inset-0 rounded-lg bg-accent/20"
+            className="absolute inset-0 bg-accent/20"
             animate={{ opacity: [0.3, 0.7, 0.3] }}
             transition={{ duration: 2, repeat: Infinity }}
           />
@@ -91,7 +91,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
         {/* Day number */}
         <div className="relative mb-2">
           <div className={`
-            w-8 h-8 mx-auto rounded-full flex items-center justify-center font-pixel text-sm
+            w-8 h-8 mx-auto flex items-center justify-center font-pixel text-sm
             ${isClaimed 
               ? 'bg-green-400 text-bg' 
               : isCurrent && canClaim 
@@ -124,7 +124,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
         {isCurrent && canClaim && onClaimReward && (
           <motion.button
             onClick={handleClaimReward}
-            className="absolute inset-0 rounded-lg bg-accent text-bg font-pixel text-sm opacity-0 hover:opacity-90 transition-opacity flex items-center justify-center"
+            className="absolute inset-0 bg-accent text-bg font-pixel text-sm opacity-0 hover:opacity-90 transition-opacity flex items-center justify-center"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -140,7 +140,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
   return (
     <div className="space-y-6">
       {/* Header with streak info */}
-      <div className="bg-surface2 border border-border rounded-lg p-4">
+      <div className="bg-surface2 border border-border p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-accent" />
@@ -167,9 +167,9 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
             <span className="text-text2">Week {progress.currentWeek} Progress</span>
             <span className="text-text1">{progress.dayInWeek}/7 days</span>
           </div>
-          <div className="w-full bg-surface1 rounded-full h-2">
+          <div className="w-full bg-surface1 h-2">
             <motion.div
-              className="h-2 bg-gradient-to-r from-accent/70 to-accent rounded-full"
+              className="h-2 bg-gradient-to-r from-accent/70 to-accent"
               initial={{ width: 0 }}
               animate={{ width: `${(progress.dayInWeek / 7) * 100}%` }}
               transition={{ duration: 0.5 }}
@@ -200,7 +200,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
 
       {/* Motivational message */}
       <motion.div
-        className="bg-accent/10 border border-accent/30 rounded-lg p-3 text-center"
+        className="bg-accent/10 border border-accent/30 p-3 text-center"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -214,14 +214,14 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
           {activeEvents.map(event => (
             <motion.div
               key={event.id}
-              className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-3"
+              className="bg-yellow-400/10 border border-yellow-400/30 p-3"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
             >
               <div className="flex items-center gap-2 mb-1">
                 <Star className="w-4 h-4 text-yellow-400" />
                 <span className="font-pixel text-sm text-text1">{event.name}</span>
-                <div className="px-2 py-0.5 bg-yellow-400/20 rounded-full text-xs font-ui text-yellow-400">
+                <div className="px-2 py-0.5 bg-yellow-400/20 text-xs font-ui text-yellow-400">
                   {event.multiplier}x
                 </div>
               </div>
@@ -263,7 +263,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
 
       {/* Streak bonuses */}
       {bonus.multiplier > 1 && (
-        <div className="bg-purple-400/10 border border-purple-400/30 rounded-lg p-4">
+        <div className="bg-purple-400/10 border border-purple-400/30 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Zap className="w-4 h-4 text-purple-400" />
             <h3 className="font-pixel text-sm text-text1">Streak Bonus Active!</h3>
@@ -289,7 +289,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
       )}
 
       {/* Upcoming milestones */}
-      <div className="bg-surface2 border border-border rounded-lg p-4">
+      <div className="bg-surface2 border border-border p-4">
         <div className="flex items-center gap-2 mb-3">
           <Target className="w-4 h-4 text-accent" />
           <h3 className="font-pixel text-sm text-text1">Upcoming Milestones</h3>

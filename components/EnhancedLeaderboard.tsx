@@ -104,7 +104,7 @@ export default function EnhancedLeaderboard({
     if (rank === 2) return <Medal className="w-5 h-5 text-gray-400" />
     if (rank === 3) return <Medal className="w-5 h-5 text-orange-600" />
     return (
-      <div className="w-5 h-5 rounded-full bg-border flex items-center justify-center">
+      <div className="w-5 h-5 bg-border flex items-center justify-center">
         <span className="font-pixel text-xs text-text2">{rank}</span>
       </div>
     )
@@ -122,7 +122,7 @@ export default function EnhancedLeaderboard({
   }
 
   return (
-    <div className="p-6 bg-surface rounded-lg border border-border">
+    <div className="p-6 bg-surface border border-border">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -132,7 +132,7 @@ export default function EnhancedLeaderboard({
           </div>
           
           {/* Timeframe Toggle */}
-          <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-bg border border-border p-1">
             {['weekly', 'monthly', 'allTime'].map((period) => (
               <button
                 key={period}
@@ -187,7 +187,7 @@ export default function EnhancedLeaderboard({
       {/* Leaderboard Table */}
       <div className="space-y-2">
         {/* Header Row */}
-        <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-bg rounded-lg border border-border font-pixel text-xs text-text2">
+        <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-bg border border-border font-pixel text-xs text-text2">
           <div className="col-span-1">RANK</div>
           <div className="col-span-4">FIGHTER</div>
           <div className="col-span-2">RECORD</div>
@@ -201,7 +201,7 @@ export default function EnhancedLeaderboard({
           {leaderboardData.map((fighter, index) => (
             <motion.div
               key={fighter.id}
-              className={`grid grid-cols-12 gap-4 px-4 py-3 rounded-lg border transition-all cursor-pointer ${
+              className={`grid grid-cols-12 gap-4 px-4 py-3 border transition-all cursor-pointer ${
                 fighter.champion 
                   ? 'bg-accent/10 border-accent shadow-lg' 
                   : 'bg-surface border-border hover:border-text2'
