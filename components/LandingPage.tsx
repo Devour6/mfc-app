@@ -58,25 +58,17 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       
       {/* Dynamic background orbs */}
       <motion.div
-        className="absolute w-96 h-96 bg-accent/5 blur-3xl"
+        className="absolute w-96 h-96 bg-accent/5 blur-3xl left-[10%] top-[20%]"
         animate={{
           x: mousePosition.x * 0.02,
           y: mousePosition.y * 0.02,
         }}
-        style={{
-          left: '10%',
-          top: '20%',
-        }}
       />
       <motion.div
-        className="absolute w-64 h-64 bg-accent2/5 blur-3xl"
+        className="absolute w-64 h-64 bg-accent2/5 blur-3xl right-[15%] bottom-[25%]"
         animate={{
           x: mousePosition.x * -0.015,
           y: mousePosition.y * -0.015,
-        }}
-        style={{
-          right: '15%',
-          bottom: '25%',
         }}
       />
 
@@ -140,11 +132,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               <span className="relative z-10">I&apos;M A SPECTATOR</span>
               {isHovered === 'spectator' && (
                 <motion.div
-                  className="absolute inset-0 bg-accent"
+                  className="absolute inset-0 bg-accent z-0"
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.2 }}
-                  style={{ zIndex: 0 }}
                 />
               )}
             </motion.button>
@@ -162,11 +153,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               <span className="relative z-10">I&apos;M A FIGHTER OWNER</span>
               {isHovered === 'fighter' && (
                 <motion.div
-                  className="absolute inset-0 bg-accent2"
+                  className="absolute inset-0 bg-accent2 z-0"
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.2 }}
-                  style={{ zIndex: 0 }}
                 />
               )}
             </motion.button>
@@ -194,11 +184,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               </span>
               {isHovered === 'live' && (
                 <motion.div
-                  className="absolute inset-0 bg-gold"
+                  className="absolute inset-0 bg-gold z-0"
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.2 }}
-                  style={{ zIndex: 0 }}
                 />
               )}
             </motion.button>
