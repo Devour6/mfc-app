@@ -42,6 +42,7 @@ lib/                  → Core engines (~3,400 lines)
   ├── auth-guard.ts         → requireAuth() — throws AuthRequiredError if no session
   ├── user-sync.ts          → ensureUser() — upsert User record on first login
   ├── rate-limit.ts         → In-memory sliding window rate limiter (RateLimiter class + helpers)
+  ├── stripe.ts             → Stripe client singleton + credit packages
   └── solana/               → Solana wallet integration
       ├── wallet-provider.tsx  → React context (ConnectionProvider + WalletProvider + WalletModalProvider)
       ├── use-wallet.ts        → Custom hook: connect/disconnect/balance/signAndSend
@@ -120,6 +121,8 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | `/api/bets/[id]` | GET, PATCH | Required | Get bet details, settle/cancel bet |
 | `/api/training` | GET, POST | Required | List user's training sessions, create session |
 | `/api/training/[id]` | GET | Required | Get training session details |
+| `/api/stripe/checkout-session` | POST | Required | Create Stripe Checkout Session for credit purchase |
+| `/api/stripe/webhook` | POST | Public* | Handle Stripe webhook events (signature-verified) |
 | `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
 | `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
 
@@ -154,11 +157,12 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
 - 67 API integration tests covering all route handlers, auth protection (401s for all guarded routes), and user sync (with auth mocks)
+- Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 
 **Not Yet Built:**
 - Solana provider wired into app layout
 - Frontend API client updated for session-based auth (no more auth0Id in request bodies)
-- Stripe payment integration
+- Stripe frontend integration (credit purchase UI wired to checkout session endpoint)
 - Solana wallet integration (scaffold built: provider, hook, credit bridge — needs frontend wiring + mainnet config)
 - Multiplayer (mock data only)
 - Deployment/environment setup

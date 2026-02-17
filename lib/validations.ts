@@ -127,6 +127,12 @@ export const creditTransactionSchema = z.object({
   description: z.string().max(200).optional(),
 })
 
+// ─── Stripe ────────────────────────────────────────────────────────────────
+
+export const checkoutSessionSchema = z.object({
+  packageId: z.string().min(1, 'Package ID is required'),
+})
+
 // ─── Query params ───────────────────────────────────────────────────────────
 
 export const fighterQuerySchema = z.object({
