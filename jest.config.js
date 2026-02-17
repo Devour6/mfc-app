@@ -21,9 +21,18 @@ const config = {
         '<rootDir>/__tests__/!(api)/**/*.(ts|tsx|js)',
         '<rootDir>/**/*.(test|spec).(ts|tsx|js)',
       ],
-      testPathIgnorePatterns: ['/node_modules/', '__tests__/api/'],
+      testPathIgnorePatterns: ['/node_modules/', '__tests__/api/', '__tests__/solana/'],
       collectCoverageFrom: [
         'components/**/*.(ts|tsx)',
+        '!**/*.d.ts',
+      ],
+    },
+    {
+      ...shared,
+      displayName: 'solana',
+      testMatch: ['<rootDir>/__tests__/solana/**/*.test.(ts|tsx)'],
+      collectCoverageFrom: [
+        'lib/solana/**/*.(ts|tsx)',
         '!**/*.d.ts',
       ],
     },
