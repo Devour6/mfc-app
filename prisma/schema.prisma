@@ -23,6 +23,9 @@ model User {
   bets        Bet[]
   fightResults FightResult[]
 
+  @@index([auth0Id])
+  @@index([email])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -34,7 +37,7 @@ model Fighter {
   elo           Int @default(1000)
   isActive      Boolean @default(true)
   trainingCost  Float @default(100.0)
-  
+
   // Stats that improve with training
   strength      Int @default(50)
   speed         Int @default(50)
@@ -42,27 +45,27 @@ model Fighter {
   stamina       Int @default(50)
   fightIQ       Int @default(50)
   aggression    Int @default(50)
-  
+
   // Record tracking
   wins          Int @default(0)
   losses        Int @default(0)
   draws         Int @default(0)
-  
+
   // Training tracking
   totalTrainingHours   Float @default(0.0)
   totalTrainingSessions Int @default(0)
-  
+
   // Momentum factors
   winStreak     Int @default(0)
   lossStreak    Int @default(0)
   lastFightAt   DateTime?
-  
+
   // Metadata
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  
+
   // Relationships
-  owner         User @relation(fields: [ownerId], references: [id])
+  owner         User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId       String
   trainings     Training[]
   fightsAsFighter1 Fight[] @relation("Fighter1")
@@ -70,6 +73,11 @@ model Fighter {
   fightResults  FightResult[]
   bets          Bet[]
 
+  @@index([ownerId])
+  @@index([elo(sort: Desc)])
+  @@index([class, isActive])
+  @@index([isActive, elo(sort: Desc)])
+  @@index([createdAt])
   @@map("fighters")
 }
 
@@ -77,23 +85,26 @@ model Training {
   id          String @id @default(cuid())
   hours       Float // How many hours trained
   cost        Float // What it cost
-  
+
   // Stat improvements from this session
   strengthGain    Int @default(0)
-  speedGain       Int @default(0) 
+  speedGain       Int @default(0)
   defenseGain     Int @default(0)
   staminaGain     Int @default(0)
   fightIQGain     Int @default(0)
   aggressionGain  Int @default(0)
-  
+
   createdAt   DateTime @default(now())
-  
+
   // Relationships
-  fighter     Fighter @relation(fields: [fighterId], references: [id])
+  fighter     Fighter @relation(fields: [fighterId], references: [id], onDelete: Cascade)
   fighterId   String
-  user        User @relation(fields: [userId], references: [id])
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
 
+  @@index([fighterId])
+  @@index([userId])
+  @@index([createdAt])
   @@map("trainings")
 }
 
@@ -103,27 +114,32 @@ model Fight {
   scheduledAt     DateTime
   startedAt       DateTime?
   endedAt         DateTime?
-  
+
   // Fight setup
   maxRounds       Int @default(3)
   venue           String?
   title           String?
-  
+
   // Algorithm data (serialized fight state)
   fightData       Json? // Stores detailed fight simulation data
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+
   // Relationships
   fighter1        Fighter @relation("Fighter1", fields: [fighter1Id], references: [id])
   fighter1Id      String
   fighter2        Fighter @relation("Fighter2", fields: [fighter2Id], references: [id])
   fighter2Id      String
-  
+
   result          FightResult?
   bets            Bet[]
 
+  @@index([status])
+  @@index([fighter1Id])
+  @@index([fighter2Id])
+  @@index([scheduledAt])
+  @@index([status, scheduledAt])
   @@map("fights")
 }
 
@@ -132,25 +148,28 @@ model FightResult {
   method      FightMethod // KO, TKO, Decision, etc.
   round       Int?
   time        String?
-  
+
   // Stats from the fight
   fighter1Stats Json // Detailed fight stats
   fighter2Stats Json
-  
+
   // ELO changes
   fighter1EloChange Int
   fighter2EloChange Int
-  
+
   createdAt   DateTime @default(now())
-  
+
   // Relationships
-  fight       Fight @relation(fields: [fightId], references: [id])
+  fight       Fight @relation(fields: [fightId], references: [id], onDelete: Cascade)
   fightId     String @unique
   winner      Fighter? @relation(fields: [winnerId], references: [id])
   winnerId    String?
   user        User @relation(fields: [userId], references: [id]) // Who created this result
   userId      String
 
+  @@index([winnerId])
+  @@index([userId])
+  @@index([createdAt])
   @@map("fight_results")
 }
 
@@ -161,18 +180,24 @@ model Bet {
   odds        Float // Odds when bet was placed
   status      BetStatus @default(PENDING)
   payout      Float?
-  
+
   createdAt   DateTime @default(now())
   settledAt   DateTime?
-  
+
   // Relationships
-  user        User @relation(fields: [userId], references: [id])
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
   fight       Fight @relation(fields: [fightId], references: [id])
   fightId     String
   fighter     Fighter? @relation(fields: [fighterId], references: [id]) // If betting on specific fighter
   fighterId   String?
 
+  @@index([userId])
+  @@index([fightId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([fightId, status])
+  @@index([createdAt])
   @@map("bets")
 }
 
