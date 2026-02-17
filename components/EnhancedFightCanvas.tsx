@@ -1216,10 +1216,10 @@ export default function EnhancedFightCanvas({
       const starX = effect.x + (i - 2) * 25 + Math.sin(time * 2 + i) * 10
       const starY = effect.y + Math.sin(time * 3 + i) * 15
       const rotation = time + i
-      const scale = 0.8 + Math.sin(time * 4 + i) * 0.3
-      
+      const scale = Math.round((0.8 + Math.sin(time * 4 + i) * 0.3) * 2) / 2
+
       ctx.save()
-      ctx.translate(starX, starY)
+      ctx.translate(Math.round(starX), Math.round(starY))
       ctx.rotate(rotation)
       ctx.scale(scale, scale)
       ctx.fillText('★', 0, 0)
@@ -1279,7 +1279,8 @@ export default function EnhancedFightCanvas({
     ctx.textAlign = 'center'
     ctx.save()
     ctx.translate(effect.x, effect.y - 40)
-    ctx.scale(1 + Math.sin(time * 5) * 0.2, 1 + Math.sin(time * 5) * 0.2)
+    const comboScale = Math.round((1 + Math.sin(time * 5) * 0.2) * 2) / 2
+    ctx.scale(comboScale, comboScale)
     ctx.fillText('COMBO!', 0, 0)
     ctx.restore()
     
@@ -1406,7 +1407,7 @@ export default function EnhancedFightCanvas({
     ctx.stroke()
     
     // Labels with excitement scaling
-    const labelScale = 1 + fightIntensity * 0.1
+    const labelScale = Math.round((1 + fightIntensity * 0.1) * 2) / 2
     ctx.save()
     ctx.scale(labelScale, labelScale)
     
