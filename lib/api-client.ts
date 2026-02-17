@@ -4,7 +4,8 @@
 
 // ─── Response Types ─────────────────────────────────────────────────────────
 
-export interface ApiFighter {
+/** Shared fighter fields returned by all endpoints */
+export interface ApiFighterBase {
   id: string
   name: string
   emoji: string
@@ -30,9 +31,19 @@ export interface ApiFighter {
   updatedAt: string
   ownerId: string
   owner?: { id: string; name: string | null; username: string | null }
-  trainings?: ApiTraining[]
-  fightResults?: ApiFightResult[]
 }
+
+/** Summary type returned by getFighters() — no nested relations */
+export type ApiFighterSummary = ApiFighterBase
+
+/** Detail type returned by getFighter(id) — includes trainings and fight results */
+export interface ApiFighterDetail extends ApiFighterBase {
+  trainings: ApiTraining[]
+  fightResults: ApiFightResult[]
+}
+
+/** Union type for backwards compatibility */
+export type ApiFighter = ApiFighterSummary | ApiFighterDetail
 
 export interface ApiFight {
   id: string
@@ -48,8 +59,8 @@ export interface ApiFight {
   updatedAt: string
   fighter1Id: string
   fighter2Id: string
-  fighter1?: Partial<ApiFighter>
-  fighter2?: Partial<ApiFighter>
+  fighter1?: Partial<ApiFighterBase>
+  fighter2?: Partial<ApiFighterBase>
   result?: ApiFightResult | null
   bets?: Partial<ApiBet>[]
 }
@@ -94,7 +105,7 @@ export interface ApiBet {
   fightId: string
   fighterId: string | null
   fight?: Partial<ApiFight>
-  fighter?: Partial<ApiFighter> | null
+  fighter?: Partial<ApiFighterBase> | null
   user?: Partial<ApiUser>
 }
 
@@ -111,7 +122,7 @@ export interface ApiTraining {
   createdAt: string
   fighterId: string
   userId: string
-  fighter?: Partial<ApiFighter>
+  fighter?: Partial<ApiFighterBase>
   user?: Partial<ApiUser>
 }
 
@@ -123,7 +134,7 @@ export interface CreditTransactionResult {
   credits: number
   transaction: {
     amount: number
-    type: string
+    type: 'deposit' | 'withdrawal' | 'training' | 'bet' | 'reward' | 'payout'
     description?: string
     timestamp: string
   }
@@ -152,18 +163,38 @@ class ApiClientError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    ...options,
-  })
+  let res: Response
 
-  const data = await res.json()
+  try {
+    res = await fetch(path, {
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      ...options,
+    })
+  } catch (err) {
+    throw new ApiClientError(
+      err instanceof TypeError ? err.message : 'Network request failed',
+      0,
+      { error: 'Network request failed' },
+    )
+  }
+
+  let data: unknown
+  try {
+    data = await res.json()
+  } catch {
+    throw new ApiClientError(
+      'Failed to parse response',
+      res.status,
+      { error: 'Failed to parse response' },
+    )
+  }
 
   if (!res.ok) {
+    const body = data as ApiError | ApiValidationError
     throw new ApiClientError(
-      data.error || `Request failed with status ${res.status}`,
+      body.error || `Request failed with status ${res.status}`,
       res.status,
-      data,
+      body,
     )
   }
 
@@ -183,7 +214,7 @@ export function getFighters(filters?: {
   class?: 'LIGHTWEIGHT' | 'MIDDLEWEIGHT' | 'HEAVYWEIGHT'
   active?: boolean
 }) {
-  return request<ApiFighter[]>(`/api/fighters${qs({
+  return request<ApiFighterSummary[]>(`/api/fighters${qs({
     ownerId: filters?.ownerId,
     class: filters?.class,
     active: filters?.active,
@@ -191,7 +222,7 @@ export function getFighters(filters?: {
 }
 
 export function getFighter(id: string) {
-  return request<ApiFighter>(`/api/fighters/${id}`)
+  return request<ApiFighterDetail>(`/api/fighters/${id}`)
 }
 
 export function createFighter(data: {
@@ -200,7 +231,7 @@ export function createFighter(data: {
   fighterClass: 'LIGHTWEIGHT' | 'MIDDLEWEIGHT' | 'HEAVYWEIGHT'
   ownerId: string
 }) {
-  return request<ApiFighter>('/api/fighters', {
+  return request<ApiFighterSummary>('/api/fighters', {
     method: 'POST',
     body: JSON.stringify(data),
   })
@@ -218,8 +249,14 @@ export function updateFighter(id: string, data: Partial<{
   losses: number
   draws: number
   isActive: boolean
+  winStreak: number
+  lossStreak: number
+  lastFightAt: string | null
+  totalTrainingHours: number
+  totalTrainingSessions: number
+  trainingCost: number
 }>) {
-  return request<ApiFighter>(`/api/fighters/${id}`, {
+  return request<ApiFighterSummary>(`/api/fighters/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   })
