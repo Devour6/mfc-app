@@ -7,13 +7,10 @@ import {
   type TransactionSignature,
 } from '@solana/web3.js'
 
-// MFC platform treasury wallet (set in env, fallback to devnet test wallet)
-const TREASURY_ADDRESS = new PublicKey(
-  process.env.NEXT_PUBLIC_MFC_TREASURY_WALLET || '11111111111111111111111111111111',
-)
-
-// Credit exchange rate: 1 SOL = 1000 credits (configurable)
-const CREDITS_PER_SOL = Number(process.env.NEXT_PUBLIC_CREDITS_PER_SOL) || 1000
+export interface SolanaConfig {
+  treasuryWallet: string
+  creditsPerSol: number
+}
 
 export interface DepositResult {
   signature: TransactionSignature
@@ -27,6 +24,24 @@ export interface WithdrawResult {
   solAmount: number
 }
 
+let _configCache: SolanaConfig | null = null
+
+/**
+ * Fetch Solana config (treasury address, exchange rate) from the backend.
+ * Cached after first successful fetch.
+ */
+export async function getSolanaConfig(): Promise<SolanaConfig> {
+  if (_configCache) return _configCache
+
+  const res = await fetch('/api/solana/config')
+  if (!res.ok) {
+    throw new Error('Failed to fetch Solana config')
+  }
+
+  _configCache = await res.json()
+  return _configCache!
+}
+
 /**
  * Build a SOL transfer transaction for depositing to MFC platform credits.
  * The caller must sign and send the transaction using their wallet adapter.
@@ -38,13 +53,15 @@ export async function buildDepositTransaction(
 ): Promise<{ transaction: Transaction; creditAmount: number }> {
   if (solAmount <= 0) throw new Error('Deposit amount must be positive')
 
+  const config = await getSolanaConfig()
+  const treasuryAddress = new PublicKey(config.treasuryWallet)
   const lamports = Math.round(solAmount * LAMPORTS_PER_SOL)
-  const creditAmount = solAmount * CREDITS_PER_SOL
+  const creditAmount = solAmount * config.creditsPerSol
 
   const transaction = new Transaction().add(
     SystemProgram.transfer({
       fromPubkey: fromWallet,
-      toPubkey: TREASURY_ADDRESS,
+      toPubkey: treasuryAddress,
       lamports,
     }),
   )
@@ -65,7 +82,8 @@ export async function confirmDeposit(
   solAmount: number,
   signature: TransactionSignature,
 ): Promise<{ credits: number }> {
-  const creditAmount = solAmount * CREDITS_PER_SOL
+  const config = await getSolanaConfig()
+  const creditAmount = solAmount * config.creditsPerSol
 
   const res = await fetch('/api/user/credits', {
     method: 'POST',
@@ -102,7 +120,8 @@ export async function requestWithdrawal(
 ): Promise<{ solAmount: number; credits: number }> {
   if (creditAmount <= 0) throw new Error('Withdrawal amount must be positive')
 
-  const solAmount = creditAmount / CREDITS_PER_SOL
+  const config = await getSolanaConfig()
+  const solAmount = creditAmount / config.creditsPerSol
 
   const res = await fetch('/api/user/credits', {
     method: 'POST',
@@ -123,6 +142,3 @@ export async function requestWithdrawal(
   const data = await res.json()
   return { solAmount, credits: data.credits }
 }
-
-// Export constants for UI consumption
-export { CREDITS_PER_SOL, TREASURY_ADDRESS }

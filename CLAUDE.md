@@ -44,7 +44,7 @@ lib/                  → Core engines (~3,400 lines)
   └── solana/               → Solana wallet integration
       ├── wallet-provider.tsx  → React context (ConnectionProvider + WalletProvider + WalletModalProvider)
       ├── use-wallet.ts        → Custom hook: connect/disconnect/balance/signAndSend
-      └── credit-bridge.ts     → SOL↔credits deposit/withdrawal (devnet, 1 SOL = 1000 credits)
+      └── credit-bridge.ts     → SOL↔credits deposit/withdrawal (fetches treasury from /api/solana/config)
 types/index.ts        → Comprehensive type definitions (~370 lines)
 prisma/schema.prisma  → DB models: User, Fighter, Training, Fight, FightResult, Bet
 prisma.config.ts      → Prisma 7 config (holds DATABASE_URL for migrations)
@@ -111,6 +111,7 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | `/api/bets/[id]` | GET, PATCH | Get bet details, settle/cancel bet (credits payout/refund via transaction) |
 | `/api/training` | GET, POST | List training sessions, create session (deducts credits, applies random stat gains, caps at 100) |
 | `/api/training/[id]` | GET | Get training session details |
+| `/api/solana/config` | GET | Returns treasury wallet address and credits-per-SOL rate (server-side env) |
 | `/api/health` | GET | Health check — returns `{ status, timestamp, db }` |
 
 **Validation:** All routes use zod schemas from `lib/validations.ts` for input validation. Invalid requests return `{ error: "Validation failed", issues: [...] }` with 400 status.
