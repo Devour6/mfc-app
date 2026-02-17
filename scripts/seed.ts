@@ -3,16 +3,30 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import * as dotenv from 'dotenv'
 
-dotenv.config()
+// Load .env.local first (Next.js convention), fall back to .env
+dotenv.config({ path: '.env.local' })
+dotenv.config({ path: '.env' })
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ 
+const prisma = new PrismaClient({
   adapter,
   log: ['info', 'warn', 'error'],
 })
 
-async function main() {
+async function clean() {
+  console.log('Cleaning existing data...')
+  // Delete in order to respect foreign key constraints
+  await prisma.bet.deleteMany()
+  await prisma.fightResult.deleteMany()
+  await prisma.fight.deleteMany()
+  await prisma.training.deleteMany()
+  await prisma.fighter.deleteMany()
+  await prisma.user.deleteMany()
+  console.log('Database cleaned.')
+}
+
+async function seed() {
   console.log('Seeding database with sample data...')
 
   // Create sample users
@@ -28,7 +42,7 @@ async function main() {
 
   const user2 = await prisma.user.create({
     data: {
-      auth0Id: 'dev-user-2', 
+      auth0Id: 'dev-user-2',
       email: 'user2@example.com',
       name: 'Champion Trainer',
       username: 'champion',
@@ -36,13 +50,14 @@ async function main() {
     }
   })
 
-  // Create sample fighters with varied training levels
+  // Create sample fighters with varied stats and ELOs matching their records
   const fighters = [
     {
       name: 'Thunder Bolt',
       emoji: '⚡',
       class: FighterClass.HEAVYWEIGHT,
       ownerId: user1.id,
+      elo: 1580,
       strength: 75,
       speed: 65,
       defense: 70,
@@ -60,6 +75,7 @@ async function main() {
       emoji: '👹',
       class: FighterClass.LIGHTWEIGHT,
       ownerId: user1.id,
+      elo: 1720,
       strength: 55,
       speed: 90,
       defense: 60,
@@ -77,6 +93,7 @@ async function main() {
       emoji: '🛡️',
       class: FighterClass.MIDDLEWEIGHT,
       ownerId: user2.id,
+      elo: 1650,
       strength: 70,
       speed: 50,
       defense: 95,
@@ -95,6 +112,7 @@ async function main() {
       emoji: '💥',
       class: FighterClass.HEAVYWEIGHT,
       ownerId: user2.id,
+      elo: 1120,
       strength: 95,
       speed: 70,
       defense: 40,
@@ -113,6 +131,7 @@ async function main() {
       emoji: '🌟',
       class: FighterClass.LIGHTWEIGHT,
       ownerId: user1.id,
+      elo: 1025,
       strength: 45,
       speed: 55,
       defense: 50,
@@ -131,7 +150,7 @@ async function main() {
   for (const fighterData of fighters) {
     const fighter = await prisma.fighter.create({ data: fighterData })
     createdFighters.push(fighter)
-    console.log(`Created fighter: ${fighter.name} (${fighter.class})`)
+    console.log(`  Created fighter: ${fighter.name} (${fighter.class}, ELO ${fighter.elo})`)
   }
 
   // Create sample training sessions
@@ -165,15 +184,15 @@ async function main() {
   for (const training of trainingSessions) {
     await prisma.training.create({ data: training })
   }
-  console.log(`Created ${trainingSessions.length} training sessions`)
+  console.log(`  Created ${trainingSessions.length} training sessions`)
 
-  // Create sample fights
+  // Create a completed fight with result
   const fight1 = await prisma.fight.create({
     data: {
       fighter1Id: createdFighters[0].id,
       fighter2Id: createdFighters[3].id,
       status: 'COMPLETED',
-      scheduledAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
+      scheduledAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       startedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       endedAt: new Date(Date.now() - 23 * 60 * 60 * 1000),
       venue: 'MFC Arena',
@@ -202,21 +221,23 @@ async function main() {
       userId: user1.id,
     }
   })
+  console.log('  Created 1 completed fight with result')
 
-  // Create scheduled fight
+  // Create a scheduled upcoming fight
   const upcomingFight = await prisma.fight.create({
     data: {
       fighter1Id: createdFighters[1].id,
       fighter2Id: createdFighters[2].id,
       status: 'SCHEDULED',
-      scheduledAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // In 2 hours
+      scheduledAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
       venue: 'MFC Championship Arena',
       title: 'Speed Demon vs Iron Wall - Title Fight',
       maxRounds: 5,
     }
   })
+  console.log('  Created 1 scheduled fight')
 
-  // Create sample bets
+  // Create a sample pending bet
   await prisma.bet.create({
     data: {
       userId: user1.id,
@@ -228,15 +249,25 @@ async function main() {
       status: 'PENDING',
     }
   })
+  console.log('  Created 1 pending bet')
 
-  console.log('Database seeded successfully! 🎉')
-  console.log('\nSample data created:')
-  console.log('- 2 users with starting credits')
-  console.log('- 5 fighters with varied training levels')
-  console.log('- 3 training sessions')
-  console.log('- 1 completed fight with results')
-  console.log('- 1 scheduled fight')
-  console.log('- 1 pending bet')
+  console.log('\nSeed complete:')
+  console.log('  2 users')
+  console.log('  5 fighters (with ELO ratings)')
+  console.log('  3 training sessions')
+  console.log('  1 completed fight with result')
+  console.log('  1 scheduled fight')
+  console.log('  1 pending bet')
+}
+
+async function main() {
+  const args = process.argv.slice(2)
+
+  if (args.includes('--clean') || args.includes('--reset')) {
+    await clean()
+  }
+
+  await seed()
 }
 
 main()
@@ -246,4 +277,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect()
+    await pool.end()
   })
