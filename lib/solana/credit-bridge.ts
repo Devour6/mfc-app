@@ -78,7 +78,6 @@ export async function buildDepositTransaction(
  * to credit the user's account.
  */
 export async function confirmDeposit(
-  auth0Id: string,
   solAmount: number,
   signature: TransactionSignature,
 ): Promise<{ credits: number }> {
@@ -89,7 +88,6 @@ export async function confirmDeposit(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      auth0Id,
       amount: creditAmount,
       type: 'deposit',
       description: `Deposit ${solAmount} SOL (tx: ${signature.slice(0, 16)}...)`,
@@ -115,7 +113,6 @@ export async function confirmDeposit(
  * For devnet/development, we deduct credits immediately.
  */
 export async function requestWithdrawal(
-  auth0Id: string,
   creditAmount: number,
 ): Promise<{ solAmount: number; credits: number }> {
   if (creditAmount <= 0) throw new Error('Withdrawal amount must be positive')
@@ -127,7 +124,6 @@ export async function requestWithdrawal(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      auth0Id,
       amount: -creditAmount,
       type: 'withdrawal',
       description: `Withdraw ${creditAmount} credits (${solAmount} SOL)`,
