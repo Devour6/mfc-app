@@ -12,7 +12,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 | Language | TypeScript 5 (strict mode) |
 | UI | React 18, Tailwind CSS 3.4, Framer Motion 11 |
 | State | Zustand 4.5 with localStorage persistence |
-| Rendering | HTML5 Canvas (pixel-art fight visuals) |
+| Rendering | HTML5 Canvas (16-bit pixel-block sprites, fillRect grid rendering) |
 | Audio | Web Audio API via custom SoundManager |
 | Database | PostgreSQL 16 via Prisma 7.4 + `@prisma/adapter-pg` (connected, migrated, seeded) |
 | Auth | Auth0 v4 (@auth0/nextjs-auth0 v4.15.0) — proxy.ts + lib/auth-guard.ts |
@@ -58,6 +58,7 @@ app/api/              → API routes (see API Routes section below)
 
 ### Fight Engine (`lib/fight-engine.ts`)
 - Tick-based simulation at 80ms intervals, 3 rounds × 180 seconds
+- Real-time clock: tick counter decrements `fightState.clock` every 12 ticks (~1 real second)
 - Actions: jab, cross, hook, uppercut, combo, dodge, block, clinch, move
 - Base 55% hit chance with modifiers (dodging -70%, blocking -60%, stunned +80%)
 - KO at 0 HP, TKO at <15 HP (30% chance), Decision by scored hits
@@ -79,7 +80,9 @@ app/api/              → API routes (see API Routes section below)
 Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
-- Currently uses mock data (2 sample fighters on startup)
+- `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
+- `placeBetAndDeduct()` — deducts credits with balance check, returns success/failure
+- Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
 - Persists to localStorage
 
 ## Database Schema (Prisma)
@@ -130,16 +133,18 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 ## What Works (Prototype Status)
 
 **Functional:**
-- Full fight simulation engine with tick-based combat
+- Full fight simulation engine with tick-based combat (clock runs at real-time 1s/tick)
 - Real-time market pricing reacting to fight state
-- Pixel-art canvas fight rendering with visual effects
+- Pixel-block canvas fight rendering (16-bit Street Fighter II style sprites using fillRect grid)
 - Achievement and daily reward systems
 - Credit economy with purchase/withdrawal UI
 - Fighter progression with traits and signature moves
 - Tournament bracket structure
 - Sound effects system
-- Responsive UI with mobile nav
+- Responsive UI with mobile nav — betting sidebar visible on all screen sizes (stacked on mobile, sidebar on desktop)
 - Zustand persistence
+- Reactive credit balance: store reads from `/api/user/credits` on mount, falls back to local data
+- Live betting deducts credits from Zustand store via `placeBetAndDeduct`
 
 **Backend (In Progress):**
 - PostgreSQL 16 connected locally, migrated, and seeded with sample data
