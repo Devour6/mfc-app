@@ -147,7 +147,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 44 API integration tests covering all route handlers
+- 43 API integration tests covering all route handlers (with auth mocks)
 
 **Not Yet Built:**
 - Solana provider wired into app layout
@@ -194,10 +194,11 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 
 **GitHub Actions** (`.github/workflows/ci.yml`) runs on every PR to `main` and on push to `main`:
 1. Checkout + install deps (`npm ci`)
-2. Lint (`npm run lint`)
-3. Type check (`npm run type-check`)
-4. Test (`npm test`)
-5. Build (`npm run build`)
+2. Generate Prisma client (`npx prisma generate`)
+3. Lint (`npm run lint`)
+4. Type check (`npm run type-check`)
+5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests only (frontend tests need prop fixes)
+6. Build (`npm run build`)
 
 All steps must pass for a PR to be mergeable.
 
@@ -216,10 +217,10 @@ These settings should be configured by the repo admin on the `main` branch:
 
 Jest 30 with three projects:
 - **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
-- **api** (`node`) — API route integration tests in `__tests__/api/` (44 tests, all passing)
+- **api** (`node`) — API route integration tests in `__tests__/api/` (43 tests, all passing)
 - **solana** — Solana module tests in `__tests__/solana/` (27 tests, all passing). Per-file `@jest-environment` directives (node for credit-bridge, jsdom for use-wallet hook).
 
-API tests mock the Prisma client (`__tests__/api/helpers.ts`) and test route handlers directly.
+API tests mock the Prisma client, Auth0 session (`requireAuth`), and user sync (`ensureUser`) in `__tests__/api/helpers.ts` and test route handlers directly.
 
 ```
 npm test                              → Run all tests
