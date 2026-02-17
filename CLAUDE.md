@@ -111,12 +111,18 @@ npm run db:generate  → Prisma client generation
 npm run db:studio    → Prisma Studio
 ```
 
+## Design System
+
+See `DESIGN_SYSTEM.md` for the complete visual specification: colors, typography, spacing, borders, buttons, animations, component patterns, and anti-patterns.
+
 ## Brand Direction
 
 - Pixel-art with serious sports presentation (not parody)
 - ESPN-style overlays, professional tone
 - Real rankings, belt system, divisions
 - Color scheme: dark bg (#0a0a0f), red accent (#ff4444), blue accent (#4488ff), gold (#ffd700)
+- No border-radius anywhere — sharp corners, pixel aesthetic
+- See `DESIGN_SYSTEM.md` for full rules
 
 ## Compliance
 
