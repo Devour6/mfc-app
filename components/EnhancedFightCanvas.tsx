@@ -1452,7 +1452,7 @@ export default function EnhancedFightCanvas({
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gradient-to-br from-red-600 to-red-800 text-white p-8 rounded-lg text-center shadow-2xl"
+              className="bg-gradient-to-br from-red-600 to-red-800 text-white p-8 text-center shadow-2xl"
               initial={{ scale: 0, rotate: -10 }}
               animate={{ scale: 1, rotate: 0 }}
               exit={{ scale: 0, rotate: 10 }}

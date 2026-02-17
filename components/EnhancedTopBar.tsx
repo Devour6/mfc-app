@@ -49,7 +49,7 @@ export default function EnhancedTopBar({
           {/* Center - Stats */}
           <div className="flex items-center gap-6">
             {/* Credits */}
-            <div className="flex items-center gap-2 bg-surface2 rounded-full px-3 py-1">
+            <div className="flex items-center gap-2 bg-surface2 px-3 py-1">
               <DollarSign className="w-4 h-4 text-green-400" />
               <span className="font-ui text-text1">{credits.toLocaleString()}</span>
               <span className="text-xs text-text2 hidden md:block">credits</span>
@@ -57,7 +57,7 @@ export default function EnhancedTopBar({
 
             {/* Login Streak */}
             {loginStreak > 0 && (
-              <div className="flex items-center gap-2 bg-orange-400/10 rounded-full px-3 py-1">
+              <div className="flex items-center gap-2 bg-orange-400/10 px-3 py-1">
                 <Flame className="w-4 h-4 text-orange-400" />
                 <span className="font-ui text-orange-400">{loginStreak}</span>
                 <span className="text-xs text-text2 hidden md:block">streak</span>
@@ -75,12 +75,12 @@ export default function EnhancedTopBar({
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300 }}
               >
-                <div className="flex items-center gap-1 bg-yellow-400/10 text-yellow-400 rounded-full px-2 py-1">
+                <div className="flex items-center gap-1 bg-yellow-400/10 text-yellow-400 px-2 py-1">
                   <Award className="w-3 h-3" />
                   <span className="font-ui text-xs">{achievementNotifications}</span>
                 </div>
                 <motion.div
-                  className="absolute inset-0 rounded-full bg-yellow-400/30"
+                  className="absolute inset-0 bg-yellow-400/30"
                   animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 />
@@ -91,7 +91,7 @@ export default function EnhancedTopBar({
             <motion.button
               onClick={onToggleSound}
               className={`
-                p-2 rounded-lg transition-colors
+                p-2 transition-colors
                 ${soundEnabled 
                   ? 'bg-surface2 text-text1 hover:bg-surface2/80' 
                   : 'bg-red-400/10 text-red-400 hover:bg-red-400/20'

@@ -118,7 +118,7 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
           <motion.div
             key={fighter.id}
             className={`
-              bg-surface border-2 rounded-lg p-6 transition-all duration-300 cursor-pointer
+              bg-surface border-2 p-6 transition-all duration-300 cursor-pointer
               ${selectedFighter === fighter.id 
                 ? 'border-accent shadow-lg shadow-accent/20 transform -translate-y-1' 
                 : 'border-border hover:border-accent/50'
@@ -166,9 +166,9 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`font-bold ${getStatColor(value)}`}>{value}</span>
-                      <div className="w-16 h-1 bg-surface2 rounded-full">
+                      <div className="w-16 h-1 bg-surface2">
                         <div 
-                          className={`h-full rounded-full ${
+                          className={`h-full ${
                             value >= 85 ? 'bg-gold' :
                             value >= 70 ? 'bg-green' :
                             value >= 55 ? 'bg-text' : 'bg-text2'
@@ -203,7 +203,7 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
                 {trainingInProgress === fighter.id ? (
                   <div className="flex items-center justify-center gap-2">
                     <motion.div
-                      className="w-3 h-3 border-2 border-gold border-t-transparent rounded-full"
+                      className="w-3 h-3 border-2 border-gold border-t-transparent"
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     />
@@ -251,7 +251,7 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
 
         {/* Add Fighter Card */}
         <motion.div
-          className="bg-surface border-2 border-dashed border-border/50 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:border-accent/50 transition-colors cursor-pointer"
+          className="bg-surface border-2 border-dashed border-border/50 p-6 flex flex-col items-center justify-center text-center hover:border-accent/50 transition-colors cursor-pointer"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: fighters.length * 0.1 }}

@@ -113,7 +113,7 @@ export default function CreditWithdrawal({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
-        className="bg-surface1 border border-border rounded-xl max-w-md w-full"
+        className="bg-surface1 border border-border max-w-md w-full"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -122,7 +122,7 @@ export default function CreditWithdrawal({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-400/10 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-green-400/10 flex items-center justify-center">
                 <ArrowUpRight className="w-5 h-5 text-green-400" />
               </div>
               <div>
@@ -150,7 +150,7 @@ export default function CreditWithdrawal({
                 exit={{ opacity: 0, x: -20 }}
               >
                 {/* Balance Display */}
-                <div className="bg-surface2 border border-border rounded-lg p-4 mb-6">
+                <div className="bg-surface2 border border-border p-4 mb-6">
                   <div className="text-center">
                     <div className="text-sm text-text2 mb-1">Available Balance</div>
                     <div className="text-2xl font-ui text-accent">
@@ -174,7 +174,7 @@ export default function CreditWithdrawal({
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="Enter amount"
-                        className="w-full px-4 py-3 bg-surface2 border border-border rounded-lg text-text1 placeholder-text2 focus:outline-none focus:border-accent"
+                        className="w-full px-4 py-3 bg-surface2 border border-border text-text1 placeholder-text2 focus:outline-none focus:border-accent"
                       />
                       <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-text2">
                         credits
@@ -207,7 +207,7 @@ export default function CreditWithdrawal({
 
                 {/* Fee Breakdown */}
                 {withdrawalCalc && (
-                  <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-4 mb-6">
+                  <div className="bg-yellow-400/10 border border-yellow-400/30 p-4 mb-6">
                     <div className="flex items-center gap-2 mb-3">
                       <DollarSign className="w-4 h-4 text-yellow-400" />
                       <span className="font-pixel text-sm text-text1">Withdrawal Breakdown</span>
@@ -241,7 +241,7 @@ export default function CreditWithdrawal({
 
                   {walletConnection.connected ? (
                     <div className="space-y-3">
-                      <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:border-accent/50 transition-colors">
+                      <label className="flex items-center gap-3 p-3 border border-border cursor-pointer hover:border-accent/50 transition-colors">
                         <input
                           type="radio"
                           checked={useConnectedWallet}
@@ -254,7 +254,7 @@ export default function CreditWithdrawal({
                         </div>
                       </label>
 
-                      <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:border-accent/50 transition-colors">
+                      <label className="flex items-center gap-3 p-3 border border-border cursor-pointer hover:border-accent/50 transition-colors">
                         <input
                           type="radio"
                           checked={!useConnectedWallet}
@@ -271,7 +271,7 @@ export default function CreditWithdrawal({
                     <button
                       onClick={handleConnectWallet}
                       disabled={isConnecting}
-                      className="w-full p-3 border-2 border-dashed border-border rounded-lg text-text2 hover:border-accent/50 transition-colors"
+                      className="w-full p-3 border-2 border-dashed border-border text-text2 hover:border-accent/50 transition-colors"
                     >
                       {isConnecting ? (
                         <div className="flex items-center justify-center gap-2">
@@ -293,14 +293,14 @@ export default function CreditWithdrawal({
                       value={customWalletAddress}
                       onChange={(e) => setCustomWalletAddress(e.target.value)}
                       placeholder="Enter Solana wallet address (e.g., 5fE...8aB)"
-                      className="w-full px-4 py-3 bg-surface2 border border-border rounded-lg text-text1 placeholder-text2 focus:outline-none focus:border-accent font-ui text-sm"
+                      className="w-full px-4 py-3 bg-surface2 border border-border text-text1 placeholder-text2 focus:outline-none focus:border-accent font-ui text-sm"
                     />
                   )}
                 </div>
 
                 {/* Error Message */}
                 {error && (
-                  <div className="bg-red-400/10 border border-red-400/30 rounded-lg p-3 mb-6">
+                  <div className="bg-red-400/10 border border-red-400/30 p-3 mb-6">
                     <div className="flex items-center gap-2 text-red-400">
                       <AlertTriangle className="w-4 h-4" />
                       <span className="text-sm">{error}</span>
@@ -312,7 +312,7 @@ export default function CreditWithdrawal({
                 <button
                   onClick={handleContinue}
                   disabled={!amount || numAmount <= 0}
-                  className="w-full py-3 bg-accent text-bg rounded-lg font-pixel text-sm hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 bg-accent text-bg font-pixel text-sm hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -339,7 +339,7 @@ export default function CreditWithdrawal({
                 </div>
 
                 {/* Withdrawal Summary */}
-                <div className="bg-surface2 border border-border rounded-lg p-6 mb-6">
+                <div className="bg-surface2 border border-border p-6 mb-6">
                   <div className="space-y-4">
                     <div className="text-center">
                       <div className="text-2xl font-ui text-green-400 mb-1">
@@ -370,7 +370,7 @@ export default function CreditWithdrawal({
                 </div>
 
                 {/* Processing Time */}
-                <div className="bg-blue-400/10 border border-blue-400/30 rounded-lg p-4 mb-6">
+                <div className="bg-blue-400/10 border border-blue-400/30 p-4 mb-6">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-blue-400" />
                     <span className="text-sm text-text1">Estimated processing time: 1-2 minutes</span>
@@ -380,14 +380,14 @@ export default function CreditWithdrawal({
                 <div className="flex gap-3">
                   <button
                     onClick={() => setStep('form')}
-                    className="flex-1 py-3 border border-border rounded-lg font-pixel text-sm text-text2 hover:text-text1 transition-colors"
+                    className="flex-1 py-3 border border-border font-pixel text-sm text-text2 hover:text-text1 transition-colors"
                   >
                     Back
                   </button>
                   <button
                     onClick={handleConfirmWithdraw}
                     disabled={isWithdrawing}
-                    className="flex-1 py-3 bg-green-400 text-bg rounded-lg font-pixel text-sm hover:bg-green-400/90 transition-colors disabled:opacity-50"
+                    className="flex-1 py-3 bg-green-400 text-bg font-pixel text-sm hover:bg-green-400/90 transition-colors disabled:opacity-50"
                   >
                     {isWithdrawing ? 'Processing...' : 'Confirm Withdrawal'}
                   </button>
@@ -403,7 +403,7 @@ export default function CreditWithdrawal({
                 animate={{ opacity: 1 }}
                 className="text-center py-12"
               >
-                <div className="w-16 h-16 bg-green-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 bg-green-400/10 flex items-center justify-center mx-auto mb-6">
                   <Loader className="w-8 h-8 text-green-400 animate-spin" />
                 </div>
                 <h3 className="font-pixel text-lg text-text1 mb-2">Processing Withdrawal</h3>
@@ -424,7 +424,7 @@ export default function CreditWithdrawal({
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-12"
               >
-                <div className="w-16 h-16 bg-green-400/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 bg-green-400/10 flex items-center justify-center mx-auto mb-6">
                   <Check className="w-8 h-8 text-green-400" />
                 </div>
                 <h3 className="font-pixel text-lg text-text1 mb-2">Withdrawal Complete!</h3>
@@ -433,7 +433,7 @@ export default function CreditWithdrawal({
                 </p>
                 <button
                   onClick={onClose}
-                  className="px-6 py-3 bg-green-400 text-bg rounded-lg font-pixel text-sm hover:bg-green-400/90 transition-colors"
+                  className="px-6 py-3 bg-green-400 text-bg font-pixel text-sm hover:bg-green-400/90 transition-colors"
                 >
                   Continue
                 </button>

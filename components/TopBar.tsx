@@ -100,7 +100,7 @@ export default function TopBar({
 
           {/* User menu (placeholder for future enhancement) */}
           <motion.button
-            className="w-8 h-8 bg-surface2 border border-border rounded-full flex items-center justify-center text-text2 hover:text-accent hover:border-accent transition-all duration-300"
+            className="w-8 h-8 bg-surface2 border border-border flex items-center justify-center text-text2 hover:text-accent hover:border-accent transition-all duration-300"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -111,13 +111,13 @@ export default function TopBar({
 
       {/* Mobile navigation (for smaller screens) */}
       <div className="sm:hidden mt-3 flex justify-center">
-        <div className="flex bg-surface2 rounded-lg p-1">
+        <div className="flex bg-surface2 p-1">
           {navItems.map((item) => (
             <motion.button
               key={item.id}
               onClick={() => onSectionChange(item.id)}
               className={`
-                relative px-3 py-2 text-xs font-semibold rounded-md transition-all duration-300
+                relative px-3 py-2 text-xs font-semibold transition-all duration-300
                 ${currentSection === item.id 
                   ? 'bg-accent text-white' 
                   : 'text-text2 hover:text-accent'

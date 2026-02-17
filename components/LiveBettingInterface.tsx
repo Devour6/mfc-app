@@ -236,7 +236,7 @@ export default function LiveBettingInterface({
   const quickAmounts = [5, 10, 25, 50, 100]
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-4 max-w-md">
+    <div className="bg-surface border border-border p-4 max-w-md">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -368,7 +368,7 @@ export default function LiveBettingInterface({
             initial={{ opacity: 0, y: 20, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.8 }}
-            className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50"
+            className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 shadow-lg z-50"
           >
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
@@ -390,7 +390,7 @@ export default function LiveBettingInterface({
             exit={{ opacity: 0, scale: 0.8 }}
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           >
-            <div className="bg-surface border border-accent rounded-lg p-6 text-center">
+            <div className="bg-surface border border-accent p-6 text-center">
               <Flame className="w-8 h-8 text-accent mx-auto mb-3" />
               <div className="font-pixel text-accent mb-2">BET PLACED!</div>
               <div className="text-xs text-text2">Good luck!</div>

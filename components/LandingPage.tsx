@@ -58,7 +58,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       
       {/* Dynamic background orbs */}
       <motion.div
-        className="absolute w-96 h-96 bg-accent/5 rounded-full blur-3xl"
+        className="absolute w-96 h-96 bg-accent/5 blur-3xl"
         animate={{
           x: mousePosition.x * 0.02,
           y: mousePosition.y * 0.02,
@@ -69,7 +69,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         }}
       />
       <motion.div
-        className="absolute w-64 h-64 bg-accent2/5 rounded-full blur-3xl"
+        className="absolute w-64 h-64 bg-accent2/5 blur-3xl"
         animate={{
           x: mousePosition.x * -0.015,
           y: mousePosition.y * -0.015,
@@ -186,7 +186,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             >
               <span className="relative z-10 flex items-center gap-2">
                 <motion.span
-                  className="w-2 h-2 bg-accent rounded-full"
+                  className="w-2 h-2 bg-accent"
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
@@ -247,7 +247,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       {Array.from({ length: 20 }).map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-1 h-1 bg-accent/20 rounded-full"
+          className="absolute w-1 h-1 bg-accent/20"
           initial={{
             x: Math.random() * window.innerWidth,
             y: Math.random() * window.innerHeight,

@@ -114,7 +114,7 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-8 h-8 bg-surface2 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-surface2 flex items-center justify-center flex-shrink-0">
             {getTransactionIcon(transaction.type)}
           </div>
           
@@ -161,7 +161,7 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
-        className="bg-surface1 border border-border rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+        className="bg-surface1 border border-border max-w-4xl w-full max-h-[90vh] overflow-hidden"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -170,7 +170,7 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-accent/10 flex items-center justify-center">
                 <Clock className="w-5 h-5 text-accent" />
               </div>
               <div>
@@ -231,7 +231,7 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search transactions..."
-                  className="w-full pl-10 pr-4 py-2 bg-surface2 border border-border rounded-lg text-text1 placeholder-text2 focus:outline-none focus:border-accent"
+                  className="w-full pl-10 pr-4 py-2 bg-surface2 border border-border text-text1 placeholder-text2 focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -241,7 +241,7 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value as any)}
-                  className="pl-10 pr-8 py-2 bg-surface2 border border-border rounded-lg text-text1 focus:outline-none focus:border-accent appearance-none"
+                  className="pl-10 pr-8 py-2 bg-surface2 border border-border text-text1 focus:outline-none focus:border-accent appearance-none"
                 >
                   {filterOptions.map(option => (
                     <option key={option.value} value={option.value}>

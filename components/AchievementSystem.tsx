@@ -68,7 +68,7 @@ export default function AchievementSystem({
     return (
       <motion.div
         className={`
-          border rounded-lg p-4 transition-all relative overflow-hidden
+          border p-4 transition-all relative overflow-hidden
           ${isComplete 
             ? `${getRarityColor(achievement.rarity)} shadow-lg` 
             : 'border-surface2 bg-surface2 text-text2'
@@ -108,7 +108,7 @@ export default function AchievementSystem({
           </div>
           
           <div className={`
-            flex items-center gap-1 px-2 py-1 rounded-full text-xs font-pixel
+            flex items-center gap-1 px-2 py-1 text-xs font-pixel
             ${getRarityColor(achievement.rarity)}
           `}>
             {getRarityIcon(achievement.rarity)}
@@ -125,9 +125,9 @@ export default function AchievementSystem({
                 {achievement.progress}/{achievement.maxProgress}
               </span>
             </div>
-            <div className="w-full bg-surface1 rounded-full h-2">
+            <div className="w-full bg-surface1 h-2">
               <motion.div
-                className={`h-2 rounded-full ${isComplete ? 'bg-accent' : 'bg-text2'}`}
+                className={`h-2 ${isComplete ? 'bg-accent' : 'bg-text2'}`}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5 }}
@@ -160,7 +160,7 @@ export default function AchievementSystem({
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: 300, scale: 0.8 }}
       className={`
-        fixed top-4 right-4 z-50 max-w-sm p-4 rounded-lg border shadow-lg
+        fixed top-4 right-4 z-50 max-w-sm p-4 border shadow-lg
         ${getRarityColor(notification.achievement.rarity)}
         backdrop-blur-sm
       `}
@@ -206,7 +206,7 @@ export default function AchievementSystem({
       </AnimatePresence>
 
       {/* Stats Overview */}
-      <div className="bg-surface2 border border-border rounded-lg p-4">
+      <div className="bg-surface2 border border-border p-4">
         <div className="flex items-center gap-2 mb-4">
           <Trophy className="w-5 h-5 text-accent" />
           <h2 className="font-pixel text-lg text-text1">Achievement Progress</h2>
@@ -240,9 +240,9 @@ export default function AchievementSystem({
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-surface1 rounded-full h-3">
+        <div className="w-full bg-surface1 h-3">
           <motion.div
-            className="h-3 bg-gradient-to-r from-accent/70 to-accent rounded-full"
+            className="h-3 bg-gradient-to-r from-accent/70 to-accent"
             initial={{ width: 0 }}
             animate={{ width: `${stats.percentage}%` }}
             transition={{ duration: 1, ease: 'easeOut' }}
@@ -253,7 +253,7 @@ export default function AchievementSystem({
       {/* Rarity Breakdown */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {Object.entries(stats.byRarity).map(([rarity, data]) => (
-          <div key={rarity} className={`border rounded-lg p-3 ${getRarityColor(rarity as any)}`}>
+          <div key={rarity} className={`border p-3 ${getRarityColor(rarity as any)}`}>
             <div className="flex items-center gap-2 mb-2">
               {getRarityIcon(rarity as any)}
               <span className="font-pixel text-xs capitalize">{rarity}</span>

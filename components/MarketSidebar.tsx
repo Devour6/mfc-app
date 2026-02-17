@@ -90,7 +90,7 @@ export default function MarketSidebar({
         <div className="grid grid-cols-2 gap-3">
           <motion.div
             className={`
-              border-2 rounded-lg p-3 text-center cursor-pointer transition-all duration-200
+              border-2 p-3 text-center cursor-pointer transition-all duration-200
               ${tradeSide === 'yes' 
                 ? 'border-green bg-green/10 shadow-lg shadow-green/20' 
                 : 'border-green/30 hover:border-green/60'
@@ -112,7 +112,7 @@ export default function MarketSidebar({
 
           <motion.div
             className={`
-              border-2 rounded-lg p-3 text-center cursor-pointer transition-all duration-200
+              border-2 p-3 text-center cursor-pointer transition-all duration-200
               ${tradeSide === 'no' 
                 ? 'border-red bg-red/10 shadow-lg shadow-red/20' 
                 : 'border-red/30 hover:border-red/60'

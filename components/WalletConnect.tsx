@@ -78,7 +78,7 @@ export default function WalletConnect({
       onClick={provider.installed ? handleConnect : undefined}
       disabled={isConnecting || !provider.installed}
       className={`
-        w-full p-4 border rounded-lg text-left transition-all
+        w-full p-4 border text-left transition-all
         ${provider.installed 
           ? 'border-border hover:border-accent hover:bg-accent/5' 
           : 'border-border opacity-50 cursor-not-allowed'
@@ -118,7 +118,7 @@ export default function WalletConnect({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
-        className="bg-surface1 border border-border rounded-xl max-w-md w-full"
+        className="bg-surface1 border border-border max-w-md w-full"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -127,7 +127,7 @@ export default function WalletConnect({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-accent/10 flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-accent" />
               </div>
               <div>
@@ -153,9 +153,9 @@ export default function WalletConnect({
             /* Connected State */
             <div className="space-y-6">
               {/* Wallet Info */}
-              <div className="bg-green-400/10 border border-green-400/30 rounded-lg p-4">
+              <div className="bg-green-400/10 border border-green-400/30 p-4">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-green-400/20 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-green-400/20 flex items-center justify-center">
                     <Check className="w-4 h-4 text-green-400" />
                   </div>
                   <div>
@@ -196,7 +196,7 @@ export default function WalletConnect({
               </div>
 
               {/* Security Notice */}
-              <div className="bg-blue-400/10 border border-blue-400/30 rounded-lg p-4">
+              <div className="bg-blue-400/10 border border-blue-400/30 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-4 h-4 text-blue-400" />
                   <span className="font-pixel text-sm text-text1">Security</span>
@@ -211,7 +211,7 @@ export default function WalletConnect({
               {/* Disconnect Button */}
               <button
                 onClick={onDisconnect}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-red-400/30 text-red-400 rounded-lg hover:bg-red-400/5 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 border border-red-400/30 text-red-400 hover:bg-red-400/5 transition-colors"
               >
                 <Power className="w-4 h-4" />
                 <span>Disconnect Wallet</span>
@@ -221,7 +221,7 @@ export default function WalletConnect({
             /* Not Connected State */
             <div className="space-y-6">
               {/* Security Notice */}
-              <div className="bg-blue-400/10 border border-blue-400/30 rounded-lg p-4">
+              <div className="bg-blue-400/10 border border-blue-400/30 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-4 h-4 text-blue-400" />
                   <span className="font-pixel text-sm text-text1">Why Connect?</span>
@@ -236,7 +236,7 @@ export default function WalletConnect({
               {/* Connecting State */}
               {isConnecting && (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-accent/10 flex items-center justify-center mx-auto mb-4">
                     <Loader className="w-8 h-8 text-accent animate-spin" />
                   </div>
                   <h3 className="font-pixel text-lg text-text1 mb-2">Connecting...</h3>
@@ -269,7 +269,7 @@ export default function WalletConnect({
                         href={provider.downloadUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-2 bg-accent/10 text-accent rounded-lg text-sm hover:bg-accent/20 transition-colors"
+                        className="px-3 py-2 bg-accent/10 text-accent text-sm hover:bg-accent/20 transition-colors"
                       >
                         Get {provider.name}
                       </a>

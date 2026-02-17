@@ -201,11 +201,11 @@ export default function NewArenaPage({
                 <div className="relative">
                   <button
                     onClick={() => onSectionChange('achievements')}
-                    className="p-2 text-yellow-400 hover:bg-surface2 rounded-full transition-colors"
+                    className="p-2 text-yellow-400 hover:bg-surface2 transition-colors"
                   >
                     <Award className="w-4 h-4" />
                   </button>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white font-ui">
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 text-xs flex items-center justify-center text-white font-ui">
                     {user.achievementNotifications.filter(n => !n.seen).length}
                   </div>
                 </div>
@@ -263,7 +263,7 @@ export default function NewArenaPage({
                     {(() => {
                       const fighter = user.fighters.find(f => f.id === selectedFighterId)
                       return fighter ? (
-                        <div className="bg-surface2 border border-border rounded-lg p-6">
+                        <div className="bg-surface2 border border-border p-6">
                           <div className="text-center mb-6">
                             <div className="text-4xl mb-2">{fighter.emoji}</div>
                             <h3 className="font-pixel text-xl text-text1">{fighter.name}</h3>
@@ -281,7 +281,7 @@ export default function NewArenaPage({
                     {user.fighters.map(fighter => (
                       <div 
                         key={fighter.id}
-                        className="bg-surface2 border border-border rounded-lg p-4 cursor-pointer hover:border-accent/30 transition-colors"
+                        className="bg-surface2 border border-border p-4 cursor-pointer hover:border-accent/30 transition-colors"
                         onClick={() => setSelectedFighterId(fighter.id)}
                       >
                         <div className="text-center mb-4">
@@ -323,7 +323,7 @@ export default function NewArenaPage({
                     {user.fighters.length >= 3 ? (
                       <button
                         onClick={handleStartTournament}
-                        className="px-6 py-3 bg-accent text-bg rounded-lg font-pixel hover:bg-accent/90 transition-colors"
+                        className="px-6 py-3 bg-accent text-bg font-pixel hover:bg-accent/90 transition-colors"
                       >
                         Start Tournament
                       </button>
@@ -339,10 +339,10 @@ export default function NewArenaPage({
                     <h3 className="font-pixel text-lg text-text1">Tournament History</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {user.tournaments.slice(0, 6).map(tournament => (
-                        <div key={tournament.id} className="bg-surface2 border border-border rounded-lg p-4">
+                        <div key={tournament.id} className="bg-surface2 border border-border p-4">
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-pixel text-sm text-text1">{tournament.name}</h4>
-                            <div className={`px-2 py-1 rounded-full text-xs ${
+                            <div className={`px-2 py-1 text-xs ${
                               tournament.status === 'completed' ? 'bg-green-400/20 text-green-400' :
                               tournament.status === 'in-progress' ? 'bg-yellow-400/20 text-yellow-400' :
                               'bg-surface1 text-text2'

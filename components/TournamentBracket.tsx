@@ -58,7 +58,7 @@ export default function TournamentBracket({
     isLoser?: boolean 
   }) => (
     <div className={`
-      flex items-center gap-2 p-2 rounded-lg transition-all
+      flex items-center gap-2 p-2 transition-all
       ${isWinner ? 'bg-green-400/20 border border-green-400/30' : ''}
       ${isLoser ? 'bg-red-400/10 border border-red-400/20 opacity-60' : ''}
       ${!isWinner && !isLoser ? 'bg-surface1 border border-border' : ''}
@@ -74,7 +74,7 @@ export default function TournamentBracket({
 
   const MatchCard = ({ match }: { match: TournamentMatch }) => (
     <motion.div
-      className={`border rounded-lg p-3 space-y-2 ${getMatchStatusColor(match.status)}`}
+      className={`border p-3 space-y-2 ${getMatchStatusColor(match.status)}`}
       whileHover={{ scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 300 }}
     >
@@ -123,13 +123,13 @@ export default function TournamentBracket({
   return (
     <div className="space-y-6">
       {/* Tournament Header */}
-      <div className="bg-surface2 border border-border rounded-lg p-4">
+      <div className="bg-surface2 border border-border p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-accent" />
             <h2 className="font-pixel text-lg text-text1">{tournament.name}</h2>
           </div>
-          <div className={`px-2 py-1 rounded-full text-xs font-pixel ${
+          <div className={`px-2 py-1 text-xs font-pixel ${
             tournament.status === 'completed' ? 'bg-green-400/20 text-green-400' :
             tournament.status === 'in-progress' ? 'bg-yellow-400/20 text-yellow-400' :
             'bg-surface1 text-text2'
@@ -171,9 +171,9 @@ export default function TournamentBracket({
 
         {/* Progress Bar */}
         <div className="mt-4">
-          <div className="w-full bg-surface1 rounded-full h-2">
+          <div className="w-full bg-surface1 h-2">
             <motion.div
-              className="h-2 bg-accent rounded-full"
+              className="h-2 bg-accent"
               initial={{ width: 0 }}
               animate={{ width: `${progress.percentage}%` }}
               transition={{ duration: 0.5 }}
@@ -188,7 +188,7 @@ export default function TournamentBracket({
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-gradient-to-r from-yellow-400/20 to-orange-400/20 border border-yellow-400/30 rounded-lg p-4"
+            className="bg-gradient-to-r from-yellow-400/20 to-orange-400/20 border border-yellow-400/30 p-4"
           >
             <div className="flex items-center justify-center gap-3 mb-3">
               <Crown className="w-6 h-6 text-yellow-400" />
@@ -210,7 +210,7 @@ export default function TournamentBracket({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-accent/10 border border-accent/30 rounded-lg p-4"
+          className="bg-accent/10 border border-accent/30 p-4"
         >
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="w-4 h-4 text-accent" />
@@ -274,7 +274,7 @@ export default function TournamentBracket({
       </div>
 
       {/* Prize Breakdown */}
-      <div className="bg-surface2 border border-border rounded-lg p-4">
+      <div className="bg-surface2 border border-border p-4">
         <h3 className="font-pixel text-sm text-text1 mb-3 flex items-center gap-2">
           <Award className="w-4 h-4 text-accent" />
           Prize Distribution
