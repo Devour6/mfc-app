@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </h2>
             
             <p className="text-text2 mb-6 leading-relaxed">
-              The fight encountered an unexpected error. Don't worry, this doesn't affect your fighters or credits.
+              The fight encountered an unexpected error. Don&apos;t worry, this doesn&apos;t affect your fighters or credits.
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (

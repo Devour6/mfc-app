@@ -215,10 +215,6 @@ npm run test:watch                → Watch mode
 npm run test:coverage             → With coverage
 ```
 
-## Known Lint Issues
-
-4 pre-existing `react/no-unescaped-entities` errors in frontend components (`DailyRewards.tsx`, `EnhancedTrainingInterface.tsx`, `ErrorBoundary.tsx`). These need to be fixed by the frontend team to make the lint step pass in CI. Unescaped `'` characters should be replaced with `&apos;`.
-
 ## Brand Direction
 
 - Pixel-art with serious sports presentation (not parody)

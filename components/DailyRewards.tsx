@@ -236,7 +236,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
         <div className="flex items-center justify-between">
           <h3 className="font-pixel text-text1 flex items-center gap-2">
             <Gift className="w-4 h-4 text-accent" />
-            This Week's Rewards
+            This Week&apos;s Rewards
           </h3>
           
           {!canClaim && (

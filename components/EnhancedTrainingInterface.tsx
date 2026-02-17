@@ -318,7 +318,7 @@ export default function EnhancedTrainingInterface({
           <h2 className="font-pixel text-xl text-accent">TRAINING CENTER</h2>
         </div>
         <p className="text-text2 text-sm">
-          Enhance your fighter's abilities through specialized training programs.
+          Enhance your fighter&apos;s abilities through specialized training programs.
         </p>
         <div className="mt-2 text-sm text-gold">
           Credits Available: {creditBalance.toLocaleString()}
