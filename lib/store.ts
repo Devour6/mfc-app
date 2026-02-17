@@ -42,6 +42,8 @@ interface GameState {
   withdrawCredits: (amount: number, walletAddress: string) => Promise<void>
   spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number) => boolean
   addRewardCredits: (amount: number, description: string, relatedId?: string) => void
+  fetchCredits: () => Promise<void>
+  placeBetAndDeduct: (amount: number, description: string) => boolean
 }
 
 // Sample fighters with evolution data
@@ -486,6 +488,29 @@ export const useGameStore = create<GameState>()(
             transactions: result.newTransactions
           }
         }))
+      },
+
+      fetchCredits: async () => {
+        try {
+          const res = await fetch('/api/user/credits')
+          if (res.ok) {
+            const data = await res.json()
+            set(state => ({
+              user: { ...state.user, credits: data.credits ?? state.user.credits }
+            }))
+          }
+        } catch {
+          // API not available — keep local data
+        }
+      },
+
+      placeBetAndDeduct: (amount: number, _description: string) => {
+        const { user } = get()
+        if (user.credits < amount) return false
+        set(state => ({
+          user: { ...state.user, credits: state.user.credits - amount }
+        }))
+        return true
       }
     }),
     {
