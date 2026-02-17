@@ -1,7 +1,5 @@
 /** @type {import('jest').Config} */
-const config = {
-  testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+const shared = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
@@ -9,16 +7,38 @@ const config = {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  testMatch: [
-    '**/__tests__/**/*.(ts|tsx|js)',
-    '**/*.(test|spec).(ts|tsx|js)',
-  ],
-  collectCoverageFrom: [
-    'components/**/*.(ts|tsx)',
-    'app/**/*.(ts|tsx)',
-    '!**/*.d.ts',
-  ],
   moduleDirectories: ['node_modules', '<rootDir>/'],
+};
+
+const config = {
+  projects: [
+    {
+      ...shared,
+      displayName: 'frontend',
+      testEnvironment: 'jsdom',
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      testMatch: [
+        '<rootDir>/__tests__/!(api)/**/*.(ts|tsx|js)',
+        '<rootDir>/**/*.(test|spec).(ts|tsx|js)',
+      ],
+      testPathIgnorePatterns: ['/node_modules/', '__tests__/api/'],
+      collectCoverageFrom: [
+        'components/**/*.(ts|tsx)',
+        '!**/*.d.ts',
+      ],
+    },
+    {
+      ...shared,
+      displayName: 'api',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/__tests__/api/**/*.test.(ts|tsx)'],
+      collectCoverageFrom: [
+        'app/api/**/*.(ts|tsx)',
+        'lib/api-utils.(ts|tsx)',
+        '!**/*.d.ts',
+      ],
+    },
+  ],
 };
 
 module.exports = config;
