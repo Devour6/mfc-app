@@ -153,7 +153,7 @@ export default function CreditWithdrawal({
                 <div className="bg-surface2 border border-border rounded-lg p-4 mb-6">
                   <div className="text-center">
                     <div className="text-sm text-text2 mb-1">Available Balance</div>
-                    <div className="text-2xl font-mono text-accent">
+                    <div className="text-2xl font-ui text-accent">
                       {CreditEngine.formatCredits(creditBalance.available)}
                     </div>
                     <div className="text-xs text-text2">
@@ -250,7 +250,7 @@ export default function CreditWithdrawal({
                         />
                         <div className="flex-1">
                           <div className="text-sm text-text1">Connected Wallet</div>
-                          <div className="text-xs text-text2 font-mono">{walletConnection.address}</div>
+                          <div className="text-xs text-text2 font-ui">{walletConnection.address}</div>
                         </div>
                       </label>
 
@@ -293,7 +293,7 @@ export default function CreditWithdrawal({
                       value={customWalletAddress}
                       onChange={(e) => setCustomWalletAddress(e.target.value)}
                       placeholder="Enter Solana wallet address (e.g., 5fE...8aB)"
-                      className="w-full px-4 py-3 bg-surface2 border border-border rounded-lg text-text1 placeholder-text2 focus:outline-none focus:border-accent font-mono text-sm"
+                      className="w-full px-4 py-3 bg-surface2 border border-border rounded-lg text-text1 placeholder-text2 focus:outline-none focus:border-accent font-ui text-sm"
                     />
                   )}
                 </div>
@@ -342,7 +342,7 @@ export default function CreditWithdrawal({
                 <div className="bg-surface2 border border-border rounded-lg p-6 mb-6">
                   <div className="space-y-4">
                     <div className="text-center">
-                      <div className="text-2xl font-mono text-green-400 mb-1">
+                      <div className="text-2xl font-ui text-green-400 mb-1">
                         {CreditEngine.formatUSD(CreditEngine.creditsToUSD(withdrawalCalc.netAmount))} USDC
                       </div>
                       <div className="text-sm text-text2">You will receive</div>
@@ -360,7 +360,7 @@ export default function CreditWithdrawal({
                       <div className="flex justify-between">
                         <span className="text-text2">Destination</span>
                         <div className="text-right">
-                          <div className="text-text1 font-mono text-xs">
+                          <div className="text-text1 font-ui text-xs">
                             {(useConnectedWallet ? walletConnection.address : customWalletAddress)?.slice(0, 8)}...
                           </div>
                         </div>

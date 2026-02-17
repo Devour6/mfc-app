@@ -89,7 +89,7 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
     const color = isPositive ? 'text-green-400' : 'text-red-400'
     
     return (
-      <span className={`font-mono ${color}`}>
+      <span className={`font-ui ${color}`}>
         {prefix}{CreditEngine.formatCredits(Math.abs(amount))}
       </span>
     )
@@ -132,7 +132,7 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
             
             <div className="flex items-center gap-4 text-xs text-text2">
               <span>{new Date(transaction.timestamp).toLocaleString()}</span>
-              <span className="font-mono">ID: {transaction.id.slice(-8)}</span>
+              <span className="font-ui">ID: {transaction.id.slice(-8)}</span>
               {transaction.fee > 0 && (
                 <span>Fee: {CreditEngine.formatCredits(transaction.fee)}</span>
               )}
@@ -194,25 +194,25 @@ export default function TransactionHistory({ transactions, onClose }: Transactio
           <div className="p-6 border-b border-border">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
-                <div className="text-lg font-mono text-green-400">
+                <div className="text-lg font-ui text-green-400">
                   {CreditEngine.formatCredits(stats.totalDeposits)}
                 </div>
                 <div className="text-xs text-text2">Total Deposits</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-mono text-blue-400">
+                <div className="text-lg font-ui text-blue-400">
                   {CreditEngine.formatCredits(stats.totalWithdrawals)}
                 </div>
                 <div className="text-xs text-text2">Total Withdrawals</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-mono text-accent">
+                <div className="text-lg font-ui text-accent">
                   {CreditEngine.formatCredits(stats.totalRewards)}
                 </div>
                 <div className="text-xs text-text2">Rewards Earned</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-mono text-yellow-400">
+                <div className="text-lg font-ui text-yellow-400">
                   {CreditEngine.formatCredits(stats.totalFeesPaid)}
                 </div>
                 <div className="text-xs text-text2">Fees Paid</div>

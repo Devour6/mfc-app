@@ -51,7 +51,7 @@ export default function EnhancedTopBar({
             {/* Credits */}
             <div className="flex items-center gap-2 bg-surface2 rounded-full px-3 py-1">
               <DollarSign className="w-4 h-4 text-green-400" />
-              <span className="font-mono text-text1">{credits.toLocaleString()}</span>
+              <span className="font-ui text-text1">{credits.toLocaleString()}</span>
               <span className="text-xs text-text2 hidden md:block">credits</span>
             </div>
 
@@ -59,7 +59,7 @@ export default function EnhancedTopBar({
             {loginStreak > 0 && (
               <div className="flex items-center gap-2 bg-orange-400/10 rounded-full px-3 py-1">
                 <Flame className="w-4 h-4 text-orange-400" />
-                <span className="font-mono text-orange-400">{loginStreak}</span>
+                <span className="font-ui text-orange-400">{loginStreak}</span>
                 <span className="text-xs text-text2 hidden md:block">streak</span>
               </div>
             )}
@@ -77,7 +77,7 @@ export default function EnhancedTopBar({
               >
                 <div className="flex items-center gap-1 bg-yellow-400/10 text-yellow-400 rounded-full px-2 py-1">
                   <Award className="w-3 h-3" />
-                  <span className="font-mono text-xs">{achievementNotifications}</span>
+                  <span className="font-ui text-xs">{achievementNotifications}</span>
                 </div>
                 <motion.div
                   className="absolute inset-0 rounded-full bg-yellow-400/30"

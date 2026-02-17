@@ -108,7 +108,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
         </div>
 
         {/* Credits */}
-        <div className={`font-mono text-lg mb-1 ${isUnlocked ? 'text-accent' : 'text-text2'}`}>
+        <div className={`font-ui text-lg mb-1 ${isUnlocked ? 'text-accent' : 'text-text2'}`}>
           {reward.credits}
         </div>
         <div className="text-xs text-text2 mb-2">credits</div>
@@ -180,19 +180,19 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-lg font-mono text-accent">{stats.creditsEarned}</div>
+            <div className="text-lg font-ui text-accent">{stats.creditsEarned}</div>
             <div className="text-xs text-text2">Credits Earned</div>
           </div>
           <div>
-            <div className="text-lg font-mono text-accent">{stats.averagePerWeek}</div>
+            <div className="text-lg font-ui text-accent">{stats.averagePerWeek}</div>
             <div className="text-xs text-text2">Days/Week</div>
           </div>
           <div>
-            <div className="text-lg font-mono text-accent">{stats.streakPercentile}%</div>
+            <div className="text-lg font-ui text-accent">{stats.streakPercentile}%</div>
             <div className="text-xs text-text2">Percentile</div>
           </div>
           <div>
-            <div className="text-lg font-mono text-accent">{loginStreak.nextRewardCredits}</div>
+            <div className="text-lg font-ui text-accent">{loginStreak.nextRewardCredits}</div>
             <div className="text-xs text-text2">Next Reward</div>
           </div>
         </div>
@@ -221,7 +221,7 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
               <div className="flex items-center gap-2 mb-1">
                 <Star className="w-4 h-4 text-yellow-400" />
                 <span className="font-pixel text-sm text-text1">{event.name}</span>
-                <div className="px-2 py-0.5 bg-yellow-400/20 rounded-full text-xs font-mono text-yellow-400">
+                <div className="px-2 py-0.5 bg-yellow-400/20 rounded-full text-xs font-ui text-yellow-400">
                   {event.multiplier}x
                 </div>
               </div>
@@ -271,16 +271,16 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-lg font-mono text-purple-400">{bonus.multiplier}x</div>
+              <div className="text-lg font-ui text-purple-400">{bonus.multiplier}x</div>
               <div className="text-xs text-text2">Multiplier</div>
             </div>
             <div>
-              <div className="text-lg font-mono text-purple-400">+{bonus.bonusCredits}</div>
+              <div className="text-lg font-ui text-purple-400">+{bonus.bonusCredits}</div>
               <div className="text-xs text-text2">Bonus Credits</div>
             </div>
             {bonus.specialReward && (
               <div>
-                <div className="text-lg font-mono text-purple-400">🏅</div>
+                <div className="text-lg font-ui text-purple-400">🏅</div>
                 <div className="text-xs text-text2">{bonus.specialReward}</div>
               </div>
             )}
@@ -299,19 +299,19 @@ export default function DailyRewards({ loginStreak, onClaimReward }: DailyReward
           {loginStreak.currentStreak < 7 && (
             <div className="flex justify-between items-center">
               <span className="text-text2">First Week Bonus</span>
-              <span className="text-accent font-mono">{7 - loginStreak.currentStreak} days</span>
+              <span className="text-accent font-ui">{7 - loginStreak.currentStreak} days</span>
             </div>
           )}
           {loginStreak.currentStreak < 30 && (
             <div className="flex justify-between items-center">
               <span className="text-text2">Monthly Champion</span>
-              <span className="text-accent font-mono">{30 - loginStreak.currentStreak} days</span>
+              <span className="text-accent font-ui">{30 - loginStreak.currentStreak} days</span>
             </div>
           )}
           {loginStreak.currentStreak < 100 && (
             <div className="flex justify-between items-center">
               <span className="text-text2">Legend Status</span>
-              <span className="text-accent font-mono">{100 - loginStreak.currentStreak} days</span>
+              <span className="text-accent font-ui">{100 - loginStreak.currentStreak} days</span>
             </div>
           )}
         </div>

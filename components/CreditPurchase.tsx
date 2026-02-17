@@ -112,7 +112,7 @@ export default function CreditPurchase({
 
         {/* Credit Amount */}
         <div className="text-center mb-4">
-          <div className="text-2xl font-mono text-accent mb-1">
+          <div className="text-2xl font-ui text-accent mb-1">
             {CreditEngine.formatCredits(totalCredits)}
           </div>
           <div className="text-sm text-text2">credits</div>
@@ -267,20 +267,20 @@ export default function CreditPurchase({
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span className="text-text2">Credits</span>
-                      <span className="font-mono text-text1">{CreditEngine.formatCredits(selectedOption.creditAmount)}</span>
+                      <span className="font-ui text-text1">{CreditEngine.formatCredits(selectedOption.creditAmount)}</span>
                     </div>
                     
                     {selectedOption.bonusCredits > 0 && (
                       <div className="flex justify-between">
                         <span className="text-green-400">Bonus Credits</span>
-                        <span className="font-mono text-green-400">+{CreditEngine.formatCredits(selectedOption.bonusCredits)}</span>
+                        <span className="font-ui text-green-400">+{CreditEngine.formatCredits(selectedOption.bonusCredits)}</span>
                       </div>
                     )}
                     
                     <div className="border-t border-border pt-4">
                       <div className="flex justify-between items-center">
                         <span className="font-pixel text-text1">Total Credits</span>
-                        <span className="font-mono text-xl text-accent">
+                        <span className="font-ui text-xl text-accent">
                           {CreditEngine.formatCredits(selectedOption.creditAmount + selectedOption.bonusCredits)}
                         </span>
                       </div>
@@ -289,7 +289,7 @@ export default function CreditPurchase({
                     <div className="border-t border-border pt-4">
                       <div className="flex justify-between items-center">
                         <span className="font-pixel text-text1">Payment</span>
-                        <span className="font-mono text-xl text-text1">${selectedOption.usdcAmount} USDC</span>
+                        <span className="font-ui text-xl text-text1">${selectedOption.usdcAmount} USDC</span>
                       </div>
                     </div>
                   </div>

@@ -86,7 +86,7 @@ export default function TournamentBracket({
           </span>
         </div>
         {match.result && (
-          <div className="text-xs text-accent font-mono">
+          <div className="text-xs text-accent font-ui">
             {match.result.method} R{match.result.round}
           </div>
         )}
@@ -144,28 +144,28 @@ export default function TournamentBracket({
               <Users className="w-3 h-3 text-text2" />
               <span className="text-xs text-text2">Fighters</span>
             </div>
-            <div className="font-mono text-lg text-accent">8</div>
+            <div className="font-ui text-lg text-accent">8</div>
           </div>
           <div>
             <div className="flex items-center justify-center gap-1 mb-1">
               <Target className="w-3 h-3 text-text2" />
               <span className="text-xs text-text2">Progress</span>
             </div>
-            <div className="font-mono text-lg text-accent">{Math.round(progress.percentage)}%</div>
+            <div className="font-ui text-lg text-accent">{Math.round(progress.percentage)}%</div>
           </div>
           <div>
             <div className="flex items-center justify-center gap-1 mb-1">
               <Award className="w-3 h-3 text-text2" />
               <span className="text-xs text-text2">Prize</span>
             </div>
-            <div className="font-mono text-lg text-accent">{tournament.prize}</div>
+            <div className="font-ui text-lg text-accent">{tournament.prize}</div>
           </div>
           <div>
             <div className="flex items-center justify-center gap-1 mb-1">
               <Calendar className="w-3 h-3 text-text2" />
               <span className="text-xs text-text2">Round</span>
             </div>
-            <div className="font-mono text-lg text-accent">{progress.currentRound}/3</div>
+            <div className="font-ui text-lg text-accent">{progress.currentRound}/3</div>
           </div>
         </div>
 
@@ -199,7 +199,7 @@ export default function TournamentBracket({
               <div className="text-4xl mb-2">{tournament.winner.emoji}</div>
               <div className="font-pixel text-lg text-accent">{tournament.winner.name}</div>
               <div className="text-sm text-text2">Winner of {tournament.name}</div>
-              <div className="font-mono text-accent mt-2">+{rewards.winner} credits</div>
+              <div className="font-ui text-accent mt-2">+{rewards.winner} credits</div>
             </div>
           </motion.div>
         )}
@@ -282,19 +282,19 @@ export default function TournamentBracket({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center text-xs">
           <div>
             <div className="text-text2 mb-1">Champion</div>
-            <div className="font-mono text-accent">{rewards.winner}</div>
+            <div className="font-ui text-accent">{rewards.winner}</div>
           </div>
           <div>
             <div className="text-text2 mb-1">Finalist</div>
-            <div className="font-mono text-accent">{rewards.finalist}</div>
+            <div className="font-ui text-accent">{rewards.finalist}</div>
           </div>
           <div>
             <div className="text-text2 mb-1">Semi-Final</div>
-            <div className="font-mono text-accent">{Math.floor(rewards.semifinalists / 2)}</div>
+            <div className="font-ui text-accent">{Math.floor(rewards.semifinalists / 2)}</div>
           </div>
           <div>
             <div className="text-text2 mb-1">Quarter-Final</div>
-            <div className="font-mono text-accent">{Math.floor(rewards.quarterfinalists / 4)}</div>
+            <div className="font-ui text-accent">{Math.floor(rewards.quarterfinalists / 4)}</div>
           </div>
         </div>
       </div>

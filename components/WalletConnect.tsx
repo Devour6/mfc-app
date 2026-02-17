@@ -179,7 +179,7 @@ export default function WalletConnect({
                       )}
                     </button>
                   </div>
-                  <div className="font-mono text-sm text-text1 bg-surface2 rounded px-2 py-1">
+                  <div className="font-ui text-sm text-text1 bg-surface2 rounded px-2 py-1">
                     {walletConnection.address}
                   </div>
                 </div>
@@ -188,7 +188,7 @@ export default function WalletConnect({
                 {walletConnection.balance !== undefined && (
                   <div className="mt-4">
                     <div className="text-sm text-text2 mb-1">USDC Balance</div>
-                    <div className="text-lg font-mono text-accent">
+                    <div className="text-lg font-ui text-accent">
                       ${walletConnection.balance.toFixed(2)}
                     </div>
                   </div>
