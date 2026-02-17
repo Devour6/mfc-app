@@ -13,12 +13,11 @@ describe('Basic Integration Tests', () => {
     expect(element.textContent).toBe('Hello World');
   });
 
-  test('React testing library is functioning', () => {
-    const testComponent = () => {
-      return <div data-testid="test">Test Component</div>;
-    };
-    
-    expect(testComponent).toBeDefined();
+  test('React can be imported and used', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const React = require('react');
+    expect(React).toBeDefined();
+    expect(React.createElement).toBeDefined();
   });
 
   test('Array methods work correctly', () => {
