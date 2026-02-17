@@ -173,15 +173,7 @@ export default function Home() {
 
   if (!isLoaded) {
     return (
-      <div style={{
-        background: '#0a0a0f',
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#e8e8f0',
-        fontFamily: 'monospace'
-      }}>
+      <div className="bg-bg min-h-screen flex items-center justify-center text-text1 font-ui">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
