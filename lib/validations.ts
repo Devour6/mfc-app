@@ -20,6 +20,8 @@ export const createFighterSchema = z.object({
 const statValue = z.number().int().min(0).max(100)
 
 export const updateFighterSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(30, 'Name must be at most 30 characters').optional(),
+  emoji: z.string().min(1, 'Emoji is required').optional(),
   strength: statValue.optional(),
   speed: statValue.optional(),
   defense: statValue.optional(),

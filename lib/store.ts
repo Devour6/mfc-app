@@ -44,6 +44,10 @@ interface GameState {
   addRewardCredits: (amount: number, description: string, relatedId?: string) => void
   fetchCredits: () => Promise<void>
   placeBetAndDeduct: (amount: number, description: string) => boolean
+
+  // Leaderboard
+  leaderboardFighters: Fighter[]
+  fetchLeaderboard: () => Promise<void>
 }
 
 // Sample fighters with evolution data
@@ -511,6 +515,41 @@ export const useGameStore = create<GameState>()(
           user: { ...state.user, credits: state.user.credits - amount }
         }))
         return true
+      },
+
+      // Leaderboard
+      leaderboardFighters: [],
+
+      fetchLeaderboard: async () => {
+        try {
+          const res = await fetch('/api/fighters?active=true')
+          if (res.ok) {
+            const data = await res.json()
+            const fighters: Fighter[] = data.map((f: any) => ({
+              id: f.id,
+              name: f.name,
+              emoji: f.emoji ?? '🥊',
+              class: f.class.charAt(0).toUpperCase() + f.class.slice(1).toLowerCase() as Fighter['class'],
+              record: { wins: f.wins ?? 0, losses: f.losses ?? 0, draws: f.draws ?? 0 },
+              elo: f.elo ?? 1000,
+              stats: {
+                strength: f.strength ?? 50,
+                speed: f.speed ?? 50,
+                defense: f.defense ?? 50,
+                stamina: f.stamina ?? 50,
+                fightIQ: f.fightIQ ?? 50,
+                aggression: f.aggression ?? 50,
+              },
+              owner: f.owner?.name ?? f.ownerId ?? 'unknown',
+              isActive: f.isActive ?? true,
+              trainingCost: f.trainingCost ?? 100,
+              evolution: FighterEvolutionEngine.createNewEvolution(),
+            }))
+            set({ leaderboardFighters: fighters })
+          }
+        } catch {
+          // API not available — keep existing data
+        }
       }
     }),
     {

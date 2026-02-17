@@ -50,19 +50,22 @@ export default function EnhancedLeaderboard({
       const winRate = (fighter.record.wins / (fighter.record.wins + fighter.record.losses + fighter.record.draws)) * 100 || 0
       const isChampion = index === 0 && fighter.elo >= 2000
       
+      const totalFights = fighter.record.wins + fighter.record.losses + fighter.record.draws
+      const isWinning = fighter.record.wins >= fighter.record.losses
+
       return {
         ...fighter,
         rank: index + 1,
-        previousRank: index + 1 + Math.floor(Math.random() * 3) - 1, // Mock previous rank
-        rankChange: Math.random() > 0.6 ? 'up' : Math.random() > 0.3 ? 'down' : 'same',
+        previousRank: undefined,
+        rankChange: 'same' as const,
         points: fighter.elo,
-        streak: { 
-          type: Math.random() > 0.6 ? 'win' : 'loss', 
-          count: Math.floor(Math.random() * 8) + 1 
+        streak: {
+          type: isWinning ? 'win' as const : 'loss' as const,
+          count: Math.max(1, Math.abs(fighter.record.wins - fighter.record.losses))
         },
         champion: isChampion,
-        fightsThisWeek: Math.floor(Math.random() * 12) + 1,
-        earnings: Math.floor(Math.random() * 50000) + 5000
+        fightsThisWeek: totalFights,
+        earnings: fighter.elo * 10
       }
     })
 

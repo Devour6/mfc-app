@@ -1,16 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import EnhancedLeaderboard from './EnhancedLeaderboard'
+import { useGameStore } from '@/lib/store'
 import { Fighter } from '@/types'
 
 interface RankingsSectionProps {
   fighters: Fighter[]
 }
 
-export default function RankingsSection({ fighters }: RankingsSectionProps) {
+export default function RankingsSection({ fighters: propFighters }: RankingsSectionProps) {
   const [timeframe, setTimeframe] = useState<'weekly' | 'monthly' | 'allTime'>('allTime')
+  const leaderboardFighters = useGameStore(state => state.leaderboardFighters)
+  const fetchLeaderboard = useGameStore(state => state.fetchLeaderboard)
+
+  useEffect(() => {
+    fetchLeaderboard()
+  }, [fetchLeaderboard])
+
+  const displayFighters = leaderboardFighters.length > 0 ? leaderboardFighters : propFighters
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -25,8 +34,8 @@ export default function RankingsSection({ fighters }: RankingsSectionProps) {
         </p>
       </motion.div>
 
-      <EnhancedLeaderboard 
-        fighters={fighters}
+      <EnhancedLeaderboard
+        fighters={displayFighters}
         timeframe={timeframe}
         onTimeframeChange={(newTimeframe) => setTimeframe(newTimeframe as any)}
       />

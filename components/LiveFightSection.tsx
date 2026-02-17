@@ -8,8 +8,11 @@ import FightCard from './FightCard'
 import CommentaryBar from './CommentaryBar'
 import LiveBettingInterface from './LiveBettingInterface'
 import LiveStatsOverlay from './LiveStatsOverlay'
+import FightReplayViewer from './FightReplayViewer'
+import BetSettlementOverlay, { SettledBet } from './BetSettlementOverlay'
 import { FightEngine } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
+import { FightRecording } from '@/lib/fight-recorder'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
 import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
@@ -75,6 +78,13 @@ export default function LiveFightSection({
   const [showFightCard, setShowFightCard] = useState(true)
   const [autoRestartEnabled, setAutoRestartEnabled] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [replayRecording, setReplayRecording] = useState<FightRecording | null>(null)
+  const [showReplay, setShowReplay] = useState(false)
+  const [activeBets, setActiveBets] = useState<Array<{
+    id: string; marketTitle: string; side: string; amount: number; odds: number; optionId: string
+  }>>([])
+  const [settledBets, setSettledBets] = useState<SettledBet[]>([])
+  const [showSettlement, setShowSettlement] = useState(false)
 
   // Connect to game store for reactive credits
   const credits = useGameStore(state => state.user.credits)
@@ -90,7 +100,7 @@ export default function LiveFightSection({
     const fighter1 = sampleFighters[0]
     const fighter2 = sampleFighters[1]
 
-    // Create fight engine
+    // Create fight engine with recording enabled
     const fight = new FightEngine(
       fighter1,
       fighter2,
@@ -108,7 +118,32 @@ export default function LiveFightSection({
             fighter1: fighter1.name,
             fighter2: fighter2.name
           })
-          
+
+          // Capture recording for replay
+          const recording = fight.getRecording()
+          if (recording) setReplayRecording(recording)
+
+          // Settle active bets
+          setActiveBets(currentBets => {
+            if (currentBets.length > 0) {
+              const winnerId = state.result!.winner
+              const settled = currentBets.map(bet => {
+                const won = (bet.optionId === 'fighter1' && winnerId === fighter1.id)
+                  || (bet.optionId === 'fighter2' && winnerId === fighter2.id)
+                  || (bet.optionId === fighter1.name && winnerId === fighter1.id)
+                  || (bet.optionId === fighter2.name && winnerId === fighter2.id)
+                return {
+                  ...bet,
+                  status: won ? 'WON' as const : 'LOST' as const,
+                  payout: won ? Math.round(bet.amount * bet.odds) : 0,
+                }
+              })
+              setSettledBets(settled)
+              setTimeout(() => setShowSettlement(true), 2000)
+            }
+            return []
+          })
+
           // Auto-restart after delay if enabled
           if (autoRestartEnabled) {
             setTimeout(() => {
@@ -141,7 +176,8 @@ export default function LiveFightSection({
           soundManager.play('ko', 1.0)
           setTimeout(() => soundManager.play('crowd-cheer', 0.7), 500)
         }
-      }
+      },
+      true // enableRecording for replay
     )
 
     // Create market engine
@@ -347,16 +383,39 @@ export default function LiveFightSection({
                   <div className="text-text2 mb-6">
                     Round {fightState.result.round} - {fightState.result.method} at {fightState.result.time}
                   </div>
-                  <motion.button
-                    onClick={handleRestartFight}
-                    className="font-pixel text-sm bg-accent text-white px-6 py-3 hover:bg-accent/90 transition-colors"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    NEXT FIGHT
-                  </motion.button>
+                  <div className="flex items-center justify-center gap-3">
+                    <motion.button
+                      onClick={handleRestartFight}
+                      className="font-pixel text-sm bg-accent text-white px-6 py-3 hover:bg-accent/90 transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      NEXT FIGHT
+                    </motion.button>
+                    {replayRecording && (
+                      <motion.button
+                        onClick={() => setShowReplay(true)}
+                        className="font-pixel text-sm border border-gold text-gold px-6 py-3 hover:bg-gold/10 transition-colors"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        WATCH REPLAY
+                      </motion.button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
+            )}
+
+            {/* Fight Replay Viewer */}
+            {showReplay && replayRecording && (
+              <div className="absolute inset-0 z-30">
+                <FightReplayViewer
+                  recording={replayRecording}
+                  fighters={sampleFighters}
+                  onClose={() => setShowReplay(false)}
+                />
+              </div>
             )}
           </div>
 
@@ -379,7 +438,16 @@ export default function LiveFightSection({
               creditBalance={credits}
               onPlaceBet={(bet) => {
                 const success = placeBetAndDeduct(bet.amount, `Bet on ${bet.marketId}`)
-                if (!success) {
+                if (success) {
+                  setActiveBets(prev => [...prev, {
+                    id: `bet-${Date.now()}`,
+                    marketTitle: bet.marketId,
+                    side: bet.optionId ?? bet.marketId,
+                    amount: bet.amount,
+                    odds: (bet.potentialPayout ?? bet.amount * 2) / bet.amount,
+                    optionId: bet.optionId ?? 'fighter1',
+                  }])
+                } else {
                   soundManager.play('punch-light', 0.4)
                 }
               }}
@@ -400,6 +468,17 @@ export default function LiveFightSection({
         </div>
 
       </div>
+
+      {/* Bet Settlement Overlay */}
+      <BetSettlementOverlay
+        settledBets={settledBets}
+        newBalance={credits}
+        isVisible={showSettlement}
+        onDismiss={() => {
+          setShowSettlement(false)
+          setSettledBets([])
+        }}
+      />
     </div>
   )
 }
