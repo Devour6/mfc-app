@@ -78,74 +78,77 @@ export default function EnhancedFightCanvas({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Detect punching impacts with enhanced effects
-    if (fightState.fighter1.animation.state === 'punching') {
-      const targetX = (fightState.fighter2.position.x / 480) * canvas.width
-      const isHeavyPunch = Math.random() > 0.7 // 30% chance of heavy punch
-      
+    // Detect strike impacts — render at contact point between fighters
+    const f1X = (fightState.fighter1.position.x / 480) * canvas.width
+    const f2X = (fightState.fighter2.position.x / 480) * canvas.width
+    const contactX = (f1X + f2X) / 2
+
+    const isF1Striking = fightState.fighter1.animation.state === 'punching' || fightState.fighter1.animation.state === 'kicking'
+    const isF2Striking = fightState.fighter2.animation.state === 'punching' || fightState.fighter2.animation.state === 'kicking'
+
+    if (isF1Striking) {
+      const isHeavy = Math.random() > 0.7
+      const isKick = fightState.fighter1.animation.state === 'kicking'
+      const impactY = isKick ? canvas.height * 0.68 : canvas.height * 0.62
+
       addVisualEffect({
         type: 'impact',
-        x: targetX,
-        y: canvas.height * 0.65,
-        duration: isHeavyPunch ? 800 : 500,
-        intensity: isHeavyPunch ? 1.0 : 0.8
-      })
-      
-      addVisualEffect({
-        type: 'sparks',
-        x: targetX,
-        y: canvas.height * 0.65,
-        duration: isHeavyPunch ? 1200 : 800,
-        intensity: isHeavyPunch ? 0.9 : 0.6
+        x: contactX,
+        y: impactY,
+        duration: isHeavy ? 800 : 500,
+        intensity: isHeavy ? 1.0 : 0.8
       })
 
-      // Add screen shake for heavy punches
-      if (isHeavyPunch) {
+      addVisualEffect({
+        type: 'sparks',
+        x: contactX,
+        y: impactY,
+        duration: isHeavy ? 1200 : 800,
+        intensity: isHeavy ? 0.9 : 0.6
+      })
+
+      if (isHeavy) {
         addVisualEffect({
           type: 'screen_shake',
           x: canvas.width / 2,
           y: canvas.height / 2,
           duration: 300,
-          intensity: 0.8
+          intensity: isKick ? 1.0 : 0.8
         })
       }
     }
 
-    if (fightState.fighter2.animation.state === 'punching') {
-      const targetX = (fightState.fighter1.position.x / 480) * canvas.width
-      const isHeavyPunch = Math.random() > 0.7 // 30% chance of heavy punch
-      
+    if (isF2Striking) {
+      const isHeavy = Math.random() > 0.7
+      const isKick = fightState.fighter2.animation.state === 'kicking'
+      const impactY = isKick ? canvas.height * 0.68 : canvas.height * 0.62
+
       addVisualEffect({
         type: 'impact',
-        x: targetX,
-        y: canvas.height * 0.65,
-        duration: isHeavyPunch ? 800 : 500,
-        intensity: isHeavyPunch ? 1.0 : 0.8
-      })
-      
-      addVisualEffect({
-        type: 'sparks',
-        x: targetX,
-        y: canvas.height * 0.65,
-        duration: isHeavyPunch ? 1200 : 800,
-        intensity: isHeavyPunch ? 0.9 : 0.6
+        x: contactX,
+        y: impactY,
+        duration: isHeavy ? 800 : 500,
+        intensity: isHeavy ? 1.0 : 0.8
       })
 
-      // Add screen shake for heavy punches
-      if (isHeavyPunch) {
+      addVisualEffect({
+        type: 'sparks',
+        x: contactX,
+        y: impactY,
+        duration: isHeavy ? 1200 : 800,
+        intensity: isHeavy ? 0.9 : 0.6
+      })
+
+      if (isHeavy) {
         addVisualEffect({
           type: 'screen_shake',
           x: canvas.width / 2,
           y: canvas.height / 2,
           duration: 300,
-          intensity: 0.8
+          intensity: isKick ? 1.0 : 0.8
         })
       }
     }
-
-    // Enhanced punching impacts (includes kicks and different strike types)
-    const currentTime = Date.now()
-    const kickVariant = Math.sin(currentTime * 0.01) > 0.5 // Randomly treat some punches as kicks for variety
 
     // Detect knockdowns with enhanced effects
     if (fightState.fighter1.animation.state === 'down' || fightState.fighter2.animation.state === 'down') {
@@ -518,13 +521,14 @@ export default function EnhancedFightCanvas({
     
     // Convert position to canvas coordinates with movement physics
     const baseX = (fighterState.position.x / 480) * width
-    const baseY = floorY - 100
+    const baseY = floorY - 20
 
     // Add movement animations
     const time = Date.now() * 0.001
-    const idleBob = Math.sin(time * 2 + fighterNumber * Math.PI) * 3
-    const circlingOffset = Math.sin(time * 0.5 + fighterNumber * Math.PI) * 15
-    
+    const idleBob = Math.sin(time * 2 + fighterNumber * Math.PI) * 1
+    const isInCombat = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking' || fighterState.animation.state === 'hit' || fighterState.animation.state === 'blocking'
+    const circlingOffset = isInCombat ? 0 : Math.sin(time * 0.5 + fighterNumber * Math.PI) * 5
+
     const x = baseX + circlingOffset
     const y = baseY + idleBob
 
@@ -571,8 +575,11 @@ export default function EnhancedFightCanvas({
     }
 
     if (fighterState.animation.state === 'punching') {
-      const isKickVariant = Math.sin(time * 8) > 0.6
-      drawMotionTrail(ctx, x, y, fighterState.position.facing, isKickVariant ? 'kicking' : 'punching')
+      drawMotionTrail(ctx, x, y, fighterState.position.facing, 'punching')
+    }
+
+    if (fighterState.animation.state === 'kicking') {
+      drawMotionTrail(ctx, x, y, fighterState.position.facing, 'kicking')
     }
 
     ctx.restore()
@@ -605,23 +612,53 @@ export default function EnhancedFightCanvas({
     let bodyLean = 0
     let armExtension = 0
     let legExtension = 0
-
-    // Add kick variation for punching state
-    const isKickVariant = Math.sin(time * 8) > 0.6 && state === 'punching'
+    const attackType = fighterState.animation.attackType || ''
+    let isKicking = false
 
     // State-specific animations
     switch (state) {
       case 'punching':
-        if (isKickVariant) {
-          // Kick animation
-          legExtension = 30 + Math.sin(time * 12) * 8
-          bodyLean = -facing * 8
-          armY -= 5 // Arms up for balance
+        // Differentiate punch visuals by attackType
+        switch (attackType) {
+          case 'jab':
+            armExtension = 18 + Math.sin(time * 18) * 3
+            bodyLean = facing * 2
+            break
+          case 'cross':
+            armExtension = 30 + Math.sin(time * 15) * 5
+            bodyLean = facing * 8
+            headY -= 2
+            break
+          case 'hook':
+            armExtension = 15
+            bodyLean = facing * 12
+            torsoY -= 2
+            break
+          case 'uppercut':
+            armExtension = 20
+            armY -= 15
+            bodyLean = facing * 6
+            headY -= 4
+            break
+          default:
+            armExtension = 25 + Math.sin(time * 15) * 5
+            bodyLean = facing * 5
+            headY -= 2
+            break
+        }
+        break
+      case 'kicking':
+        isKicking = true
+        if (attackType === 'roundhouse') {
+          // Roundhouse: big sweeping leg, body leans back
+          legExtension = 35 + Math.sin(time * 10) * 8
+          bodyLean = -facing * 12
+          armY -= 8
         } else {
-          // Punch animation  
-          armExtension = 25 + Math.sin(time * 15) * 5
-          bodyLean = facing * 5
-          headY -= 2
+          // Front kick: leg extends forward, slight lean
+          legExtension = 28 + Math.sin(time * 12) * 6
+          bodyLean = -facing * 6
+          armY -= 5
         }
         break
       case 'hit':
@@ -648,36 +685,36 @@ export default function EnhancedFightCanvas({
     
     // Back leg
     if (facing === 1) {
-      drawLeg(ctx, x - 8, legY, color, false, legExtension, isKickVariant && Math.sin(time * 12) > 0.5)
+      drawLeg(ctx, x - 8, legY, color, false, 0, false)
     } else {
-      drawLeg(ctx, x + 8, legY, color, false, legExtension, isKickVariant && Math.sin(time * 12) > 0.5)
+      drawLeg(ctx, x + 8, legY, color, false, 0, false)
     }
-    
+
     // Back arm
     if (facing === 1) {
-      drawArm(ctx, x - 15, armY, color, facing, false, armExtension, state === 'punching' && !isKickVariant)
+      drawArm(ctx, x - 15, armY, color, facing, false, armExtension, state === 'punching')
     } else {
-      drawArm(ctx, x + 15, armY, color, facing, false, armExtension, state === 'punching' && !isKickVariant)
+      drawArm(ctx, x + 15, armY, color, facing, false, armExtension, state === 'punching')
     }
-    
+
     // Torso with muscle definition
     drawTorso(ctx, x, torsoY, color, state)
-    
+
     // Head with facial features
     drawHead(ctx, x, headY, color, facing, state, fighterState.hp)
-    
+
     // Front arm (punching arm)
     if (facing === 1) {
-      drawArm(ctx, x + 15, armY, color, facing, true, armExtension, state === 'punching' && !isKickVariant)
+      drawArm(ctx, x + 15, armY, color, facing, true, armExtension, state === 'punching')
     } else {
-      drawArm(ctx, x - 15, armY, color, facing, true, armExtension, state === 'punching' && !isKickVariant)
+      drawArm(ctx, x - 15, armY, color, facing, true, armExtension, state === 'punching')
     }
-    
-    // Front leg
+
+    // Front leg (kicking leg)
     if (facing === 1) {
-      drawLeg(ctx, x + 8, legY, color, true, legExtension, isKickVariant && Math.sin(time * 12) < -0.5)
+      drawLeg(ctx, x + 8, legY, color, true, legExtension, isKicking)
     } else {
-      drawLeg(ctx, x - 8, legY, color, true, legExtension, isKickVariant && Math.sin(time * 12) < -0.5)
+      drawLeg(ctx, x - 8, legY, color, true, legExtension, isKicking)
     }
 
     ctx.restore()
@@ -817,7 +854,9 @@ export default function EnhancedFightCanvas({
     ctx.save()
     ctx.translate(x, y)
     if (isFront && isPunching) {
-      ctx.rotate(facing * 45 * Math.PI / 180)
+      // Uppercut punches rotate upward, hooks rotate wider
+      const punchAngle = extension > 20 ? 55 : 45
+      ctx.rotate(facing * punchAngle * Math.PI / 180)
     }
 
     const armLen = Math.floor((25 + extension) / P)
@@ -892,6 +931,12 @@ export default function EnhancedFightCanvas({
     pxo(ctx, ox, bootY + P, '#111')
     pxo(ctx, ox + P, bootY + P, '#111')
     pxo(ctx, ox + P * 2, bootY + P, '#111')
+
+    // Kicking boot glow
+    if (isKicking && isFront) {
+      ctx.fillStyle = 'rgba(255,100,0,0.3)'
+      ctx.fillRect(ox - P * 2, bootY - P, P * 6, P * 4)
+    }
 
     ctx.restore()
   }
