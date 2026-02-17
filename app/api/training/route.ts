@@ -2,18 +2,22 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { createTrainingSchema, trainingQuerySchema } from '@/lib/validations'
+import { requireAuth } from '@/lib/auth-guard'
+import { ensureUser } from '@/lib/user-sync'
 
-// GET /api/training?fighterId=...&userId=...&limit=... — List training sessions
+// GET /api/training?fighterId=...&limit=... — List authenticated user's training sessions
 export async function GET(request: NextRequest) {
   try {
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
+
     const raw = Object.fromEntries(request.nextUrl.searchParams.entries())
     const parsed = trainingQuerySchema.safeParse(raw)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { fighterId, userId, limit } = parsed.data
-    const where: Record<string, unknown> = {}
+    const { fighterId, limit } = parsed.data
+    const where: Record<string, unknown> = { userId: dbUser.id }
     if (fighterId) where.fighterId = fighterId
-    if (userId) where.userId = userId
 
     const trainings = await prisma.training.findMany({
       where,
@@ -30,14 +34,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/training — Create a training session
+// POST /api/training — Create a training session (auth required)
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
+
     const body = await request.json()
     const parsed = createTrainingSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { fighterId, userId, hours } = parsed.data
+    const { fighterId, hours } = parsed.data
+    const userId = dbUser.id
 
     // Verify fighter exists and belongs to user
     const fighter = await prisma.fighter.findUnique({ where: { id: fighterId } })

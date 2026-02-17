@@ -99,20 +99,27 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 
 ## API Routes
 
-| Route | Methods | Description |
-|-------|---------|-------------|
-| `/api/fighters` | GET, POST | List fighters (with filters), create fighter |
-| `/api/fighters/[id]` | GET, PATCH | Get fighter details, update fighter stats |
-| `/api/fights` | GET, POST | List fights (with status filter), create fight |
-| `/api/fights/[id]` | GET, POST, PATCH | Get fight details, submit result (with round/winner validation), update status (with legal transition enforcement) |
-| `/api/user` | GET, POST, PATCH | Get/create/update user profile (email format, username regex validation) |
-| `/api/user/credits` | GET, POST | Get credit balance, add/deduct credits (transaction-safe) |
-| `/api/bets` | GET, POST | List bets (filter by fight/user/status), place bet (deducts credits, validates fight state) |
-| `/api/bets/[id]` | GET, PATCH | Get bet details, settle/cancel bet (credits payout/refund via transaction) |
-| `/api/training` | GET, POST | List training sessions, create session (deducts credits, applies random stat gains, caps at 100) |
-| `/api/training/[id]` | GET | Get training session details |
-| `/api/solana/config` | GET | Returns treasury wallet address and credits-per-SOL rate (server-side env) |
-| `/api/health` | GET | Health check — returns `{ status, timestamp, db }` |
+| Route | Methods | Auth | Description |
+|-------|---------|------|-------------|
+| `/api/fighters` | GET | Public | List fighters (with filters) |
+| `/api/fighters` | POST | Required | Create fighter (owner set from session) |
+| `/api/fighters/[id]` | GET | Public | Get fighter details |
+| `/api/fighters/[id]` | PATCH | Required | Update fighter stats (must own fighter) |
+| `/api/fights` | GET | Public | List fights (with status filter) |
+| `/api/fights` | POST | Required | Create fight |
+| `/api/fights/[id]` | GET | Public | Get fight details |
+| `/api/fights/[id]` | POST | Required | Submit fight result |
+| `/api/fights/[id]` | PATCH | Required | Update fight status |
+| `/api/user` | GET, POST, PATCH | Required | Get/sync/update user profile (uses session, auto-creates on first login) |
+| `/api/user/credits` | GET, POST | Required | Get credit balance, add/deduct credits (transaction-safe) |
+| `/api/bets` | GET, POST | Required | List user's bets, place bet (deducts credits) |
+| `/api/bets/[id]` | GET, PATCH | Required | Get bet details, settle/cancel bet |
+| `/api/training` | GET, POST | Required | List user's training sessions, create session |
+| `/api/training/[id]` | GET | Required | Get training session details |
+| `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
+| `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
+
+**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts`. Unauthenticated requests get 401. User identity comes from the Auth0 session — no more `auth0Id`/`userId` in request bodies. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`.
 
 **Validation:** All routes use zod schemas from `lib/validations.ts` for input validation. Invalid requests return `{ error: "Validation failed", issues: [...] }` with 400 status.
 
@@ -136,14 +143,15 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 
 **Backend (In Progress):**
 - PostgreSQL 16 connected locally, migrated, and seeded with sample data
-- API routes exist for all entities with zod validation
+- API routes exist for all entities with zod validation and auth guards
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
-- Auth0 v4 integrated: proxy.ts active, requireAuth() guard ready, user-sync upsert ready
+- Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
 - 44 API integration tests covering all route handlers
 
 **Not Yet Built:**
-- Auth0 auth guards on individual API routes (requireAuth() is ready but not yet applied to route handlers)
+- Solana provider wired into app layout
+- Frontend API client updated for session-based auth (no more auth0Id in request bodies)
 - Stripe payment integration
 - Solana wallet integration (scaffold built: provider, hook, credit bridge — needs frontend wiring + mainnet config)
 - Multiplayer (mock data only)

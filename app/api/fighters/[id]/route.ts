@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { jsonResponse, notFound, validationError, serverError } from '@/lib/api-utils'
+import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { updateFighterSchema } from '@/lib/validations'
+import { requireAuth } from '@/lib/auth-guard'
+import { ensureUser } from '@/lib/user-sync'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -26,9 +28,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH /api/fighters/:id — Update fighter stats (after fight or training)
+// PATCH /api/fighters/:id — Update fighter stats (auth required, must own fighter)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
+
     const { id } = await params
     const body = await request.json()
 
@@ -37,6 +42,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const existing = await prisma.fighter.findUnique({ where: { id } })
     if (!existing) return notFound('Fighter')
+    if (existing.ownerId !== dbUser.id) {
+      return errorResponse('You can only update your own fighters', 403)
+    }
 
     const fighter = await prisma.fighter.update({
       where: { id },

@@ -2,17 +2,21 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { createBetSchema, betQuerySchema } from '@/lib/validations'
+import { requireAuth } from '@/lib/auth-guard'
+import { ensureUser } from '@/lib/user-sync'
 
-// GET /api/bets?userId=...&fightId=...&status=...&limit=... — List bets
+// GET /api/bets?fightId=...&status=...&limit=... — List authenticated user's bets
 export async function GET(request: NextRequest) {
   try {
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
+
     const raw = Object.fromEntries(request.nextUrl.searchParams.entries())
     const parsed = betQuerySchema.safeParse(raw)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { userId, fightId, status, limit } = parsed.data
-    const where: Record<string, unknown> = {}
-    if (userId) where.userId = userId
+    const { fightId, status, limit } = parsed.data
+    const where: Record<string, unknown> = { userId: dbUser.id }
     if (fightId) where.fightId = fightId
     if (status) where.status = status
 
@@ -39,14 +43,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/bets — Place a bet
+// POST /api/bets — Place a bet (auth required)
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
+
     const body = await request.json()
     const parsed = createBetSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { userId, fightId, fighterId, side, amount, odds } = parsed.data
+    const { fightId, fighterId, side, amount, odds } = parsed.data
+    const userId = dbUser.id
 
     // Verify fight exists and is in a bettable state
     const fight = await prisma.fight.findUnique({ where: { id: fightId } })

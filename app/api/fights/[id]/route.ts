@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { submitFightResultSchema, updateFightStatusSchema, isLegalStatusTransition } from '@/lib/validations'
+import { requireAuth } from '@/lib/auth-guard'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -27,9 +28,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// POST /api/fights/:id — Submit fight result
+// POST /api/fights/:id — Submit fight result (auth required)
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireAuth()
     const { id } = await params
     const body = await request.json()
 
@@ -108,9 +110,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH /api/fights/:id — Update fight status (start, cancel)
+// PATCH /api/fights/:id — Update fight status (auth required)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireAuth()
     const { id } = await params
     const body = await request.json()
 
