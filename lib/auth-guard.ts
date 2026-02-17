@@ -41,9 +41,17 @@ export async function requireAuth(): Promise<AuthSession> {
 
   // Try API key from Authorization header
   const headerStore = await headers()
-  const authHeader = headerStore.get('authorization')
-  if (authHeader?.startsWith('Bearer mfc_sk_')) {
+  const authHeader = headerStore.get('authorization')?.trim()
+  if (authHeader?.startsWith('Bearer ')) {
     const key = authHeader.slice(7) // Remove "Bearer "
+
+    // Validate format: mfc_sk_ prefix + 64 hex chars (256 bits)
+    if (!/^mfc_sk_[a-f0-9]{64}$/.test(key)) {
+      throw new AuthRequiredError()
+    }
+
+    // TODO: Keys are stored in plaintext. For production, hash with bcrypt
+    // and use a prefix-based lookup strategy instead of findUnique on raw key.
     const apiKey = await prisma.apiKey.findUnique({
       where: { key },
       include: {
@@ -58,7 +66,9 @@ export async function requireAuth(): Promise<AuthSession> {
       prisma.apiKey.update({
         where: { id: apiKey.id },
         data: { lastUsedAt: new Date() },
-      }).catch(() => {})
+      }).catch((err) => {
+        console.error('[API Auth] Failed to update lastUsedAt for key', apiKey.id, err)
+      })
 
       // Return session-like object that ensureUser() can consume
       return {

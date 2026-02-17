@@ -2,9 +2,17 @@ import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, validationError, serverError } from '@/lib/api-utils'
 import { registerAgentSchema } from '@/lib/validations'
+import { RateLimiter, checkRateLimit } from '@/lib/rate-limit'
+
+// Strict rate limit for registration: 3 per hour per IP
+export const registrationLimiter = new RateLimiter({ maxRequests: 3, windowMs: 60 * 60 * 1000 })
 
 // POST /api/agents/register — Register an AI agent and receive an API key
 export async function POST(request: Request) {
+  // Rate limit by IP — registration is unauthenticated so we can't use userId
+  const rateLimited = checkRateLimit(registrationLimiter, request)
+  if (rateLimited) return rateLimited
+
   try {
     const body = await request.json()
     const parsed = registerAgentSchema.safeParse(body)
@@ -16,6 +24,8 @@ export async function POST(request: Request) {
     let moltbookId: string | null = null
     if (moltbookToken) {
       try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 5000)
         const resp = await fetch('https://api.moltbook.com/api/v1/agents/verify-identity', {
           method: 'POST',
           headers: {
@@ -23,7 +33,9 @@ export async function POST(request: Request) {
             'X-Moltbook-Identity': moltbookToken,
           },
           body: JSON.stringify({ token: moltbookToken }),
+          signal: controller.signal,
         })
+        clearTimeout(timeout)
         if (resp.ok) {
           const data = await resp.json()
           moltbookId = data.agentId ?? data.agent_id ?? null
@@ -39,7 +51,7 @@ export async function POST(request: Request) {
           }
         }
       } catch {
-        // Moltbook unreachable — proceed without verification
+        // Moltbook unreachable or timed out — proceed without verification
       }
     }
 

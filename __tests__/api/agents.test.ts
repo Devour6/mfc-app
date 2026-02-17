@@ -3,10 +3,11 @@
  */
 import { mockPrisma, createRequest } from './helpers'
 
-import { POST as registerAgent } from '@/app/api/agents/register/route'
+import { POST as registerAgent, registrationLimiter } from '@/app/api/agents/register/route'
 
 beforeEach(() => {
   jest.clearAllMocks()
+  registrationLimiter.reset()
 })
 
 // ─── Agent Registration ─────────────────────────────────────────────────────
