@@ -7,6 +7,7 @@ import MarketSidebar from './MarketSidebar'
 import FightCard from './FightCard'
 import CommentaryBar from './CommentaryBar'
 import LiveBettingInterface from './LiveBettingInterface'
+import LiveStatsOverlay from './LiveStatsOverlay'
 import { FightEngine } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
@@ -73,6 +74,7 @@ export default function LiveFightSection({
   const [marketEngine, setMarketEngine] = useState<MarketEngine | null>(null)
   const [showFightCard, setShowFightCard] = useState(true)
   const [autoRestartEnabled, setAutoRestartEnabled] = useState(true)
+  const [soundEnabled, setSoundEnabled] = useState(true)
 
   // Connect to game store for reactive credits
   const credits = useGameStore(state => state.user.credits)
@@ -256,13 +258,26 @@ export default function LiveFightSection({
             <div className="font-pixel text-sm text-text">
               {Math.floor(fightState.clock / 60)}:{(fightState.clock % 60).toString().padStart(2, '0')}
             </div>
-            <div className="flex items-center gap-2">
-              <motion.div
-                className="w-2 h-2 bg-green rounded-full"
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-              <span className="font-pixel text-xs text-green">LIVE</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  const next = !soundEnabled
+                  setSoundEnabled(next)
+                  if (next) { soundManager.unmute() } else { soundManager.mute() }
+                }}
+                className="font-pixel text-[10px] text-text2 hover:text-text transition-colors"
+                title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+              >
+                {soundEnabled ? 'SND:ON' : 'SND:OFF'}
+              </button>
+              <div className="flex items-center gap-2">
+                <motion.div
+                  className="w-2 h-2 bg-green rounded-full"
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+                <span className="font-pixel text-xs text-green">LIVE</span>
+              </div>
             </div>
           </div>
 
@@ -351,6 +366,11 @@ export default function LiveFightSection({
 
         {/* Right Sidebar - Markets & Betting - Always visible */}
         <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
+          {/* Live Stats Overlay */}
+          <div className="border-b border-border">
+            <LiveStatsOverlay fightState={fightState} fighters={sampleFighters} />
+          </div>
+
           {/* Live Betting Interface */}
           <div className="border-b border-border p-4">
             <LiveBettingInterface
