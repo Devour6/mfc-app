@@ -152,7 +152,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 43 API integration tests covering all route handlers (with auth mocks)
+- 67 API integration tests covering all route handlers, auth protection (401s for all guarded routes), and user sync (with auth mocks)
 
 **Not Yet Built:**
 - Solana provider wired into app layout

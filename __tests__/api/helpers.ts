@@ -64,17 +64,20 @@ const defaultDbUser = { id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, us
 
 // Mock @/lib/auth-guard — requireAuth returns a default session
 export const mockRequireAuth = jest.fn().mockResolvedValue(defaultSession)
-jest.mock('@/lib/auth-guard', () => ({
-  requireAuth: mockRequireAuth,
-  AuthRequiredError: class AuthRequiredError extends Error {
-    public readonly response: Response
-    constructor() {
-      super('Unauthorized')
-      this.name = 'AuthRequiredError'
-      this.response = Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  },
-}))
+jest.mock('@/lib/auth-guard', () => {
+  const { NextResponse } = require('next/server')
+  return {
+    requireAuth: mockRequireAuth,
+    AuthRequiredError: class AuthRequiredError extends Error {
+      public readonly response: InstanceType<typeof NextResponse>
+      constructor() {
+        super('Unauthorized')
+        this.name = 'AuthRequiredError'
+        this.response = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    },
+  }
+})
 
 // Mock @/lib/user-sync — ensureUser returns a default db user
 export const mockEnsureUser = jest.fn().mockResolvedValue(defaultDbUser)
