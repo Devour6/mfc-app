@@ -438,6 +438,15 @@ export function startTraining(data: {
   })
 }
 
+// ─── Stripe ────────────────────────────────────────────────────────────────
+
+export function createCheckoutSession(packageId: string) {
+  return request<{ sessionId: string; url: string }>('/api/stripe/checkout-session', {
+    method: 'POST',
+    body: JSON.stringify({ packageId }),
+  })
+}
+
 // ─── Re-export error class for consumers ────────────────────────────────────
 
 export { ApiClientError }
