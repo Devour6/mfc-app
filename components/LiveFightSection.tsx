@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import EnhancedFightCanvas from './EnhancedFightCanvas'
-import MarketSidebar from './MarketSidebar'
 import FightCard from './FightCard'
 import CommentaryBar from './CommentaryBar'
-import LiveBettingInterface from './LiveBettingInterface'
+import TradingPanel, { BettingSlip } from './TradingPanel'
 import LiveStatsOverlay from './LiveStatsOverlay'
 import FightReplayViewer from './FightReplayViewer'
 import BetSettlementOverlay, { SettledBet } from './BetSettlementOverlay'
@@ -257,7 +256,7 @@ export default function LiveFightSection({
 
   if (!fightState || !marketState) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}
@@ -273,7 +272,7 @@ export default function LiveFightSection({
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Fight Card Overlay */}
       {showFightCard && (
         <FightCard 
@@ -294,26 +293,13 @@ export default function LiveFightSection({
             <div className="font-pixel text-sm text-text">
               {Math.floor(fightState.clock / 60)}:{(fightState.clock % 60).toString().padStart(2, '0')}
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  const next = !soundEnabled
-                  setSoundEnabled(next)
-                  if (next) { soundManager.unmute() } else { soundManager.mute() }
-                }}
-                className="font-pixel text-[10px] text-text2 hover:text-text transition-colors"
-                title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-              >
-                {soundEnabled ? 'SND:ON' : 'SND:OFF'}
-              </button>
-              <div className="flex items-center gap-2">
-                <motion.div
-                  className="w-2 h-2 bg-green"
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-                <span className="font-pixel text-xs text-green">LIVE</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <motion.div
+                className="w-2 h-2 bg-green"
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              <span className="font-pixel text-xs text-green">LIVE</span>
             </div>
           </div>
 
@@ -423,20 +409,21 @@ export default function LiveFightSection({
           <CommentaryBar commentary={currentCommentary} />
         </div>
 
-        {/* Right Sidebar - Markets & Betting - Always visible */}
+        {/* Right Sidebar - Unified Trading Panel */}
         <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
           {/* Live Stats Overlay */}
           <div className="border-b border-border">
             <LiveStatsOverlay fightState={fightState} fighters={sampleFighters} />
           </div>
 
-          {/* Live Betting Interface */}
-          <div className="border-b border-border p-4">
-            <LiveBettingInterface
+          {/* Trading Panel */}
+          <div className="flex-1 overflow-hidden">
+            <TradingPanel
+              marketState={marketState}
               fightState={fightState}
               fighters={sampleFighters}
-              creditBalance={credits}
-              onPlaceBet={(bet) => {
+              credits={credits}
+              onPlaceBet={(bet: BettingSlip) => {
                 const success = placeBetAndDeduct(bet.amount, `Bet on ${bet.marketId}`)
                 if (success) {
                   setActiveBets(prev => [...prev, {
@@ -451,18 +438,8 @@ export default function LiveFightSection({
                   soundManager.play('punch-light', 0.4)
                 }
               }}
-              onMarketUpdate={(marketId) => {
-                console.log('Market updated:', marketId)
-              }}
-            />
-          </div>
-
-          {/* Market Sidebar */}
-          <div className="flex-1 overflow-hidden">
-            <MarketSidebar
-              marketState={marketState}
-              fighters={sampleFighters}
-              onTrade={handleTrade}
+              onPlaceTrade={handleTrade}
+              activeBets={activeBets}
             />
           </div>
         </div>

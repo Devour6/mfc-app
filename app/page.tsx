@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
 import LiveFightSection from '@/components/LiveFightSection'
 import LandingPage from '@/components/LandingPage'
+import ArenaTopBar, { ArenaSection } from '@/components/ArenaTopBar'
 import DailyRewards from '@/components/DailyRewards'
 import RankingsSection from '@/components/RankingsSection'
 import TournamentBracket from '@/components/TournamentBracket'
 import AchievementSystem from '@/components/AchievementSystem'
 import FightersSection from '@/components/FightersSection'
+import soundManager from '@/lib/sound-manager'
+import { useGameStore } from '@/lib/store'
 // import { LoginStreak, TournamentBracket, TournamentMatch, Fighter } from '@/types'
 
 // Inline type definitions to fix build
@@ -156,8 +160,11 @@ const mockNotifications = [
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<'landing' | 'arena'>('landing')
-  const [arenaSection, setArenaSection] = useState<'fights' | 'rewards' | 'rankings' | 'tournaments' | 'achievements' | 'fighters'>('fights')
+  const [drawerSection, setDrawerSection] = useState<ArenaSection | null>(null)
+  const [soundEnabled, setSoundEnabled] = useState(true)
   const [isLoaded, setIsLoaded] = useState(false)
+
+  const credits = useGameStore(state => state.user.credits)
 
   useEffect(() => {
     setIsLoaded(true)
@@ -171,9 +178,27 @@ export default function Home() {
     setCurrentView('landing')
   }
 
+  const handleToggleSound = () => {
+    const next = !soundEnabled
+    setSoundEnabled(next)
+    if (next) { soundManager.unmute() } else { soundManager.mute() }
+  }
+
+  const handleOpenSection = (section: ArenaSection) => {
+    setDrawerSection(prev => prev === section ? null : section)
+  }
+
+  const drawerTitle: Record<ArenaSection, string> = {
+    rankings: 'RANKINGS',
+    fighters: 'FIGHTERS',
+    tournaments: 'TOURNAMENTS',
+    rewards: 'REWARDS',
+    achievements: 'ACHIEVEMENTS',
+  }
+
   if (!isLoaded) {
     return (
-      <div className="bg-bg min-h-screen flex items-center justify-center text-text1 font-ui">
+      <div className="bg-bg min-h-screen flex items-center justify-center text-text font-ui">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -202,7 +227,7 @@ export default function Home() {
             <LandingPage onEnterArena={enterArena} />
           </motion.div>
         )}
-        
+
         {currentView === 'arena' && (
           <motion.div
             key="arena"
@@ -212,156 +237,92 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="h-screen flex flex-col"
           >
-            {/* Header with navigation */}
-            <div className="bg-surface border-b border-border px-4 py-2 flex items-center justify-between">
-              <motion.button
-                onClick={goHome}
-                className="font-pixel text-accent hover:text-accent/80 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                ← MFC
-              </motion.button>
-              <div className="font-pixel text-xs text-gold">
-                MOLT FIGHTING CHAMPIONSHIP
-              </div>
-              <div className="font-pixel text-xs text-text2">
-                {arenaSection === 'fights' ? 'LIVE NOW' : arenaSection.toUpperCase()}
-              </div>
-            </div>
+            {/* Slim top bar */}
+            <ArenaTopBar
+              credits={credits}
+              soundEnabled={soundEnabled}
+              onToggleSound={handleToggleSound}
+              onGoHome={goHome}
+              onOpenSection={handleOpenSection}
+            />
 
-            {/* Navigation tabs */}
-            <div className="bg-surface border-b border-border px-4 py-2">
-              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                {[
-                  { id: 'fights', label: '🥊 FIGHTS', icon: '🥊' },
-                  { id: 'rewards', label: '🎁 REWARDS', icon: '🎁' },
-                  { id: 'rankings', label: '🏆 RANKINGS', icon: '🏆' },
-                  { id: 'tournaments', label: '🏟️ TOURNAMENTS', icon: '🏟️' },
-                  { id: 'fighters', label: '🤖 FIGHTERS', icon: '🤖' },
-                  { id: 'achievements', label: '🎖️ ACHIEVEMENTS', icon: '🎖️' }
-                ].map((tab) => (
-                  <motion.button
-                    key={tab.id}
-                    onClick={() => setArenaSection(tab.id as any)}
-                    className={`font-pixel text-xs px-3 py-2 border transition-all ${
-                      arenaSection === tab.id
-                        ? 'bg-accent text-white border-accent'
-                        : 'bg-transparent text-text2 border-border hover:text-text hover:border-text2'
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <span className="md:hidden">{tab.icon}</span>
-                    <span className="hidden md:inline">{tab.label}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Content area */}
-            <div className="flex-1 overflow-hidden">
-              <AnimatePresence mode="wait">
-                {arenaSection === 'fights' && (
-                  <motion.div
-                    key="fights"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full"
-                  >
-                    <LiveFightSection onFightComplete={(fighterId, fightData) => {
-                      console.log('Fight completed:', fighterId, fightData)
-                    }} />
-                  </motion.div>
-                )}
+            {/* Fight always visible — fills remaining space */}
+            <div className="flex-1 overflow-hidden relative">
+              <LiveFightSection onFightComplete={(fighterId, fightData) => {
+                console.log('Fight completed:', fighterId, fightData)
+              }} />
 
-                {arenaSection === 'rewards' && (
-                  <motion.div
-                    key="rewards"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full overflow-y-auto p-4"
-                  >
-                    <DailyRewards 
-                      loginStreak={mockLoginStreak}
-                      onClaimReward={(reward) => {
-                        console.log('Reward claimed:', reward)
-                        // Add reward claiming logic
-                      }}
+              {/* Slide-over drawer for secondary sections */}
+              <AnimatePresence>
+                {drawerSection && (
+                  <>
+                    {/* Backdrop */}
+                    <motion.div
+                      key="drawer-backdrop"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 bg-black/60 z-40"
+                      onClick={() => setDrawerSection(null)}
                     />
-                  </motion.div>
-                )}
-
-                {arenaSection === 'rankings' && (
-                  <motion.div
-                    key="rankings"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full overflow-y-auto p-4"
-                  >
-                    <RankingsSection fighters={mockFighters} />
-                  </motion.div>
-                )}
-
-                {arenaSection === 'tournaments' && (
-                  <motion.div
-                    key="tournaments"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full overflow-y-auto p-4"
-                  >
-                    <TournamentBracket 
-                      tournament={mockTournament}
-                      onStartMatch={(match) => console.log('Starting match:', match)}
-                      showControls={true}
-                    />
-                  </motion.div>
-                )}
-
-                {arenaSection === 'fighters' && (
-                  <motion.div
-                    key="fighters"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full overflow-y-auto p-4"
-                  >
-                    <FightersSection 
-                      fighters={mockFighters as any[]}
-                      onFightComplete={(fighterId, fightData) => console.log('Fight completed:', fighterId, fightData)}
-                      onSelectFighter={(fighterId) => console.log('Selected fighter:', fighterId)}
-                      onTraining={(fighterId, fighterName, cost) => {
-                        console.log('Training:', fighterId, fighterName, cost)
-                        return true // Allow training
-                      }}
-                    />
-                  </motion.div>
-                )}
-
-                {arenaSection === 'achievements' && (
-                  <motion.div
-                    key="achievements"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="h-full overflow-y-auto p-4"
-                  >
-                    <AchievementSystem 
-                      achievements={mockAchievements as any[]}
-                      notifications={mockNotifications as any[]}
-                      onDismissNotification={(notificationId) => console.log('Dismissed notification:', notificationId)}
-                    />
-                  </motion.div>
+                    {/* Drawer panel */}
+                    <motion.div
+                      key="drawer-panel"
+                      initial={{ x: '100%' }}
+                      animate={{ x: 0 }}
+                      exit={{ x: '100%' }}
+                      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                      className="absolute top-0 right-0 bottom-0 w-full max-w-lg bg-bg border-l border-border z-50 flex flex-col overflow-hidden"
+                    >
+                      {/* Drawer header */}
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface shrink-0">
+                        <span className="font-pixel text-xs text-text">{drawerTitle[drawerSection]}</span>
+                        <button
+                          onClick={() => setDrawerSection(null)}
+                          className="text-text2 hover:text-text transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {/* Drawer content */}
+                      <div className="flex-1 overflow-y-auto p-4">
+                        {drawerSection === 'rewards' && (
+                          <DailyRewards
+                            loginStreak={mockLoginStreak}
+                            onClaimReward={(reward) => console.log('Reward claimed:', reward)}
+                          />
+                        )}
+                        {drawerSection === 'rankings' && (
+                          <RankingsSection fighters={mockFighters} />
+                        )}
+                        {drawerSection === 'tournaments' && (
+                          <TournamentBracket
+                            tournament={mockTournament}
+                            onStartMatch={(match) => console.log('Starting match:', match)}
+                            showControls={true}
+                          />
+                        )}
+                        {drawerSection === 'fighters' && (
+                          <FightersSection
+                            fighters={mockFighters as any[]}
+                            onFightComplete={(fighterId, fightData) => console.log('Fight completed:', fighterId, fightData)}
+                            onSelectFighter={(fighterId) => console.log('Selected fighter:', fighterId)}
+                            onTraining={(fighterId, fighterName, cost) => {
+                              console.log('Training:', fighterId, fighterName, cost)
+                              return true
+                            }}
+                          />
+                        )}
+                        {drawerSection === 'achievements' && (
+                          <AchievementSystem
+                            achievements={mockAchievements as any[]}
+                            notifications={mockNotifications as any[]}
+                            onDismissNotification={(notificationId) => console.log('Dismissed notification:', notificationId)}
+                          />
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
                 )}
               </AnimatePresence>
             </div>
