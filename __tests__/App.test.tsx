@@ -1,19 +1,47 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import HomePage from '../app/page';
 
-// Mock the child components to avoid complex dependencies
+// Mock sound manager
+jest.mock('../lib/sound-manager', () => ({
+  __esModule: true,
+  default: { mute: jest.fn(), unmute: jest.fn() },
+}));
+
+// Mock Zustand store
+jest.mock('../lib/store', () => ({
+  useGameStore: (selector: any) => selector({ user: { credits: 1000 } }),
+}));
+
+// Mock child components — LandingPage exposes a button to trigger view switch
+jest.mock('../components/LandingPage', () => {
+  return function MockLandingPage({ onEnterArena }: { onEnterArena: (role: 'spectator' | 'fighter') => void }) {
+    return (
+      <div data-testid="landing-page">
+        <button onClick={() => onEnterArena('spectator')}>Enter Arena</button>
+      </div>
+    );
+  };
+});
+
 jest.mock('../components/LiveFightSection', () => {
   return function MockLiveFightSection() {
     return <div data-testid="live-fight-section">Live Fight Section</div>;
   };
 });
 
-jest.mock('../components/LandingPage', () => {
-  return function MockLandingPage() {
-    return <div data-testid="landing-page">Landing Page</div>;
+jest.mock('../components/ArenaTopBar', () => {
+  const MockArenaTopBar = (props: any) => (
+    <div data-testid="arena-top-bar">
+      <button onClick={props.onGoHome}>MFC</button>
+      <button onClick={() => props.onOpenSection('rankings')}>Rankings</button>
+    </div>
+  );
+  return {
+    __esModule: true,
+    default: MockArenaTopBar,
   };
 });
 
@@ -49,63 +77,66 @@ jest.mock('../components/FightersSection', () => {
 
 describe('MFC App Integration Tests', () => {
   beforeEach(() => {
-    // Reset any mocks before each test
     jest.clearAllMocks();
   });
 
-  test('landing page renders without crashing', async () => {
+  test('landing page renders on initial load', async () => {
     render(<HomePage />);
-    
-    // Wait for the component to render
     await waitFor(() => {
       expect(screen.getByTestId('landing-page')).toBeInTheDocument();
     });
   });
 
-  test('app renders main components correctly', async () => {
+  test('arena components are not visible on landing view', async () => {
     render(<HomePage />);
-    
-    // Check that all major sections are present
     await waitFor(() => {
       expect(screen.getByTestId('landing-page')).toBeInTheDocument();
-      expect(screen.getByTestId('live-fight-section')).toBeInTheDocument();
-      expect(screen.getByTestId('daily-rewards')).toBeInTheDocument();
-      expect(screen.getByTestId('rankings-section')).toBeInTheDocument();
-      expect(screen.getByTestId('tournament-bracket')).toBeInTheDocument();
-      expect(screen.getByTestId('achievement-system')).toBeInTheDocument();
-      expect(screen.getByTestId('fighters-section')).toBeInTheDocument();
     });
+    expect(screen.queryByTestId('arena-top-bar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('live-fight-section')).not.toBeInTheDocument();
+  });
+
+  test('entering arena shows ArenaTopBar and LiveFightSection', async () => {
+    const user = userEvent.setup();
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('landing-page')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Enter Arena'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('arena-top-bar')).toBeInTheDocument();
+      expect(screen.getByTestId('live-fight-section')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('landing-page')).not.toBeInTheDocument();
   });
 
   test('app renders without throwing errors', () => {
-    // This test ensures the app can render without any JavaScript errors
     expect(() => {
       render(<HomePage />);
     }).not.toThrow();
   });
 
-  test('main page contains expected content structure', async () => {
+  test('drawer sections render when opened from arena', async () => {
+    const user = userEvent.setup();
     render(<HomePage />);
-    
-    // Verify the app structure is rendered
-    const appContainer = screen.getByTestId('landing-page').parentElement;
-    expect(appContainer).toBeInTheDocument();
-    
-    // Check that multiple components are rendered
-    const components = [
-      'landing-page',
-      'live-fight-section', 
-      'daily-rewards',
-      'rankings-section',
-      'tournament-bracket',
-      'achievement-system',
-      'fighters-section'
-    ];
-    
-    for (const componentTestId of components) {
-      await waitFor(() => {
-        expect(screen.getByTestId(componentTestId)).toBeInTheDocument();
-      });
-    }
+
+    await waitFor(() => {
+      expect(screen.getByTestId('landing-page')).toBeInTheDocument();
+    });
+
+    // Enter the arena
+    await user.click(screen.getByText('Enter Arena'));
+    await waitFor(() => {
+      expect(screen.getByTestId('arena-top-bar')).toBeInTheDocument();
+    });
+
+    // Open the rankings drawer
+    await user.click(screen.getByText('Rankings'));
+    await waitFor(() => {
+      expect(screen.getByTestId('rankings-section')).toBeInTheDocument();
+    });
   });
 });

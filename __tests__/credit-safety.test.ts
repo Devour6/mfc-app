@@ -200,13 +200,18 @@ describe('placeBetAndDeduct — API wiring', () => {
     expect(global.fetch).toHaveBeenCalledWith('/api/user/credits')
   })
 
-  it('rolls back local credits on API failure', async () => {
+  it('fetches authoritative balance on API failure (no blind rollback)', async () => {
     mockPlaceBet.mockRejectedValue(new Error('Network error'))
+    // Server still has 1000 (API call failed, no server-side deduction)
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ credits: 1000 }),
+    })
     resetStore(1000)
     useGameStore.getState().placeBetAndDeduct(250, 'failing bet', testBetDetails)
     // Immediately after, credits are optimistically deducted
     expect(useGameStore.getState().user.credits).toBe(750)
-    // After promise settles, credits are restored
+    // After promise settles, fetchCredits restores from server
     await flushPromises()
     expect(useGameStore.getState().user.credits).toBe(1000)
   })

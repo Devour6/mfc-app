@@ -205,7 +205,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 103 tests: 91 API integration + 12 credit safety (atomic deduction, TOCTOU prevention, API wiring, optimistic rollback)
+- 163+ tests passing: 91 API integration + 27 Solana + 45 frontend (component, credit-safety, navigation, fight)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
 
@@ -213,8 +213,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Stripe frontend integration (CreditPurchase component exists but not wired to checkout-session API)
 - Solana wallet connect button in ArenaTopBar (provider already in app layout, hook built)
 - SOL↔credits deposit/withdrawal UI (credit-bridge.ts built, needs modal + frontend wiring)
-- Store → API migration (training, fighter creation still use local state only — placeBetAndDeduct is wired to POST /api/bets)
-- Frontend component tests outdated (reference old 6-tab nav, need updating for ArenaTopBar/TradingPanel)
+- Frontend component tests updated and passing (45/45): App, LandingPage, Navigation (ArenaTopBar), FightComponents, BasicTests, credit-safety, training-api-wiring
 - Multiplayer (mock data only)
 - Deployment/environment setup
 
@@ -258,7 +257,7 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 2. Generate Prisma client (`npx prisma generate`)
 3. Lint (`npm run lint`)
 4. Type check (`npm run type-check`)
-5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests only (frontend tests need prop fixes)
+5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests in CI; frontend tests also passing locally
 6. Build (`npm run build`)
 
 All steps must pass for a PR to be mergeable.
@@ -277,7 +276,7 @@ These settings should be configured by the repo admin on the `main` branch:
 ## Testing
 
 Jest 30 with three projects:
-- **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
+- **frontend** (`jsdom`) — component tests in `__tests__/` (45 tests, all passing)
 - **api** (`node`) — API route integration tests in `__tests__/api/` (43 tests, all passing)
 - **solana** — Solana module tests in `__tests__/solana/` (27 tests, all passing). Per-file `@jest-environment` directives (node for credit-bridge, jsdom for use-wallet hook).
 
