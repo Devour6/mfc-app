@@ -17,6 +17,7 @@ import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 import OnboardingPrompt from './OnboardingPrompt'
+import ContractConceptCard from './ContractConceptCard'
 
 interface LiveFightSectionProps {
   onFightComplete?: (fighterId: string, fightData: any) => void
@@ -95,6 +96,7 @@ export default function LiveFightSection({
   // Onboarding state
   const onboardingStep = useGameStore(state => state.onboardingStep)
   const advanceOnboarding = useGameStore(state => state.advanceOnboarding)
+  const pickedFighter = useGameStore(state => state.pickedFighter)
   const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false)
   const onboardingTriggered = useRef(false)
 
@@ -448,6 +450,18 @@ export default function LiveFightSection({
                 advanceOnboarding('picked-side')
                 setShowOnboardingPrompt(false)
               }}
+            />
+          )}
+
+          {/* Contract concept card (simplified mode, after fighter pick) */}
+          {simplified && marketState && (
+            <ContractConceptCard
+              fighterName={pickedFighter === sampleFighters[1].id ? sampleFighters[1].name : sampleFighters[0].name}
+              fighterColor={pickedFighter === sampleFighters[1].id ? 'accent2' : 'accent'}
+              yesPrice={marketState.yesPrice}
+              visible={onboardingStep === 'picked-side'}
+              onGotIt={() => advanceOnboarding('market-open')}
+              onDismiss={() => advanceOnboarding('completed')}
             />
           )}
 
