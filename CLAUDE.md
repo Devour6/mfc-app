@@ -23,7 +23,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 
 ```
 app/                  → Next.js App Router (layout, page, globals.css)
-components/           → 28 React components (~7,300 lines)
+components/           → 28 React components (~7,300 lines) — see UI Architecture below
 lib/                  → Core engines (~3,400 lines)
   ├── fight-engine.ts       → Tick-based combat simulation
   ├── market-engine.ts      → Price discovery + order book
@@ -82,13 +82,43 @@ app/api/              → API routes (see API Routes section below)
 - Signature moves with unlock conditions
 - Age-based peak performance (25-35)
 
+## UI Architecture
+
+### Navigation — ArenaTopBar (`components/ArenaTopBar.tsx`)
+- Slim single-row bar: MFC logo (→ landing), LIVE pill, "More" dropdown, credits, sound toggle
+- "More" dropdown contains secondary sections: Rankings, Fighters, Tournaments, Rewards, Achievements
+- Clicking a dropdown item opens that section in a **slide-over drawer** (overlays the fight, doesn't replace it)
+- Replaces the old 6-tab navigation bar that swapped out the fight view when switching sections
+- Fight canvas + trading sidebar are **always visible** — they never get unmounted
+
+### Trading — TradingPanel (`components/TradingPanel.tsx`)
+- Unified Polymarket/Kalshi-style trading panel (replaces separate LiveBettingInterface + MarketSidebar)
+- Structure: Market question → YES/NO buttons (cent prices, trend arrows) → Amount chips (10/25/50/100 + custom) → Cost/win summary → BUY button
+- Collapsible accordion sections: Live Props (in-fight micro-markets), Order Book (bids/asks depth), Your Positions (active bets + recent trades)
+- Props: `marketState`, `fightState`, `fighters`, `credits`, `onPlaceBet`, `onPlaceTrade`, `activeBets`
+
+### Arena Layout (`app/page.tsx`)
+- Landing view → Arena view (state-driven, no routing)
+- Arena: `ArenaTopBar` (fixed top) + `LiveFightSection` (fills remaining height)
+- Secondary sections rendered inside a slide-over drawer (animated, spring physics, backdrop click/Escape to close, ARIA dialog attributes)
+- Drawer overlays on top of the fight area — fight engine continues running behind it
+
+### Fight Section (`components/LiveFightSection.tsx`)
+- Orchestrates: FightEngine + MarketEngine + recording + settlement
+- Layout: Fight header (round/clock/LIVE) → EnhancedFightCanvas → CommentaryBar | right sidebar: LiveStatsOverlay + TradingPanel
+- Responsive: sidebar on desktop (380px), stacked on mobile
+
+### Deleted Components (kept in git history, no longer imported)
+- `LiveBettingInterface.tsx` — replaced by TradingPanel's collapsible Live Props section
+- `MarketSidebar.tsx` — replaced by TradingPanel's main YES/NO trading + Order Book section
+
 ## State Management
 
 Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
-- `placeBetAndDeduct()` — deducts credits with balance check, returns success/failure
+- `placeBetAndDeduct()` — atomic credit deduction (balance check inside `set()` callback prevents TOCTOU race), returns success/failure
 - `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
 - Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
 - Persists to localStorage
@@ -154,8 +184,10 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Fighter progression with traits and signature moves
 - Tournament bracket structure
 - Sound effects system
-- Responsive UI with mobile nav — betting sidebar visible on all screen sizes (stacked on mobile, sidebar on desktop)
-- Slide-over drawer for secondary sections (rankings, fighters, tournaments, rewards, achievements) with Escape key close, ARIA dialog accessibility, full-width on mobile
+- Slim top bar navigation with "More" dropdown — fight always visible, secondary sections in slide-over drawer
+- Unified TradingPanel: Polymarket-style YES/NO trading with collapsible live props, order book, positions
+- Responsive layout: TradingPanel sidebar on desktop (380px), stacked below fight on mobile
+- Slide-over drawer with Escape key close, ARIA dialog accessibility, full-width on mobile
 - Zustand persistence
 - Reactive credit balance: store reads from `/api/user/credits` on mount, falls back to local data
 - Live betting deducts credits from Zustand store via `placeBetAndDeduct` (atomic — balance check inside set() callback)
@@ -173,7 +205,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 91 API integration tests covering all route handlers, auth protection, user sync, agent registration (with auth mocks)
+- 98 tests: 91 API integration + 7 credit safety (atomic deduction, TOCTOU prevention, insufficient balance rejection)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
 
