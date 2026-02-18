@@ -2,6 +2,19 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+
+// Mock Solana wallet hook before importing ArenaTopBar
+jest.mock('@/lib/solana/use-wallet', () => ({
+  useSolanaWallet: () => ({
+    connected: false,
+    publicKey: null,
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    getBalance: jest.fn().mockResolvedValue(0),
+    signAndSend: jest.fn(),
+  }),
+}));
+
 import ArenaTopBar from '../components/ArenaTopBar';
 
 describe('ArenaTopBar Navigation Tests', () => {
