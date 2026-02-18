@@ -1,14 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { updateUserSchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireAnyRole } from '@/lib/role-guard'
 
-// GET /api/user — Get authenticated user's profile
+// GET /api/user — Get authenticated user's profile (both roles)
 export async function GET() {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAnyRole()
 
     const user = await prisma.user.findUnique({
       where: { id: dbUser.id },
@@ -28,22 +26,20 @@ export async function GET() {
   }
 }
 
-// POST /api/user — Sync user on login (idempotent)
+// POST /api/user — Sync user on login (both roles)
 export async function POST() {
   try {
-    const session = await requireAuth()
-    const user = await ensureUser(session)
+    const user = await requireAnyRole()
     return jsonResponse(user)
   } catch (error) {
     return serverError(error)
   }
 }
 
-// PATCH /api/user — Update user settings
+// PATCH /api/user — Update user settings (both roles)
 export async function PATCH(request: Request) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAnyRole()
 
     const body = await request.json()
     const parsed = updateUserSchema.safeParse(body)

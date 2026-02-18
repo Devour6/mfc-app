@@ -1,14 +1,12 @@
 import { stripe, getCreditPackage } from '@/lib/stripe'
 import { jsonResponse, errorResponse, validationError, serverError } from '@/lib/api-utils'
 import { checkoutSessionSchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireAnyRole } from '@/lib/role-guard'
 
-// POST /api/stripe/checkout-session — Create a Stripe Checkout Session for credit purchase
+// POST /api/stripe/checkout-session — Create a Stripe Checkout Session (both roles)
 export async function POST(request: Request) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAnyRole()
 
     const body = await request.json()
     const parsed = checkoutSessionSchema.safeParse(body)

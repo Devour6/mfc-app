@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { submitFightResultSchema, updateFightStatusSchema, isLegalStatusTransition } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireAgent, requireAnyRole } from '@/lib/role-guard'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -29,11 +28,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// POST /api/fights/:id — Submit fight result (auth required)
+// POST /api/fights/:id — Submit fight result (agent only)
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAgent()
     const { id } = await params
     const body = await request.json()
 
@@ -112,10 +110,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH /api/fights/:id — Update fight status (auth required)
+// PATCH /api/fights/:id — Update fight status (both roles)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAuth()
+    await requireAnyRole()
     const { id } = await params
     const body = await request.json()
 

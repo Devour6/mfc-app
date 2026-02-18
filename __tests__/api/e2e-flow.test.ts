@@ -10,17 +10,17 @@
  * 6. Insufficient credits → bet rejected, no side effects
  */
 
-import { mockPrisma, createRequest, params, mockEnsureUser } from './helpers'
+import { mockPrisma, createRequest, params, mockRequireHuman } from './helpers'
 
 import { POST as PlaceBet } from '@/app/api/bets/route'
 import { PATCH as SettleBet } from '@/app/api/bets/[id]/route'
 
-const DEFAULT_USER = { id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser' }
+const DEFAULT_USER = { id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser', isAgent: false }
 const SCHEDULED_FIGHT = { id: 'fight1', status: 'SCHEDULED', fighter1Id: 'f1', fighter2Id: 'f2' }
 
 beforeEach(() => {
   jest.clearAllMocks()
-  mockEnsureUser.mockResolvedValue(DEFAULT_USER)
+  mockRequireHuman.mockResolvedValue(DEFAULT_USER)
 })
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

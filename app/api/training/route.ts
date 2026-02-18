@@ -2,14 +2,12 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { createTrainingSchema, trainingQuerySchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireAgent, requireAnyRole } from '@/lib/role-guard'
 
-// GET /api/training?fighterId=...&limit=... — List authenticated user's training sessions
+// GET /api/training?fighterId=...&limit=... — List training sessions (both roles)
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAnyRole()
 
     const raw = Object.fromEntries(request.nextUrl.searchParams.entries())
     const parsed = trainingQuerySchema.safeParse(raw)
@@ -34,11 +32,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/training — Create a training session (auth required)
+// POST /api/training — Create a training session (agent only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAgent()
 
     const body = await request.json()
     const parsed = createTrainingSchema.safeParse(body)

@@ -2,14 +2,14 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { settleBetSchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
+import { requireHuman } from '@/lib/role-guard'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-// GET /api/bets/:id — Get bet details (auth required)
+// GET /api/bets/:id — Get bet details (human only)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAuth()
+    await requireHuman()
     const { id } = await params
 
     const bet = await prisma.bet.findUnique({
@@ -34,10 +34,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH /api/bets/:id — Settle or cancel a bet (auth required)
+// PATCH /api/bets/:id — Settle or cancel a bet (human only)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAuth()
+    await requireHuman()
     const { id } = await params
     const body = await request.json()
 

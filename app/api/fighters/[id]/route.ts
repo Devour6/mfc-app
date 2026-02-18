@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { updateFighterSchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireAnyRole } from '@/lib/role-guard'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -31,8 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH /api/fighters/:id — Update fighter stats (auth required, must own fighter)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAnyRole()
 
     const { id } = await params
     const body = await request.json()

@@ -2,14 +2,12 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { createBetSchema, betQuerySchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireHuman } from '@/lib/role-guard'
 
 // GET /api/bets?fightId=...&status=...&limit=... — List authenticated user's bets
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireHuman()
 
     const raw = Object.fromEntries(request.nextUrl.searchParams.entries())
     const parsed = betQuerySchema.safeParse(raw)
@@ -46,8 +44,7 @@ export async function GET(request: NextRequest) {
 // POST /api/bets — Place a bet (auth required)
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireHuman()
 
     const body = await request.json()
     const parsed = createBetSchema.safeParse(body)
