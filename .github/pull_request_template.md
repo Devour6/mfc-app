@@ -4,8 +4,10 @@
 
 ## Checklist
 
-- [ ] Read `CLAUDE.md` before making changes
+- [ ] Read `CLAUDE.md` and `LEARNINGS.md` before making changes
 - [ ] Updated `CLAUDE.md` to document changes (if applicable)
+- [ ] Added new gotchas to `LEARNINGS.md` (if discovered any)
+- [ ] Acceptance criteria from task definition verified locally
 - [ ] `npm run lint` passes
 - [ ] `npm run type-check` passes
 - [ ] `npm run build` succeeds
