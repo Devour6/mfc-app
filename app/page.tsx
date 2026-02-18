@@ -170,7 +170,7 @@ export default function Home() {
     setIsLoaded(true)
   }, [])
 
-  const enterArena = (userType: 'spectator' | 'fighter') => {
+  const enterArena = () => {
     setCurrentView('arena')
   }
 
