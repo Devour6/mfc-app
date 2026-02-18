@@ -5,9 +5,16 @@
  * 1. placeBetAndDeduct deducts correct amount
  * 2. Insufficient balance rejects bet/trade
  * 3. Atomic balance check prevents TOCTOU double-spend
+ * 4. API wiring: calls placeBet on success with betDetails, rollback on failure
  */
 
-// Mock all the heavy dependencies the store imports
+// ─── Mocks ─────────────────────────────────────────────────────────────────
+
+const mockPlaceBet = jest.fn()
+jest.mock('@/lib/api-client', () => ({
+  placeBet: (...args: unknown[]) => mockPlaceBet(...args),
+}))
+
 jest.mock('@/lib/evolution-engine', () => ({
   FighterEvolutionEngine: {
     createNewEvolution: () => ({
@@ -69,14 +76,32 @@ jest.mock('@/lib/credit-engine', () => ({
 
 import { useGameStore } from '@/lib/store'
 
-// Helper to reset store between tests
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function resetStore(credits: number) {
   useGameStore.setState(state => ({
     user: { ...state.user, credits },
   }))
 }
 
+function flushPromises() {
+  return new Promise(resolve => setTimeout(resolve, 0))
+}
+
+const testBetDetails = {
+  fightId: 'fight-1',
+  side: 'YES' as const,
+  odds: 1.8,
+  fighterId: 'fighter-1',
+}
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
 describe('placeBetAndDeduct — credit safety', () => {
+  beforeEach(() => {
+    mockPlaceBet.mockReset()
+  })
+
   it('deducts the correct amount on success', () => {
     resetStore(1000)
     const result = useGameStore.getState().placeBetAndDeduct(250, 'test bet')
@@ -107,11 +132,9 @@ describe('placeBetAndDeduct — credit safety', () => {
 
   it('prevents double-spend on rapid sequential calls (TOCTOU fix)', () => {
     resetStore(100)
-    // Two rapid calls that each try to spend 100
     const r1 = useGameStore.getState().placeBetAndDeduct(100, 'bet 1')
     const r2 = useGameStore.getState().placeBetAndDeduct(100, 'bet 2')
 
-    // Exactly one should succeed, one should fail
     expect(r1).toBe(true)
     expect(r2).toBe(false)
     expect(useGameStore.getState().user.credits).toBe(0)
@@ -120,12 +143,10 @@ describe('placeBetAndDeduct — credit safety', () => {
   it('handles many rapid calls without over-deducting', () => {
     resetStore(500)
     const results: boolean[] = []
-    // Fire 10 bets of 100 each — only 5 should succeed
     for (let i = 0; i < 10; i++) {
       results.push(useGameStore.getState().placeBetAndDeduct(100, `bet ${i}`))
     }
-    const successes = results.filter(Boolean).length
-    expect(successes).toBe(5)
+    expect(results.filter(Boolean).length).toBe(5)
     expect(useGameStore.getState().user.credits).toBe(0)
   })
 
@@ -134,5 +155,66 @@ describe('placeBetAndDeduct — credit safety', () => {
     const result = useGameStore.getState().placeBetAndDeduct(33.33, 'fractional')
     expect(result).toBe(true)
     expect(useGameStore.getState().user.credits).toBeCloseTo(66.67, 2)
+  })
+})
+
+describe('placeBetAndDeduct — API wiring', () => {
+  beforeEach(() => {
+    mockPlaceBet.mockReset()
+    // Mock global fetch for fetchCredits
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ credits: 750 }),
+    })
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('does NOT call API when no betDetails provided', () => {
+    resetStore(1000)
+    useGameStore.getState().placeBetAndDeduct(100, 'local only')
+    expect(mockPlaceBet).not.toHaveBeenCalled()
+  })
+
+  it('calls placeBet API with correct params when betDetails provided', () => {
+    mockPlaceBet.mockResolvedValue({ id: 'bet-1', status: 'PENDING' })
+    resetStore(1000)
+    useGameStore.getState().placeBetAndDeduct(100, 'api bet', testBetDetails)
+    expect(mockPlaceBet).toHaveBeenCalledWith({
+      fightId: 'fight-1',
+      side: 'YES',
+      amount: 100,
+      odds: 1.8,
+      fighterId: 'fighter-1',
+    })
+  })
+
+  it('syncs credits from server after successful API call', async () => {
+    mockPlaceBet.mockResolvedValue({ id: 'bet-1', status: 'PENDING' })
+    resetStore(1000)
+    useGameStore.getState().placeBetAndDeduct(100, 'api bet', testBetDetails)
+    await flushPromises()
+    // fetchCredits calls global.fetch('/api/user/credits')
+    expect(global.fetch).toHaveBeenCalledWith('/api/user/credits')
+  })
+
+  it('rolls back local credits on API failure', async () => {
+    mockPlaceBet.mockRejectedValue(new Error('Network error'))
+    resetStore(1000)
+    useGameStore.getState().placeBetAndDeduct(250, 'failing bet', testBetDetails)
+    // Immediately after, credits are optimistically deducted
+    expect(useGameStore.getState().user.credits).toBe(750)
+    // After promise settles, credits are restored
+    await flushPromises()
+    expect(useGameStore.getState().user.credits).toBe(1000)
+  })
+
+  it('does NOT call API when balance is insufficient', () => {
+    mockPlaceBet.mockResolvedValue({ id: 'bet-1' })
+    resetStore(50)
+    useGameStore.getState().placeBetAndDeduct(100, 'too expensive', testBetDetails)
+    expect(mockPlaceBet).not.toHaveBeenCalled()
   })
 })

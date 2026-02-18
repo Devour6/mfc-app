@@ -118,7 +118,7 @@ Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
-- `placeBetAndDeduct()` — atomic credit deduction (balance check inside `set()` callback prevents TOCTOU race), returns success/failure
+- `placeBetAndDeduct(amount, desc, betDetails?)` — atomic credit deduction with optional API backend. When `betDetails` (fightId, side, odds) provided, fires `POST /api/bets` with optimistic local deduction + rollback on failure. Syncs credits from server on success.
 - `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
 - Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
 - Persists to localStorage
@@ -205,7 +205,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 98 tests: 91 API integration + 7 credit safety (atomic deduction, TOCTOU prevention, insufficient balance rejection)
+- 103 tests: 91 API integration + 12 credit safety (atomic deduction, TOCTOU prevention, API wiring, optimistic rollback)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
 
@@ -213,7 +213,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Stripe frontend integration (CreditPurchase component exists but not wired to checkout-session API)
 - Solana wallet connect button in ArenaTopBar (provider already in app layout, hook built)
 - SOL↔credits deposit/withdrawal UI (credit-bridge.ts built, needs modal + frontend wiring)
-- Store → API migration (placeBetAndDeduct, training, fighter creation still use local state only)
+- Store → API migration (training, fighter creation still use local state only — placeBetAndDeduct is wired to POST /api/bets)
 - Frontend component tests outdated (reference old 6-tab nav, need updating for ArenaTopBar/TradingPanel)
 - Multiplayer (mock data only)
 - Deployment/environment setup

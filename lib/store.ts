@@ -18,6 +18,15 @@ import { TournamentEngine } from './tournament-engine'
 import { AchievementEngine } from './achievement-engine'
 import { DailyRewardsEngine } from './daily-rewards-engine'
 import { CreditEngine } from './credit-engine'
+import { placeBet as apiBetPlace } from './api-client'
+
+/** Optional backend bet details — when provided, bet is recorded via POST /api/bets */
+export interface BetDetails {
+  fightId: string
+  side: 'YES' | 'NO' | 'FIGHTER1' | 'FIGHTER2' | 'OVER' | 'UNDER'
+  odds: number
+  fighterId?: string
+}
 
 interface GameState {
   // User data
@@ -43,7 +52,7 @@ interface GameState {
   spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number) => boolean
   addRewardCredits: (amount: number, description: string, relatedId?: string) => void
   fetchCredits: () => Promise<void>
-  placeBetAndDeduct: (amount: number, description: string) => boolean
+  placeBetAndDeduct: (amount: number, description: string, betDetails?: BetDetails) => boolean
 
   // Leaderboard
   leaderboardFighters: Fighter[]
@@ -508,14 +517,38 @@ export const useGameStore = create<GameState>()(
         }
       },
 
-      placeBetAndDeduct: (amount: number, _description: string) => {
+      placeBetAndDeduct: (amount: number, _description: string, betDetails?: BetDetails) => {
+        // Atomic optimistic deduction — balance check inside set() prevents TOCTOU
         let success = false
         set(state => {
           if (state.user.credits < amount) return state
           success = true
           return { user: { ...state.user, credits: state.user.credits - amount } }
         })
-        return success
+        if (!success) return false
+
+        // If backend bet details provided, record via API (fire-and-forget with rollback)
+        if (betDetails) {
+          apiBetPlace({
+            fightId: betDetails.fightId,
+            side: betDetails.side,
+            amount,
+            odds: betDetails.odds,
+            fighterId: betDetails.fighterId,
+          })
+            .then(() => {
+              // Sync credits from server to pick up the authoritative balance
+              get().fetchCredits()
+            })
+            .catch(() => {
+              // API failed — rollback local deduction
+              set(state => ({
+                user: { ...state.user, credits: state.user.credits + amount },
+              }))
+            })
+        }
+
+        return true
       },
 
       // Leaderboard
