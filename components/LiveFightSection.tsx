@@ -16,6 +16,7 @@ import { FightState, MarketState, Commentary, Fighter } from '@/types'
 import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
+import OnboardingPrompt from './OnboardingPrompt'
 
 interface LiveFightSectionProps {
   onFightComplete?: (fighterId: string, fightData: any) => void
@@ -90,6 +91,24 @@ export default function LiveFightSection({
   const credits = useGameStore(state => state.user.credits)
   const placeBetAndDeduct = useGameStore(state => state.placeBetAndDeduct)
   const fetchCredits = useGameStore(state => state.fetchCredits)
+
+  // Onboarding state
+  const onboardingStep = useGameStore(state => state.onboardingStep)
+  const advanceOnboarding = useGameStore(state => state.advanceOnboarding)
+  const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false)
+  const onboardingTriggered = useRef(false)
+
+  // Onboarding prompt trigger: 30s timer or significant event
+  useEffect(() => {
+    if (!simplified || onboardingStep !== 'watching' || onboardingTriggered.current) return
+    const timer = setTimeout(() => {
+      if (!onboardingTriggered.current) {
+        onboardingTriggered.current = true
+        setShowOnboardingPrompt(true)
+      }
+    }, 30000)
+    return () => clearTimeout(timer)
+  }, [simplified, onboardingStep])
 
   useEffect(() => {
     fetchCredits()
@@ -324,6 +343,12 @@ export default function LiveFightSection({
                 soundManager.play('bell', 0.8)
               }}
               onSignificantMoment={(moment, severity) => {
+                // Trigger onboarding prompt on knockdown
+                if (simplified && onboardingStep === 'watching' && !onboardingTriggered.current && moment === 'knockdown') {
+                  onboardingTriggered.current = true
+                  setShowOnboardingPrompt(true)
+                }
+
                 let commentText = ""
                 switch(moment) {
                   case 'knockdown':
@@ -409,6 +434,22 @@ export default function LiveFightSection({
               </div>
             )}
           </div>
+
+          {/* Onboarding prompt (simplified mode only) */}
+          {simplified && marketState && (
+            <OnboardingPrompt
+              fighter1Name={sampleFighters[0].name}
+              fighter2Name={sampleFighters[1].name}
+              yesPrice={marketState.yesPrice}
+              visible={showOnboardingPrompt}
+              onPick={(fighter) => {
+                const fighterId = fighter === 'fighter1' ? sampleFighters[0].id : sampleFighters[1].id
+                useGameStore.setState({ pickedFighter: fighterId })
+                advanceOnboarding('picked-side')
+                setShowOnboardingPrompt(false)
+              }}
+            />
+          )}
 
           {/* Commentary Bar */}
           <CommentaryBar commentary={currentCommentary} />
