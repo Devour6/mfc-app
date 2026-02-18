@@ -26,6 +26,7 @@ export default function SimplifiedMarketPanel({
   const [yesButtonState, setYesButtonState] = useState<ButtonState>('idle')
   const [noButtonState, setNoButtonState] = useState<ButtonState>('idle')
   const [mobileExpanded, setMobileExpanded] = useState(true)
+  const [toast, setToast] = useState<string | null>(null)
 
   // Track previous price for trend arrows
   const [prevYesPrice, setPrevYesPrice] = useState(marketState.yesPrice)
@@ -73,7 +74,9 @@ export default function SimplifiedMarketPanel({
     setTimeout(() => {
       onBuy(side, price, qty)
       setButtonState('success')
+      setToast(`Bought ${qty} ${side.toUpperCase()} contracts at ${price.toFixed(2)}`)
       setTimeout(() => setButtonState('idle'), 300)
+      setTimeout(() => setToast(null), 3000)
     }, 100)
   }
 
@@ -330,6 +333,21 @@ export default function SimplifiedMarketPanel({
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Trade toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.25 }}
+            className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 bg-surface2 border border-border px-4 py-2 z-50"
+          >
+            <span className="font-ui text-xs text-text whitespace-nowrap">{toast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }
