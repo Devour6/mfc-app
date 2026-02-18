@@ -105,6 +105,10 @@ export default function LiveFightSection({
   const onboardingTriggered = useRef(false)
   const isFirstFight = useRef(true)
 
+  // In onboarding, YES = "picked fighter wins". If user picked fighter2,
+  // we need to flip the market's yesPrice (which always represents fighter1).
+  const pickedIsFighter2 = pickedFighter === sampleFighters[1].id
+
   // Show simplified market panel when onboarding reaches market-open step
   const showSimplifiedMarket = simplified && (
     onboardingStep === 'market-open' ||
@@ -204,8 +208,8 @@ export default function LiveFightSection({
             const totalQty = trades.reduce((s, t) => s + t.quantity, 0)
             const totalCost = trades.reduce((s, t) => s + t.price * t.quantity, 0)
             const lastSide = trades[trades.length - 1].side
-            // YES wins if picked fighter (fighter1 by convention for YES) won
-            const yesWins = winnerId === fighter1.id
+            // YES wins if the user's picked fighter won
+            const yesWins = pickedIsFighter2 ? winnerId === fighter2.id : winnerId === fighter1.id
             const won = (lastSide === 'yes' && yesWins) || (lastSide === 'no' && !yesWins)
             const payout = won ? totalQty : 0
             const profit = payout - totalCost
@@ -571,9 +575,9 @@ export default function LiveFightSection({
           {/* Contract concept card (simplified mode, after fighter pick) */}
           {simplified && marketState && (
             <ContractConceptCard
-              fighterName={pickedFighter === sampleFighters[1].id ? sampleFighters[1].name : sampleFighters[0].name}
-              fighterColor={pickedFighter === sampleFighters[1].id ? 'accent2' : 'accent'}
-              yesPrice={marketState.yesPrice}
+              fighterName={pickedIsFighter2 ? sampleFighters[1].name : sampleFighters[0].name}
+              fighterColor={pickedIsFighter2 ? 'accent2' : 'accent'}
+              yesPrice={pickedIsFighter2 ? 1 - marketState.yesPrice : marketState.yesPrice}
               visible={onboardingStep === 'picked-side'}
               onGotIt={() => advanceOnboarding('market-open')}
               onDismiss={() => advanceOnboarding('completed')}
@@ -624,8 +628,8 @@ export default function LiveFightSection({
         {/* Simplified Market Panel (onboarding mode, after "Got it") */}
         {showSimplifiedMarket && marketState && (
           <SimplifiedMarketPanel
-            fighterName={pickedFighter === sampleFighters[1].id ? sampleFighters[1].name : sampleFighters[0].name}
-            marketState={marketState}
+            fighterName={pickedIsFighter2 ? sampleFighters[1].name : sampleFighters[0].name}
+            marketState={pickedIsFighter2 ? { ...marketState, yesPrice: 1 - marketState.yesPrice } : marketState}
             demoCredits={demoCredits}
             demoTrades={demoTrades}
             onBuy={(side, price, qty) => {

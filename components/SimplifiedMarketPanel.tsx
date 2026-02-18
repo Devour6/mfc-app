@@ -165,7 +165,7 @@ export default function SimplifiedMarketPanel({
   const buyButtonContent = (side: 'yes' | 'no', btnState: ButtonState) => {
     if (btnState === 'loading') {
       return (
-        <span className={`inline-block w-2 h-2 border border-current border-t-transparent animate-spin ${side === 'yes' ? 'rounded-full' : 'rounded-full'}`} />
+        <span className="inline-block w-2 h-2 border border-current border-t-transparent animate-spin" />
       )
     }
     if (btnState === 'success') return '\u2713'
