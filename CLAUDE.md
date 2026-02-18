@@ -108,6 +108,10 @@ app/api/              → API routes (see API Routes section below)
 - Layout: Fight header (round/clock/LIVE) → EnhancedFightCanvas → CommentaryBar | right sidebar: LiveStatsOverlay + TradingPanel
 - Responsive: sidebar on desktop (380px), stacked on mobile
 - Supports `simplified` prop for onboarding first-time users
+- FTUE flow: OnboardingPrompt → fighter picker → ContractConceptCard → SimplifiedMarketPanel → demo trade → settlement → ConvertPrompt
+- `ContractConceptCard` — explains YES contracts after fighter pick
+- `SimplifiedMarketPanel` — stripped-down trading panel (desktop sidebar + mobile bottom sheet)
+- `ConvertPrompt` — account creation CTA overlay with re-show logic (max 2 dismissals)
 
 ## State Management
 
@@ -116,6 +120,7 @@ Zustand store (`lib/store.ts`) manages:
 - Game state (tournament, achievements, login streak, credit balance, transactions)
 - Onboarding state (hasCompletedOnboarding, hasSeenFirstFight, etc.)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
+- `syncUserProfile()` — one-time fetch of user profile (isAgent flag) from `/api/user`
 - `placeBetAndDeduct(amount, desc, betDetails?)` — atomic credit deduction with optional API backend. When `betDetails` (fightId, side, odds) provided, fires `POST /api/bets` with optimistic local deduction + rollback on failure. Syncs credits from server on success.
 - `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
 - Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
@@ -123,8 +128,8 @@ Zustand store (`lib/store.ts`) manages:
 
 ## Database Schema (Prisma)
 
-Models: `User`, `Fighter`, `Training`, `Fight`, `FightResult`, `Bet`, `ApiKey`, `AgentProfile`
-Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `FightMethod`, `BetSide`, `BetStatus`
+Models: `User`, `Fighter`, `Training`, `Fight`, `FightResult`, `Bet`, `ApiKey`, `AgentProfile`, `Skin`, `SkinPurchase`, `BillingRequest`
+Enums: `FighterClass`, `FightStatus`, `FightMethod`, `BetSide`, `BetStatus`, `SkinType`, `SkinRarity`, `BillingStatus`
 
 **Prisma 7 setup:**
 - `prisma/schema.prisma` — models only, no `url` in datasource (Prisma 7 requirement)
@@ -159,6 +164,12 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | `/api/stripe/webhook` | POST | Public* | Handle Stripe webhook events (signature-verified) |
 | `/api/agents/challenge` | GET | Public | Get a reverse CAPTCHA challenge for agent registration |
 | `/api/agents/register` | POST | Public | Register an AI agent (requires solved challenge), returns API key |
+| `/api/skins` | GET | Public | List skins (with type/rarity filters) |
+| `/api/skins/purchase` | POST | Human | Purchase skin for a fighter (transactional credit deduction) |
+| `/api/fighters/[id]/skins` | GET | Public | Get equipped skins for a fighter |
+| `/api/billing/requests` | GET | Required | List billing requests (agents see own, owners see their agents') |
+| `/api/billing/requests` | POST | Agent | Create billing request (agent requests credits from owner) |
+| `/api/billing/requests/[id]` | PATCH | Human | Approve/reject billing request (transfers credits on approve) |
 | `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
 | `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
 
@@ -298,7 +309,7 @@ Route checks are **error mode** — violations will fail CI.
 ## Testing
 
 Jest 30 with three projects:
-- **api** (`node`) — API route tests in `__tests__/api/` (118 tests, 11 suites)
+- **api** (`node`) — API route tests in `__tests__/api/` (166 tests, 17 suites)
 - **frontend** (`jsdom`) — component tests in `__tests__/` (52 tests, 8 suites)
 - **solana** — Solana module tests in `__tests__/solana/` (27 tests, 2 suites). Per-file `@jest-environment` directives.
 
