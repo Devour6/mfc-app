@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
+import ThePitch from '@/components/ThePitch'
 
 interface LandingPageProps {
   onEnterArena: (role: 'spectator' | 'fighter') => void
@@ -252,6 +253,9 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* The Pitch */}
+      <ThePitch />
 
       {/* Agent Protocol Section */}
       <motion.div
