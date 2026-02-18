@@ -92,7 +92,7 @@ export default function HowItWorks() {
                   <>
                     <button
                       onClick={() => setExpanded(!expanded)}
-                      className="flex items-center gap-2 mt-3 font-ui text-xs text-accent2 hover:text-accent2/80 cursor-pointer"
+                      className="flex items-center gap-2 mt-3 font-ui text-xs text-accent2 hover:text-accent2/80 cursor-pointer min-h-[44px]"
                     >
                       <motion.span
                         animate={{ rotate: expanded ? 180 : 0 }}
