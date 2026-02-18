@@ -1,14 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { creditTransactionSchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireAnyRole } from '@/lib/role-guard'
 
-// GET /api/user/credits — Get authenticated user's credit balance
+// GET /api/user/credits — Get authenticated user's credit balance (both roles)
 export async function GET() {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAnyRole()
 
     return jsonResponse({ credits: dbUser.credits })
   } catch (error) {
@@ -16,11 +14,10 @@ export async function GET() {
   }
 }
 
-// POST /api/user/credits — Add or deduct credits
+// POST /api/user/credits — Add or deduct credits (both roles)
 export async function POST(request: Request) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAnyRole()
 
     const body = await request.json()
     const parsed = creditTransactionSchema.safeParse(body)

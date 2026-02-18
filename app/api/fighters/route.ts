@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, validationError, serverError } from '@/lib/api-utils'
 import { createFighterSchema, fighterQuerySchema } from '@/lib/validations'
-import { requireAuth } from '@/lib/auth-guard'
-import { ensureUser } from '@/lib/user-sync'
+import { requireAgent } from '@/lib/role-guard'
 
 // GET /api/fighters?ownerId=...&class=...&active=true — List fighters
 export async function GET(request: NextRequest) {
@@ -30,11 +29,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/fighters — Create a new fighter (auth required)
+// POST /api/fighters — Create a new fighter (agent only)
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const dbUser = await ensureUser(session)
+    const dbUser = await requireAgent()
 
     const body = await request.json()
     const parsed = createFighterSchema.safeParse(body)

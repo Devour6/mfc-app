@@ -1,22 +1,20 @@
 /**
  * @jest-environment node
  */
-import { mockPrisma, mockEnsureUser, mockRequireAuth, createRequest } from './helpers'
+import { mockPrisma, mockRequireAnyRole, createRequest } from './helpers'
 
 import { GET, POST } from '@/app/api/user/credits/route'
 
 beforeEach(() => {
   jest.clearAllMocks()
-  // Restore default auth mocks after clearAllMocks (which only clears calls, not implementations)
-  mockRequireAuth.mockResolvedValue({ user: { sub: 'auth0|test-user' } })
-  mockEnsureUser.mockResolvedValue({ id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser' })
+  mockRequireAnyRole.mockResolvedValue({ id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser', isAgent: false })
 })
 
 // ─── GET /api/user/credits ──────────────────────────────────────────────────
 
 describe('GET /api/user/credits', () => {
   it('returns credit balance from authenticated session', async () => {
-    mockEnsureUser.mockResolvedValue({ id: 'u1', auth0Id: 'auth0|123', credits: 500, username: 'testuser' })
+    mockRequireAnyRole.mockResolvedValue({ id: 'u1', auth0Id: 'auth0|123', credits: 500, username: 'testuser', isAgent: false })
 
     const res = await GET()
     const data = await res.json()
@@ -25,12 +23,13 @@ describe('GET /api/user/credits', () => {
     expect(data.credits).toBe(500)
   })
 
-  it('returns 500 if auth fails', async () => {
-    mockRequireAuth.mockRejectedValue(new Error('Unauthorized'))
+  it('returns 401 if auth fails', async () => {
+    const { AuthRequiredError } = jest.requireMock('@/lib/auth-guard')
+    mockRequireAnyRole.mockRejectedValue(new AuthRequiredError())
 
     const res = await GET()
 
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(401)
   })
 })
 
