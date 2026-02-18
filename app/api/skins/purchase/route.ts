@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (existing) return errorResponse('You already own this skin for this fighter', 409)
 
     // Transaction: deduct credits + create purchase
-    const purchase = await prisma.$transaction(async (tx: any) => {
+    const purchase = await prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: dbUser.id },
         select: { id: true, credits: true },
