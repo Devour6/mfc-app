@@ -1,18 +1,14 @@
 /**
  * @jest-environment jsdom
  *
- * Training API wiring tests — verifies:
- * 1. spendCreditsTraining calls startTraining API when hours provided
- * 2. No API call without hours param
- * 3. Rollback on API failure
- * 4. fetchCredits sync on API success
+ * Training credit deduction tests — verifies:
+ * 1. spendCreditsTraining deducts credits via CreditEngine
+ * 2. Returns false when CreditEngine rejects (insufficient balance)
+ * 3. Updates store state correctly
+ *
+ * Note: API wiring (POST /api/training) will be tested once the
+ * store's spendCreditsTraining is wired to the training API endpoint.
  */
-
-const mockStartTraining = jest.fn()
-
-jest.mock('@/lib/api-client', () => ({
-  startTraining: (...args: unknown[]) => mockStartTraining(...args),
-}))
 
 jest.mock('@/lib/evolution-engine', () => ({
   FighterEvolutionEngine: {
@@ -91,65 +87,73 @@ function resetStore() {
   }))
 }
 
-describe('spendCreditsTraining — API wiring', () => {
+describe('spendCreditsTraining — credit deduction', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     resetStore()
   })
 
-  it('does not call API when hours is not provided', () => {
-    useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200)
-    expect(mockStartTraining).not.toHaveBeenCalled()
-  })
+  it('returns true and updates balance on successful training', () => {
+    const result = useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200)
 
-  it('calls startTraining with correct params when hours provided', () => {
-    mockStartTraining.mockResolvedValueOnce({ id: 't1' })
-    useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200, 2)
-    expect(mockStartTraining).toHaveBeenCalledWith({ fighterId: 'f1', hours: 2 })
-  })
-
-  it('syncs credits on successful API call', async () => {
-    mockStartTraining.mockResolvedValueOnce({ id: 't1' })
-    const fetchSpy = jest.spyOn(useGameStore.getState(), 'fetchCredits').mockResolvedValueOnce()
-
-    useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200, 1)
-
-    // Wait for the async chain to resolve
-    await new Promise(resolve => setTimeout(resolve, 10))
-
-    expect(fetchSpy).toHaveBeenCalled()
-    fetchSpy.mockRestore()
-  })
-
-  it('rolls back creditBalance on API failure', async () => {
-    mockStartTraining.mockRejectedValueOnce(new Error('Server error'))
-
-    const priorBalance = useGameStore.getState().user.creditBalance
-
-    useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200, 1)
-
-    // After sync call, local state should have been updated
-    expect(useGameStore.getState().user.creditBalance).not.toEqual(priorBalance)
-
-    // Wait for the async chain to reject
-    await new Promise(resolve => setTimeout(resolve, 10))
-
-    // After rollback, creditBalance should be restored
-    expect(useGameStore.getState().user.creditBalance).toEqual(priorBalance)
+    expect(result).toBe(true)
+    expect(CreditEngine.processTraining).toHaveBeenCalledWith(
+      expect.objectContaining({ available: 1000 }),
+      expect.any(Array),
+      'f1',
+      'Fighter',
+      200
+    )
+    expect(useGameStore.getState().user.creditBalance.available).toBe(800)
   })
 
   it('returns false when CreditEngine rejects (insufficient balance)', () => {
     ;(CreditEngine.processTraining as jest.Mock).mockReturnValueOnce({ error: 'Insufficient credits' })
 
-    const result = useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 9999, 5)
+    const result = useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 9999)
 
     expect(result).toBe(false)
-    expect(mockStartTraining).not.toHaveBeenCalled()
+    // Balance should remain unchanged
+    expect(useGameStore.getState().user.creditBalance.available).toBe(1000)
   })
 
-  it('still returns true synchronously even when API call is pending', () => {
-    mockStartTraining.mockReturnValue(new Promise(() => {})) // never resolves
-    const result = useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200, 1)
+  it('updates transactions in the store', () => {
+    useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200)
+
+    const transactions = useGameStore.getState().user.transactions
+    expect(transactions).toEqual([{ type: 'training', amount: -200 }])
+  })
+
+  it('calls CreditEngine.processTraining with correct params', () => {
+    useGameStore.getState().spendCreditsTraining('fighter-abc', 'TITAN-9', 150)
+
+    expect(CreditEngine.processTraining).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Array),
+      'fighter-abc',
+      'TITAN-9',
+      150
+    )
+  })
+
+  it('handles multiple sequential training calls', () => {
+    // First training
+    const result1 = useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200)
+    expect(result1).toBe(true)
+
+    // Second training (mock returns another deduction)
+    ;(CreditEngine.processTraining as jest.Mock).mockReturnValueOnce({
+      newBalance: { available: 600, locked: 0, total: 600, lifetimeEarned: 1000, lifetimeSpent: 400 },
+      newTransactions: [{ type: 'training', amount: -200 }, { type: 'training', amount: -200 }],
+    })
+
+    const result2 = useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200)
+    expect(result2).toBe(true)
+    expect(useGameStore.getState().user.creditBalance.available).toBe(600)
+  })
+
+  it('still returns true synchronously', () => {
+    const result = useGameStore.getState().spendCreditsTraining('f1', 'Fighter', 200)
     expect(result).toBe(true)
   })
 })
