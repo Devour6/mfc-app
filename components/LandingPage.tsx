@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 import ForAgents from '@/components/ForAgents'
+import TheExchange from '@/components/TheExchange'
 
 interface LandingPageProps {
   onEnterArena: (role: 'spectator' | 'fighter') => void
@@ -253,6 +254,9 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* The Exchange */}
+      <TheExchange />
 
       {/* For Agents */}
       <ForAgents />

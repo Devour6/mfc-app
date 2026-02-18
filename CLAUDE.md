@@ -23,7 +23,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 
 ```
 app/                  → Next.js App Router (layout, page, globals.css)
-components/           → 28 React components (~7,300 lines) — see UI Architecture below
+components/           → 34 React components (~8,500 lines) — see UI Architecture below
 lib/                  → Core engines (~3,400 lines)
   ├── fight-engine.ts       → Tick-based combat simulation
   ├── market-engine.ts      → Price discovery + order book
@@ -208,12 +208,13 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - 163+ tests passing: 91 API integration + 27 Solana + 45 frontend (component, credit-safety, navigation, fight)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
+- Store → API wiring: `placeBetAndDeduct` fires `POST /api/bets` with optimistic deduction + `fetchCredits()` rollback; `spendCreditsTraining` fires `POST /api/training`; `addFighter` fires `POST /api/fighters`; `fetchLeaderboard` uses `GET /api/fighters`
+- Solana wallet connect/disconnect in ArenaTopBar (shows truncated address + SOL balance when connected)
+- SOL↔credits deposit/withdrawal modal (`SolCreditBridgeModal.tsx`) — builds SOL transfer tx, calls `confirmDeposit()` to credit account
+- Credit safety: optimistic updates use `fetchCredits()` for server-sync on success and rollback on failure (no blind `credits + amount`)
 
 **Not Yet Built:**
 - Stripe frontend integration (CreditPurchase component exists but not wired to checkout-session API)
-- Solana wallet connect button in ArenaTopBar (provider already in app layout, hook built)
-- SOL↔credits deposit/withdrawal UI (credit-bridge.ts built, needs modal + frontend wiring)
-- Frontend component tests updated and passing (45/45): App, LandingPage, Navigation (ArenaTopBar), FightComponents, BasicTests, credit-safety, training-api-wiring
 - Multiplayer (mock data only)
 - Deployment/environment setup
 
