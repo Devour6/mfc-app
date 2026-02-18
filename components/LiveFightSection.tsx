@@ -9,7 +9,7 @@ import TradingPanel, { BettingSlip } from './TradingPanel'
 import LiveStatsOverlay from './LiveStatsOverlay'
 import FightReplayViewer from './FightReplayViewer'
 import BetSettlementOverlay, { SettledBet } from './BetSettlementOverlay'
-import { FightEngine } from '@/lib/fight-engine'
+import { FightEngine, FightBiasConfig } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
 import { FightRecording } from '@/lib/fight-recorder'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
@@ -17,6 +17,8 @@ import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 import OnboardingPrompt from './OnboardingPrompt'
+import ContractConceptCard from './ContractConceptCard'
+import SimplifiedMarketPanel from './SimplifiedMarketPanel'
 
 interface LiveFightSectionProps {
   onFightComplete?: (fighterId: string, fightData: any) => void
@@ -95,8 +97,38 @@ export default function LiveFightSection({
   // Onboarding state
   const onboardingStep = useGameStore(state => state.onboardingStep)
   const advanceOnboarding = useGameStore(state => state.advanceOnboarding)
+  const pickedFighter = useGameStore(state => state.pickedFighter)
+  const demoCredits = useGameStore(state => state.demoCredits)
+  const demoTrades = useGameStore(state => state.demoTrades)
+  const placeDemoTrade = useGameStore(state => state.placeDemoTrade)
   const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false)
   const onboardingTriggered = useRef(false)
+  const isFirstFight = useRef(true)
+
+  // In onboarding, YES = "picked fighter wins". If user picked fighter2,
+  // we need to flip the market's yesPrice (which always represents fighter1).
+  const pickedIsFighter2 = pickedFighter === sampleFighters[1].id
+
+  // Show simplified market panel when onboarding reaches market-open step
+  const showSimplifiedMarket = simplified && (
+    onboardingStep === 'market-open' ||
+    onboardingStep === 'demo-traded' ||
+    onboardingStep === 'converted'
+  )
+
+  // Demo trade settlement state
+  const [demoSettlement, setDemoSettlement] = useState<{
+    won: boolean
+    winnerName: string
+    payout: number
+    profit: number
+    quantity: number
+    side: string
+  } | null>(null)
+  const demoTradesRef = useRef(demoTrades)
+  useEffect(() => { demoTradesRef.current = demoTrades }, [demoTrades])
+  const pickedFighterRef = useRef(pickedFighter)
+  useEffect(() => { pickedFighterRef.current = pickedFighter }, [pickedFighter])
 
   // Onboarding prompt trigger: 30s timer or significant event
   useEffect(() => {
@@ -118,6 +150,12 @@ export default function LiveFightSection({
   useEffect(() => {
     const fighter1 = sampleFighters[0]
     const fighter2 = sampleFighters[1]
+
+    // Build bias config for first fight in simplified (onboarding) mode
+    const biasConfig: FightBiasConfig | undefined =
+      simplified && isFirstFight.current && pickedFighterRef.current
+        ? { favoredFighterId: pickedFighterRef.current, damageModifier: 0.15 }
+        : undefined
 
     // Create fight engine with recording enabled
     const fight = new FightEngine(
@@ -163,6 +201,29 @@ export default function LiveFightSection({
             return []
           })
 
+          // Settle demo trades (onboarding mode)
+          if (demoTradesRef.current.length > 0) {
+            const winnerId = state.result!.winner
+            const trades = demoTradesRef.current
+            const totalQty = trades.reduce((s, t) => s + t.quantity, 0)
+            const totalCost = trades.reduce((s, t) => s + t.price * t.quantity, 0)
+            const lastSide = trades[trades.length - 1].side
+            // YES wins if the user's picked fighter won
+            const yesWins = pickedIsFighter2 ? winnerId === fighter2.id : winnerId === fighter1.id
+            const won = (lastSide === 'yes' && yesWins) || (lastSide === 'no' && !yesWins)
+            const payout = won ? totalQty : 0
+            const profit = payout - totalCost
+
+            setDemoSettlement({
+              won,
+              winnerName: winnerId === fighter1.id ? fighter1.name : fighter2.name,
+              payout,
+              profit,
+              quantity: totalQty,
+              side: lastSide.toUpperCase(),
+            })
+          }
+
           // Auto-restart after delay if enabled
           if (autoRestartEnabled) {
             setTimeout(() => {
@@ -198,8 +259,12 @@ export default function LiveFightSection({
           setTimeout(() => soundManager.play('crowd-cheer', 0.7), 500)
         }
       },
-      true // enableRecording for replay
+      true, // enableRecording for replay
+      biasConfig
     )
+
+    // After first fight initializes, mark it as no longer first
+    if (biasConfig) isFirstFight.current = false
 
     // Create market engine
     const market = new MarketEngine(
@@ -231,6 +296,7 @@ export default function LiveFightSection({
   const handleRestartFight = () => {
     if (fightEngine) {
       fightEngine.restart()
+      setDemoSettlement(null)
 
       // Stop old market engine before creating new one
       marketEngineRef.current?.stop()
@@ -306,7 +372,11 @@ export default function LiveFightSection({
       )}
 
       {/* Main Fight Layout - Responsive: stacked on mobile, sidebar on desktop */}
-      <div className={`flex-1 flex flex-col ${simplified ? '' : 'lg:grid lg:grid-cols-[1fr_380px]'} overflow-y-auto lg:overflow-hidden`}>
+      <div className={`flex-1 flex flex-col ${
+        simplified
+          ? (showSimplifiedMarket ? 'lg:grid lg:grid-cols-[1fr_288px]' : '')
+          : 'lg:grid lg:grid-cols-[1fr_380px]'
+      } overflow-y-auto lg:overflow-hidden`}>
         {/* Fight Area */}
         <div className="flex flex-col min-h-[50vh] lg:min-h-0 lg:overflow-hidden">
           {/* Fight Header */}
@@ -423,6 +493,57 @@ export default function LiveFightSection({
               </motion.div>
             )}
 
+            {/* Demo trade settlement overlay (simplified mode) */}
+            {simplified && fightState.result && demoSettlement && (
+              <motion.div
+                className="absolute inset-0 bg-black/90 flex items-center justify-center z-25"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.5 }}
+              >
+                <div className="text-center px-4 max-w-sm">
+                  {demoSettlement.won ? (
+                    <>
+                      <motion.div
+                        className="font-pixel text-2xl text-gold mb-3"
+                        animate={{
+                          textShadow: [
+                            '0 0 20px rgba(255,215,0,0.4)',
+                            '0 0 40px rgba(255,215,0,0.7)',
+                            '0 0 20px rgba(255,215,0,0.4)',
+                          ],
+                        }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        {demoSettlement.winnerName} wins!
+                      </motion.div>
+                      <div className="font-ui text-sm text-text mb-1">
+                        Your {demoSettlement.quantity} {demoSettlement.side} contracts pay {demoSettlement.payout.toFixed(2)}
+                      </div>
+                      <div className="font-pixel text-lg text-green mt-2">
+                        Profit: +{demoSettlement.profit.toFixed(2)}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-pixel text-2xl text-text2 mb-3">
+                        {demoSettlement.winnerName} wins.
+                      </div>
+                      <div className="font-ui text-sm text-text mb-1">
+                        Your {demoSettlement.quantity} {demoSettlement.side} contracts expire at 0.00
+                      </div>
+                      <div className="font-pixel text-lg text-red mt-2">
+                        Loss: {demoSettlement.profit.toFixed(2)}
+                      </div>
+                      <div className="font-ui text-xs text-text2 mt-4">
+                        Next fight starts in 10 seconds. Try again?
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {/* Fight Replay Viewer */}
             {showReplay && replayRecording && (
               <div className="absolute inset-0 z-30">
@@ -448,6 +569,18 @@ export default function LiveFightSection({
                 advanceOnboarding('picked-side')
                 setShowOnboardingPrompt(false)
               }}
+            />
+          )}
+
+          {/* Contract concept card (simplified mode, after fighter pick) */}
+          {simplified && marketState && (
+            <ContractConceptCard
+              fighterName={pickedIsFighter2 ? sampleFighters[1].name : sampleFighters[0].name}
+              fighterColor={pickedIsFighter2 ? 'accent2' : 'accent'}
+              yesPrice={pickedIsFighter2 ? 1 - marketState.yesPrice : marketState.yesPrice}
+              visible={onboardingStep === 'picked-side'}
+              onGotIt={() => advanceOnboarding('market-open')}
+              onDismiss={() => advanceOnboarding('completed')}
             />
           )}
 
@@ -490,6 +623,22 @@ export default function LiveFightSection({
               />
             </div>
           </div>
+        )}
+
+        {/* Simplified Market Panel (onboarding mode, after "Got it") */}
+        {showSimplifiedMarket && marketState && (
+          <SimplifiedMarketPanel
+            fighterName={pickedIsFighter2 ? sampleFighters[1].name : sampleFighters[0].name}
+            marketState={pickedIsFighter2 ? { ...marketState, yesPrice: 1 - marketState.yesPrice } : marketState}
+            demoCredits={demoCredits}
+            demoTrades={demoTrades}
+            onBuy={(side, price, qty) => {
+              placeDemoTrade(side, price, qty)
+              if (onboardingStep === 'market-open') {
+                advanceOnboarding('demo-traded')
+              }
+            }}
+          />
         )}
 
       </div>
