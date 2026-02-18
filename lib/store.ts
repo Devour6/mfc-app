@@ -18,6 +18,7 @@ import { TournamentEngine } from './tournament-engine'
 import { AchievementEngine } from './achievement-engine'
 import { DailyRewardsEngine } from './daily-rewards-engine'
 import { CreditEngine } from './credit-engine'
+import { createFighter as apiCreateFighter, getFighters } from './api-client'
 
 interface GameState {
   // User data
@@ -33,7 +34,7 @@ interface GameState {
   advanceTournament: (matchId: string, result: any) => void
   claimDailyReward: (reward: DailyReward) => void
   dismissNotification: (notificationId: string) => void
-  addFighter: (fighter: Omit<Fighter, 'evolution'>) => void
+  addFighter: (fighter: Omit<Fighter, 'evolution'>, apiData?: { name: string; emoji: string; fighterClass: 'LIGHTWEIGHT' | 'MIDDLEWEIGHT' | 'HEAVYWEIGHT' }) => void
   
   // Credit system actions
   connectWallet: () => Promise<void>
@@ -329,7 +330,7 @@ export const useGameStore = create<GameState>()(
         }))
       },
 
-      addFighter: (fighterData: Omit<Fighter, 'evolution'>) => {
+      addFighter: (fighterData: Omit<Fighter, 'evolution'>, apiData?: { name: string; emoji: string; fighterClass: 'LIGHTWEIGHT' | 'MIDDLEWEIGHT' | 'HEAVYWEIGHT' }) => {
         set(state => {
           const newFighter: Fighter = {
             ...fighterData,
@@ -337,14 +338,14 @@ export const useGameStore = create<GameState>()(
           }
 
           const updatedFighters = [...state.user.fighters, newFighter]
-          
+
           // Check collection achievements
           const achievementResult = AchievementEngine.checkCollectionAchievements(
             state.user.achievements,
             updatedFighters
           )
 
-          const newNotifications = achievementResult.newUnlocks.map(achievement => 
+          const newNotifications = achievementResult.newUnlocks.map(achievement =>
             AchievementEngine.createNotification(achievement)
           )
 
@@ -365,6 +366,20 @@ export const useGameStore = create<GameState>()(
 
           return newState
         })
+
+        if (apiData) {
+          apiCreateFighter(apiData)
+            .then(() => { get().fetchLeaderboard() })
+            .catch(() => {
+              // Rollback: remove the optimistically added fighter
+              set(state => ({
+                user: {
+                  ...state.user,
+                  fighters: state.user.fighters.filter(f => f.id !== fighterData.id),
+                }
+              }))
+            })
+        }
       },
 
       // Credit system actions
@@ -523,31 +538,28 @@ export const useGameStore = create<GameState>()(
 
       fetchLeaderboard: async () => {
         try {
-          const res = await fetch('/api/fighters?active=true')
-          if (res.ok) {
-            const data = await res.json()
-            const fighters: Fighter[] = data.map((f: any) => ({
-              id: f.id,
-              name: f.name,
-              emoji: f.emoji ?? '🥊',
-              class: f.class.charAt(0).toUpperCase() + f.class.slice(1).toLowerCase() as Fighter['class'],
-              record: { wins: f.wins ?? 0, losses: f.losses ?? 0, draws: f.draws ?? 0 },
-              elo: f.elo ?? 1000,
-              stats: {
-                strength: f.strength ?? 50,
-                speed: f.speed ?? 50,
-                defense: f.defense ?? 50,
-                stamina: f.stamina ?? 50,
-                fightIQ: f.fightIQ ?? 50,
-                aggression: f.aggression ?? 50,
-              },
-              owner: f.owner?.name ?? f.ownerId ?? 'unknown',
-              isActive: f.isActive ?? true,
-              trainingCost: f.trainingCost ?? 100,
-              evolution: FighterEvolutionEngine.createNewEvolution(),
-            }))
-            set({ leaderboardFighters: fighters })
-          }
+          const data = await getFighters({ active: true })
+          const fighters: Fighter[] = data.map(f => ({
+            id: f.id,
+            name: f.name,
+            emoji: f.emoji ?? '🥊',
+            class: f.class.charAt(0).toUpperCase() + f.class.slice(1).toLowerCase() as Fighter['class'],
+            record: { wins: f.wins ?? 0, losses: f.losses ?? 0, draws: f.draws ?? 0 },
+            elo: f.elo ?? 1000,
+            stats: {
+              strength: f.strength ?? 50,
+              speed: f.speed ?? 50,
+              defense: f.defense ?? 50,
+              stamina: f.stamina ?? 50,
+              fightIQ: f.fightIQ ?? 50,
+              aggression: f.aggression ?? 50,
+            },
+            owner: f.owner?.name ?? f.ownerId ?? 'unknown',
+            isActive: f.isActive ?? true,
+            trainingCost: f.trainingCost ?? 100,
+            evolution: FighterEvolutionEngine.createNewEvolution(),
+          }))
+          set({ leaderboardFighters: fighters })
         } catch {
           // API not available — keep existing data
         }
