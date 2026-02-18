@@ -35,5 +35,8 @@ jobs:
       - name: Test
         run: npm test -- --selectProjects=api --no-coverage
 
+      - name: MFC route checks
+        run: bash scripts/lint-mfc-routes.sh
+
       - name: Build
         run: npm run build
