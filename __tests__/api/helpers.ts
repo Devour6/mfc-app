@@ -55,6 +55,16 @@ export const mockPrisma = {
     findUnique: jest.fn(),
     create: jest.fn(),
   },
+  skin: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
+  skinPurchase: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
   $transaction: jest.fn(),
   $queryRaw: jest.fn(),
 }
