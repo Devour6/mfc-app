@@ -198,7 +198,7 @@ export default function Home() {
 
   if (!isLoaded) {
     return (
-      <div className="bg-bg min-h-screen flex items-center justify-center text-text1 font-ui">
+      <div className="bg-bg min-h-screen flex items-center justify-center text-text font-ui">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

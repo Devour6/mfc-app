@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TrendingUp, TrendingDown, ChevronRight } from 'lucide-react'
 import { FightState, MarketState, Fighter, Trade } from '@/types'
@@ -49,7 +49,7 @@ export default function TradingPanel({
   const [selectedAmount, setSelectedAmount] = useState(25)
   const [customAmount, setCustomAmount] = useState('')
   const [priceDirection, setPriceDirection] = useState<'up' | 'down' | 'stable'>('stable')
-  const [lastPrice, setLastPrice] = useState(marketState.yesPrice)
+  const lastPriceRef = useRef(marketState.yesPrice)
   const [recentTrades, setRecentTrades] = useState<Trade[]>([])
 
   // Collapsible section state
@@ -69,15 +69,15 @@ export default function TradingPanel({
 
   // Track price direction
   useEffect(() => {
-    if (marketState.yesPrice > lastPrice + 0.005) {
+    if (marketState.yesPrice > lastPriceRef.current + 0.005) {
       setPriceDirection('up')
-    } else if (marketState.yesPrice < lastPrice - 0.005) {
+    } else if (marketState.yesPrice < lastPriceRef.current - 0.005) {
       setPriceDirection('down')
     } else {
       setPriceDirection('stable')
     }
-    setLastPrice(marketState.yesPrice)
-  }, [marketState.yesPrice, lastPrice])
+    lastPriceRef.current = marketState.yesPrice
+  }, [marketState.yesPrice])
 
   // Generate prop markets from fight state
   useEffect(() => {

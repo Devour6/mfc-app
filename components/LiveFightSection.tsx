@@ -256,7 +256,7 @@ export default function LiveFightSection({
 
   if (!fightState || !marketState) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}
@@ -272,7 +272,7 @@ export default function LiveFightSection({
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Fight Card Overlay */}
       {showFightCard && (
         <FightCard 
@@ -293,26 +293,13 @@ export default function LiveFightSection({
             <div className="font-pixel text-sm text-text">
               {Math.floor(fightState.clock / 60)}:{(fightState.clock % 60).toString().padStart(2, '0')}
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  const next = !soundEnabled
-                  setSoundEnabled(next)
-                  if (next) { soundManager.unmute() } else { soundManager.mute() }
-                }}
-                className="font-pixel text-[10px] text-text2 hover:text-text transition-colors"
-                title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-              >
-                {soundEnabled ? 'SND:ON' : 'SND:OFF'}
-              </button>
-              <div className="flex items-center gap-2">
-                <motion.div
-                  className="w-2 h-2 bg-green"
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-                <span className="font-pixel text-xs text-green">LIVE</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <motion.div
+                className="w-2 h-2 bg-green"
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              <span className="font-pixel text-xs text-green">LIVE</span>
             </div>
           </div>
 
