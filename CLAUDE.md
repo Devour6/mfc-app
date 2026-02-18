@@ -256,6 +256,8 @@ The following changes affect **ALL agents on ALL teams**:
 
 5. **PR checklist updated** — Now requires reading `LEARNINGS.md`, verifying acceptance criteria, and noting new gotchas.
 
+6. **PR #68 (2026-02-18) — Border-radius removal complete** — All 44 instances of `rounded`, `border-radius`, and `borderRadius` removed from 14 component files. Components now comply with pixel-art design system (sharp corners only). This is Phase 1 of custom linter plan; Phase 2 will add ESLint rule.
+
 **No changes to existing code, components, or APIs.** These are process/workflow additions only.
 
 ---
@@ -323,6 +325,18 @@ Runs automatically on every PR (opened, synced, reopened, ready for review). Use
 Posts review comments directly on the PR with inline suggestions. This does NOT auto-approve — a human or lead engineer still merges. The AI review catches obvious issues fast so authors get feedback in minutes rather than waiting for a manual review session.
 
 **Setup requirement:** `OPENAI_API_KEY` must be stored as a repository secret in GitHub (Settings → Secrets → Actions).
+
+### Custom Linters
+
+**ESLint rules** (via `eslint-plugin-mfc` in `eslint-rules/`):
+- `mfc/no-rounded-corners` (warn) — flags `rounded`, `rounded-*` Tailwind classes and `borderRadius` styles. MFC uses sharp corners only.
+- `mfc/no-raw-fetch-in-components` (error) — flags raw `fetch()` calls in `components/`. Use `lib/api-client.ts` instead.
+
+**CI route checks** (`scripts/lint-mfc-routes.sh`):
+- `requireAuth → ensureUser` — auth-required routes must call both `requireAuth()` and `ensureUser()`.
+- `route test coverage` — every route file needs a corresponding test in `__tests__/api/`.
+
+Both currently in **warn mode** (non-blocking). Will be promoted to error after existing violations are cleaned up.
 
 ### PR Template
 `.github/pull_request_template.md` includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
