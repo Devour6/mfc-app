@@ -615,10 +615,10 @@ export const useGameStore = create<GameState>()(
       leaderboardFighters: [],
 
       // Onboarding (FTUE)
-      onboardingStep: 'watching' as OnboardingStep,
+      onboardingStep: 'completed' as OnboardingStep,
       demoCredits: 100,
       demoTrades: [] as DemoTrade[],
-      hasCompletedOnboarding: false,
+      hasCompletedOnboarding: true,
       pickedFighter: null,
 
       advanceOnboarding: (step: OnboardingStep) => {
@@ -695,6 +695,14 @@ export const useGameStore = create<GameState>()(
     {
       name: 'mfc-game-storage',
       storage: createJSONStorage(() => localStorage),
+      version: 1,
+      migrate: (persisted: any, version: number) => {
+        if (version === 0) {
+          persisted.hasCompletedOnboarding = true
+          persisted.onboardingStep = 'completed'
+        }
+        return persisted
+      },
     }
   )
 )
