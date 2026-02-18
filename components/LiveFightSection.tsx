@@ -94,6 +94,7 @@ export default function LiveFightSection({
   const isAgent = useGameStore(state => state.user.isAgent)
   const placeBetAndDeduct = useGameStore(state => state.placeBetAndDeduct)
   const fetchCredits = useGameStore(state => state.fetchCredits)
+  const syncUserProfile = useGameStore(state => state.syncUserProfile)
 
   // Onboarding state
   const onboardingStep = useGameStore(state => state.onboardingStep)
@@ -145,7 +146,8 @@ export default function LiveFightSection({
 
   useEffect(() => {
     fetchCredits()
-  }, [fetchCredits])
+    syncUserProfile()
+  }, [fetchCredits, syncUserProfile])
 
   // Initialize fight and market engines
   useEffect(() => {
