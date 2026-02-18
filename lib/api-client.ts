@@ -229,7 +229,6 @@ export function createFighter(data: {
   name: string
   emoji: string
   fighterClass: 'LIGHTWEIGHT' | 'MIDDLEWEIGHT' | 'HEAVYWEIGHT'
-  ownerId: string
 }) {
   return request<ApiFighterSummary>('/api/fighters', {
     method: 'POST',
@@ -319,7 +318,6 @@ export function submitFightResult(id: string, data: {
   fighter2Stats?: Record<string, unknown>
   fighter1EloChange?: number
   fighter2EloChange?: number
-  userId: string
 }) {
   return request<ApiFightResult>(`/api/fights/${id}`, {
     method: 'POST',
@@ -329,23 +327,20 @@ export function submitFightResult(id: string, data: {
 
 // ─── User ───────────────────────────────────────────────────────────────────
 
-export function getUserProfile(auth0Id: string) {
-  return request<ApiUser>(`/api/user${qs({ auth0Id })}`)
+export function getUserProfile() {
+  return request<ApiUser>('/api/user')
 }
 
-export function createUser(data: {
-  auth0Id: string
-  email: string
+export function syncUser(data?: {
   name?: string
 }) {
   return request<ApiUser>('/api/user', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(data ?? {}),
   })
 }
 
 export function updateUser(data: {
-  auth0Id: string
   name?: string
   username?: string
 }) {
@@ -357,12 +352,11 @@ export function updateUser(data: {
 
 // ─── Credits ────────────────────────────────────────────────────────────────
 
-export function getUserCredits(auth0Id: string) {
-  return request<CreditBalance>(`/api/user/credits${qs({ auth0Id })}`)
+export function getUserCredits() {
+  return request<CreditBalance>('/api/user/credits')
 }
 
 export function modifyCredits(data: {
-  auth0Id: string
   amount: number
   type: 'deposit' | 'withdrawal' | 'training' | 'bet' | 'reward' | 'payout'
   description?: string
@@ -394,7 +388,6 @@ export function getBet(id: string) {
 }
 
 export function placeBet(data: {
-  userId: string
   fightId: string
   fighterId?: string
   side: 'YES' | 'NO' | 'FIGHTER1' | 'FIGHTER2' | 'OVER' | 'UNDER'
@@ -437,7 +430,6 @@ export function getTrainingSession(id: string) {
 
 export function startTraining(data: {
   fighterId: string
-  userId: string
   hours: number
 }) {
   return request<ApiTraining>('/api/training', {

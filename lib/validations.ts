@@ -81,7 +81,6 @@ export const submitFightResultSchema = z.object({
   fighter2Stats: z.record(z.string(), z.unknown()).optional().default({}),
   fighter1EloChange: z.number().int().optional().default(0),
   fighter2EloChange: z.number().int().optional().default(0),
-  userId: z.string().min(1, 'User ID is required'),
 })
 
 // ─── Bets ───────────────────────────────────────────────────────────────────
