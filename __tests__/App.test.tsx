@@ -17,10 +17,10 @@ jest.mock('../lib/store', () => ({
 
 // Mock child components — LandingPage exposes a button to trigger view switch
 jest.mock('../components/LandingPage', () => {
-  return function MockLandingPage({ onEnterArena }: { onEnterArena: (role: 'spectator' | 'fighter') => void }) {
+  return function MockLandingPage({ onEnterArena }: { onEnterArena: () => void }) {
     return (
       <div data-testid="landing-page">
-        <button onClick={() => onEnterArena('spectator')}>Enter Arena</button>
+        <button onClick={() => onEnterArena()}>Enter Arena</button>
       </div>
     );
   };

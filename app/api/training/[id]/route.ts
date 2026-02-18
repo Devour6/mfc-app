@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, notFound, serverError } from '@/lib/api-utils'
-import { requireAuth } from '@/lib/auth-guard'
+import { requireAnyRole } from '@/lib/role-guard'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-// GET /api/training/:id — Get training session details (auth required)
+// GET /api/training/:id — Get training session details (both roles)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAuth()
+    await requireAnyRole()
     const { id } = await params
 
     const training = await prisma.training.findUnique({

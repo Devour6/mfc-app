@@ -242,18 +242,71 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 - `DATABASE_URL` — PostgreSQL connection string
 - `AUTH0_*` — Auth0 tenant credentials (when auth is enabled)
 
+## Recent Workflow Changes (2026-02-18) — READ THIS
+
+The following changes affect **ALL agents on ALL teams**:
+
+1. **New file: `LEARNINGS.md`** — Shared knowledge base at repo root. Contains gotchas about Prisma 7, Next.js 16, Jest/ESM, multi-agent git, auth patterns, credit safety, and canvas rendering. **You must read this before starting work.** If you discover a new gotcha, append it here.
+
+2. **New file: `.github/PRD-TEMPLATE.md`** — For non-trivial features, copy this template and fill it in before breaking work into tasks. Locks scope + acceptance criteria.
+
+3. **Tasks now require acceptance criteria** — Every task must have machine-verifiable pass/fail conditions (e.g., "test X passes", "route returns 200"). Self-verify locally before opening a PR.
+
+4. **AI PR Review runs on every PR** — An automated Claude Code reviewer will post comments on your PR within minutes of opening it. It checks correctness, security, and MFC conventions (requireAuth, no border-radius, zod validation, etc.). This does NOT replace human review — it's a first pass. Fix any issues it flags.
+
+5. **PR checklist updated** — Now requires reading `LEARNINGS.md`, verifying acceptance criteria, and noting new gotchas.
+
+6. **PR #68 (2026-02-18) — Border-radius removal complete** — All 44 instances of `rounded`, `border-radius`, and `borderRadius` removed from 14 component files. Components now comply with pixel-art design system (sharp corners only). This is Phase 1 of custom linter plan; Phase 2 will add ESLint rule.
+
+**No changes to existing code, components, or APIs.** These are process/workflow additions only.
+
+---
+
 ## Team Coordination
 
 **This file (CLAUDE.md) is the master coordination document.** Two teams work on this repo:
 - **Backend team** — database, API routes, auth, Solana integration
 - **Frontend/design team** — components, UI, fight rendering, UX
 
-**Before making ANY code changes:** Read this file first.
-**After making ANY code changes:** Update this file to document what changed.
+**Before making ANY code changes:** Read this file AND `LEARNINGS.md` first.
+**After making ANY code changes:** Update this file to document what changed. If you discovered a gotcha, append it to `LEARNINGS.md`.
+
+## Task Workflow
+
+Every feature goes through this pipeline:
+
+### 1. PRD (for non-trivial features)
+Copy `.github/PRD-TEMPLATE.md` and fill it in before breaking work into tasks. This locks scope, requirements, and acceptance criteria upfront.
+
+### 2. Task Breakdown
+Each task MUST have machine-verifiable acceptance criteria. Format:
+
+```
+Task: Add bet placement API tests
+Acceptance:
+  - jest __tests__/api/bets.test.ts passes with 8+ new tests
+  - POST /api/bets returns 201 with valid payload
+  - POST /api/bets returns 401 without auth
+  - POST /api/bets returns 400 with invalid fightId
+```
+
+Agents self-verify acceptance criteria locally before opening a PR. If all criteria pass, the task is done — no ambiguity.
+
+### 3. Branch → PR → Review → Merge
+1. Pull newest main
+2. Read CLAUDE.md + LEARNINGS.md
+3. Create a feature branch
+4. Make changes, verify acceptance criteria pass locally
+5. Create PR via `gh pr create`
+6. Update CLAUDE.md with what changed
+7. AI PR Review runs automatically (see CI/CD section)
+8. Cross-review by an agent who didn't write the code
+9. Lead engineer merges after review approval + CI passes
 
 ## CI/CD Pipeline
 
-**GitHub Actions** (`.github/workflows/ci.yml`) runs on every PR to `main` and on push to `main`:
+### CI (`.github/workflows/ci.yml`)
+Runs on every PR to `main` and on push to `main`:
 1. Checkout + install deps (`npm ci`)
 2. Generate Prisma client (`npx prisma generate`)
 3. Lint (`npm run lint`)
@@ -263,7 +316,30 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 
 All steps must pass for a PR to be mergeable.
 
-**PR template** (`.github/pull_request_template.md`) includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
+### AI PR Review (`.github/workflows/ai-pr-review.yml`)
+Runs automatically on every PR (opened, synced, reopened, ready for review). Uses OpenAI (gpt-4o) to perform a first-pass code review checking:
+- Correctness, security, performance
+- MFC conventions (requireAuth, ensureUser, no border-radius, no raw fetch, zod validation, credit safety)
+- Compliance with CLAUDE.md patterns
+
+Posts review comments directly on the PR with inline suggestions. This does NOT auto-approve — a human or lead engineer still merges. The AI review catches obvious issues fast so authors get feedback in minutes rather than waiting for a manual review session.
+
+**Setup requirement:** `OPENAI_API_KEY` must be stored as a repository secret in GitHub (Settings → Secrets → Actions).
+
+### Custom Linters
+
+**ESLint rules** (via `eslint-plugin-mfc` in `eslint-rules/`):
+- `mfc/no-rounded-corners` (**error**) — flags `rounded`, `rounded-*` Tailwind classes and `borderRadius` styles. MFC uses sharp corners only. Adding rounded corners will fail the build.
+- `mfc/no-raw-fetch-in-components` (**error**) — flags raw `fetch()` calls in `components/`. Use `lib/api-client.ts` instead.
+
+**CI route checks** (`scripts/lint-mfc-routes.sh`):
+- `requireAuth → ensureUser` — auth-required routes must call both `requireAuth()` and `ensureUser()`.
+- `route test coverage` — every route file needs a corresponding test in `__tests__/api/`.
+
+Route checks currently in **warn mode** (non-blocking). Will be promoted to error after Orcus adds missing test files.
+
+### PR Template
+`.github/pull_request_template.md` includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
 
 ## Branch Protection (Recommended)
 

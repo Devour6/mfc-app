@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { mockPrisma, mockRequireAuth, mockEnsureUser, createRequest, params } from './helpers'
+import { mockPrisma, mockRequireAuth, mockEnsureUser, mockRequireHuman, mockRequireAgent, mockRequireAnyRole, createRequest, params } from './helpers'
 
 import { GET as GET_fighters, POST as POST_fighters } from '@/app/api/fighters/route'
 import { GET as GET_fighter, PATCH as PATCH_fighter } from '@/app/api/fighters/[id]/route'
@@ -22,14 +22,29 @@ beforeEach(() => {
     user: { sub: 'auth0|test-user', name: 'Test User', email: 'test@mfc.gg' },
   })
   mockEnsureUser.mockResolvedValue({
-    id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser',
+    id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser', isAgent: false,
+  })
+  // Role guard defaults
+  mockRequireHuman.mockResolvedValue({
+    id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser', isAgent: false,
+  })
+  mockRequireAgent.mockResolvedValue({
+    id: 'u-agent-1', auth0Id: 'agent_abc123def456', credits: 1000, username: null, isAgent: true,
+  })
+  mockRequireAnyRole.mockResolvedValue({
+    id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser', isAgent: false,
   })
 })
 
 // Helper: simulate unauthenticated request
 function simulateUnauthenticated() {
   const { AuthRequiredError } = jest.requireMock('@/lib/auth-guard')
-  mockRequireAuth.mockRejectedValue(new AuthRequiredError())
+  const authErr = new AuthRequiredError()
+  mockRequireAuth.mockRejectedValue(authErr)
+  // Role guards also reject since they call requireAuth internally
+  mockRequireHuman.mockRejectedValue(authErr)
+  mockRequireAgent.mockRejectedValue(authErr)
+  mockRequireAnyRole.mockRejectedValue(authErr)
 }
 
 // ─── Public routes — should work WITHOUT auth ────────────────────────────────
@@ -225,21 +240,19 @@ describe('Protected routes return 401 when unauthenticated', () => {
   })
 })
 
-// ─── User sync — ensureUser called on authenticated requests ─────────────────
+// ─── User sync — role guards called on authenticated requests ────────────────
 
-describe('User sync (ensureUser)', () => {
-  it('POST /api/user calls ensureUser with session', async () => {
+describe('User sync (role guards)', () => {
+  it('POST /api/user calls requireAnyRole', async () => {
     const res = await POST_user()
     expect(res.status).toBe(200)
-    expect(mockEnsureUser).toHaveBeenCalledWith(
-      expect.objectContaining({ user: expect.objectContaining({ sub: 'auth0|test-user' }) })
-    )
+    expect(mockRequireAnyRole).toHaveBeenCalled()
   })
 
-  it('GET /api/user/credits uses ensureUser for identity', async () => {
+  it('GET /api/user/credits uses requireAnyRole for identity', async () => {
     const res = await GET_credits()
     expect(res.status).toBe(200)
-    expect(mockEnsureUser).toHaveBeenCalled()
+    expect(mockRequireAnyRole).toHaveBeenCalled()
     const data = await res.json()
     expect(data.credits).toBe(10000)
   })

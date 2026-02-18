@@ -1,7 +1,10 @@
 {
   "extends": ["next/core-web-vitals"],
+  "plugins": ["mfc"],
   "rules": {
     "react-hooks/exhaustive-deps": "warn",
-    "@next/next/no-img-element": "off"
+    "@next/next/no-img-element": "off",
+    "mfc/no-rounded-corners": "error",
+    "mfc/no-raw-fetch-in-components": "error"
   }
 }

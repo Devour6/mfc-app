@@ -189,7 +189,7 @@ export default function CreditWithdrawal({
                         key={preset}
                         onClick={() => setAmount(preset.toString())}
                         disabled={preset > creditBalance.available}
-                        className="flex-1 py-2 text-sm border border-border rounded text-text2 hover:text-text1 hover:border-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 py-2 text-sm border border-border text-text2 hover:text-text1 hover:border-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {CreditEngine.formatCredits(preset)}
                       </button>

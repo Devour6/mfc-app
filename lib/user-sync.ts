@@ -19,7 +19,7 @@ export async function ensureUser(session: { user: { sub: string; name?: string; 
       ...(name && { name }),
       ...(email && { email }),
     },
-    select: { id: true, auth0Id: true, credits: true, username: true },
+    select: { id: true, auth0Id: true, credits: true, username: true, isAgent: true },
   })
 
   return user

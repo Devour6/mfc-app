@@ -191,9 +191,9 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
                 }}
                 disabled={trainingInProgress === fighter.id}
                 className={`
-                  flex-1 py-2 px-3 text-sm font-semibold rounded transition-all duration-200
-                  ${trainingInProgress === fighter.id 
-                    ? 'bg-gold/20 text-gold cursor-not-allowed' 
+                  flex-1 py-2 px-3 text-sm font-semibold transition-all duration-200
+                  ${trainingInProgress === fighter.id
+                    ? 'bg-gold/20 text-gold cursor-not-allowed'
                     : 'bg-accent text-white hover:bg-accent/90 hover:shadow-lg'
                   }
                 `}
@@ -221,9 +221,9 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
                 }}
                 disabled={!fighter.isActive}
                 className={`
-                  flex-1 py-2 px-3 text-sm font-semibold rounded transition-all duration-200
-                  ${fighter.isActive 
-                    ? 'bg-surface2 border border-border text-text hover:border-accent hover:text-accent' 
+                  flex-1 py-2 px-3 text-sm font-semibold transition-all duration-200
+                  ${fighter.isActive
+                    ? 'bg-surface2 border border-border text-text hover:border-accent hover:text-accent'
                     : 'bg-surface2/50 border border-border/50 text-text2/50 cursor-not-allowed'
                   }
                 `}
@@ -237,9 +237,9 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
             {/* Status Badge */}
             <div className="mt-3 text-center">
               <span className={`
-                px-2 py-1 text-xs font-pixel rounded
-                ${fighter.isActive 
-                  ? 'bg-green/20 text-green' 
+                px-2 py-1 text-xs font-pixel
+                ${fighter.isActive
+                  ? 'bg-green/20 text-green'
                   : 'bg-text2/20 text-text2'
                 }
               `}>
@@ -263,7 +263,7 @@ export default function FightersSection({ fighters, onFightComplete, onSelectFig
             Add a new AI agent to your roster
           </div>
           <motion.button
-            className="mt-4 bg-accent/10 border border-accent text-accent px-4 py-2 text-sm font-semibold rounded hover:bg-accent/20 transition-colors"
+            className="mt-4 bg-accent/10 border border-accent text-accent px-4 py-2 text-sm font-semibold hover:bg-accent/20 transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >

@@ -147,7 +147,7 @@ export default function MobileFighterCard({
               e.stopPropagation()
               onFightStart?.(fighter.id)
             }}
-            className="flex items-center gap-1 px-3 py-1.5 bg-accent text-white font-pixel text-xs rounded transition-colors hover:bg-accent/90 flex-1"
+            className="flex items-center gap-1 px-3 py-1.5 bg-accent text-white font-pixel text-xs transition-colors hover:bg-accent/90 flex-1"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -159,7 +159,7 @@ export default function MobileFighterCard({
               e.stopPropagation()
               setShowTraining(!showTraining)
             }}
-            className="flex items-center gap-1 px-3 py-1.5 bg-transparent border border-border text-text2 font-pixel text-xs rounded transition-colors hover:text-text hover:border-text2 flex-1"
+            className="flex items-center gap-1 px-3 py-1.5 bg-transparent border border-border text-text2 font-pixel text-xs transition-colors hover:text-text hover:border-text2 flex-1"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -248,8 +248,8 @@ export default function MobileFighterCard({
                     ].map((result, index) => (
                       <div
                         key={index}
-                        className={`w-6 h-6 rounded flex items-center justify-center font-pixel text-xs ${
-                          result === 'W' 
+                        className={`w-6 h-6 flex items-center justify-center font-pixel text-xs ${
+                          result === 'W'
                             ? 'bg-green text-white' 
                             : 'bg-red text-white'
                         }`}

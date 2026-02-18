@@ -76,7 +76,7 @@ export default function TopBar({
           {/* Sound toggle */}
           <motion.button
             onClick={onToggleSound}
-            className="p-2 hover:bg-surface2 rounded transition-colors duration-200"
+            className="p-2 hover:bg-surface2 transition-colors duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
@@ -90,7 +90,7 @@ export default function TopBar({
 
           {/* Credits display */}
           <motion.div
-            className="bg-gold/10 border border-gold/20 px-4 py-2 rounded"
+            className="bg-gold/10 border border-gold/20 px-4 py-2"
             whileHover={{ scale: 1.02 }}
           >
             <div className="font-pixel text-xs text-gold">

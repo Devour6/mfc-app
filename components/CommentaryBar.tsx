@@ -66,7 +66,7 @@ export default function CommentaryBar({ commentary, commentaryHistory = [] }: Co
         {commentary && (
           <motion.div
             className={`
-              px-2 py-1 text-xs font-pixel rounded flex-shrink-0
+              px-2 py-1 text-xs font-pixel flex-shrink-0
               ${commentary.priority === 'high' ? 'bg-accent/20 text-accent' :
                 commentary.priority === 'medium' ? 'bg-gold/20 text-gold' :
                 'bg-text2/20 text-text2'

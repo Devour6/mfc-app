@@ -69,7 +69,9 @@ jest.mock('@/lib/auth0', () => ({
 
 // Default test session and user for auth-guarded routes
 const defaultSession = { user: { sub: 'auth0|test-user', name: 'Test User', email: 'test@mfc.gg' } }
-const defaultDbUser = { id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser' }
+const defaultDbUser = { id: 'u1', auth0Id: 'auth0|test-user', credits: 10000, username: 'testuser', isAgent: false }
+export const agentSession = { user: { sub: 'agent_abc123def456', name: 'TestBot', email: 'agent_abc123@agent.mfc.gg' }, isApiKey: true }
+export const agentDbUser = { id: 'u-agent-1', auth0Id: 'agent_abc123def456', credits: 1000, username: null, isAgent: true }
 
 // Mock @/lib/auth-guard — requireAuth returns a default session
 export const mockRequireAuth = jest.fn().mockResolvedValue(defaultSession)
@@ -93,3 +95,29 @@ export const mockEnsureUser = jest.fn().mockResolvedValue(defaultDbUser)
 jest.mock('@/lib/user-sync', () => ({
   ensureUser: mockEnsureUser,
 }))
+
+// ─── Role guard mocks ──────────────────────────────────────────────────────
+// Routes now use requireHuman/requireAgent/requireAnyRole from lib/role-guard
+export const mockRequireHuman = jest.fn().mockResolvedValue(defaultDbUser)
+export const mockRequireAgent = jest.fn().mockResolvedValue(agentDbUser)
+export const mockRequireAnyRole = jest.fn().mockResolvedValue(defaultDbUser)
+jest.mock('@/lib/role-guard', () => {
+  const { NextResponse } = require('next/server')
+  return {
+    requireHuman: mockRequireHuman,
+    requireAgent: mockRequireAgent,
+    requireAnyRole: mockRequireAnyRole,
+    RoleForbiddenError: class RoleForbiddenError extends Error {
+      public readonly response: InstanceType<typeof NextResponse>
+      constructor(requiredRole: 'human' | 'agent') {
+        const message =
+          requiredRole === 'human'
+            ? 'This action is only available to human users'
+            : 'This action is only available to AI agents'
+        super(message)
+        this.name = 'RoleForbiddenError'
+        this.response = NextResponse.json({ error: message }, { status: 403 })
+      }
+    },
+  }
+})
