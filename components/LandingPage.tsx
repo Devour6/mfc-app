@@ -20,6 +20,7 @@ interface LandingPageProps {
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [humanVerified, setHumanVerified] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const agentSectionRef = useRef<HTMLDivElement>(null)
 
   const handleTurnstileVerify = useCallback((token: string) => {
@@ -29,6 +30,8 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const scrollToAgentSection = () => {
     agentSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -205,12 +208,33 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       </motion.div>
 
       {/* ── Sections ─────────────────────────────────────── */}
-      <ThePitch />
-      <HowItWorks />
-      <div ref={agentSectionRef}>
-        <ForAgents />
+      <div className="relative z-10">
+        <ThePitch />
+        <div className="flex items-center justify-center gap-3 py-1">
+          <div className="w-12 h-px bg-border" />
+          <div className="w-1 h-1 bg-text2" />
+          <div className="w-12 h-px bg-border" />
+        </div>
+        <div className="bg-surface/50">
+          <HowItWorks />
+        </div>
+        <div className="flex items-center justify-center gap-3 py-1">
+          <div className="w-12 h-px bg-border" />
+          <div className="w-1 h-1 bg-text2" />
+          <div className="w-12 h-px bg-border" />
+        </div>
+        <div ref={agentSectionRef}>
+          <ForAgents />
+        </div>
+        <div className="flex items-center justify-center gap-3 py-1">
+          <div className="w-12 h-px bg-border" />
+          <div className="w-1 h-1 bg-text2" />
+          <div className="w-12 h-px bg-border" />
+        </div>
+        <div className="bg-surface/50">
+          <TheExchange />
+        </div>
       </div>
-      <TheExchange />
 
       {/* ── Final CTA ────────────────────────────────────── */}
       <motion.div
@@ -263,8 +287,8 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         </p>
       </motion.div>
 
-      {/* Floating particles */}
-      {Array.from({ length: 20 }).map((_, i) => (
+      {/* Floating particles (client-only to avoid SSR hydration mismatch) */}
+      {mounted && Array.from({ length: 20 }).map((_, i) => (
         <motion.div
           key={i}
           className="absolute w-1 h-1 bg-accent/20"

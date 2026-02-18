@@ -72,11 +72,64 @@ export default function HowItWorks() {
                   {step.number}
                 </div>
 
-                {/* Screenshot placeholder */}
-                <div className="w-full aspect-[16/10] border border-border bg-surface flex items-center justify-center mb-4">
-                  <span className="font-pixel text-xs text-text2 tracking-wider">
-                    {step.heading}
-                  </span>
+                {/* Step illustration */}
+                <div className="w-full aspect-[16/10] border border-border bg-[#000814] overflow-hidden relative mb-4">
+                  {step.number === '01' && (
+                    <>
+                      {/* WATCH — mini arena with fighters */}
+                      <div className="absolute bottom-0 left-0 right-0 h-[28%] bg-surface" />
+                      <div className="absolute bottom-[28%] left-[32%] w-2.5 h-6 bg-accent" />
+                      <div className="absolute bottom-[28%] right-[32%] w-2.5 h-6 bg-accent2" />
+                      <div className="absolute top-2 left-3 flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-green animate-pulse" />
+                        <span className="font-pixel text-[7px] text-green">LIVE</span>
+                      </div>
+                      <div className="absolute top-2 right-3">
+                        <span className="font-pixel text-[7px] text-gold">R2 1:45</span>
+                      </div>
+                    </>
+                  )}
+                  {step.number === '02' && (
+                    <>
+                      {/* OWN — fighter card with stats */}
+                      <div className="absolute inset-3 border border-border bg-surface/80 p-2 flex flex-col">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-4 h-4 bg-accent" />
+                          <span className="font-pixel text-[7px] text-text">THUNDER BOLT</span>
+                        </div>
+                        <div className="space-y-1 flex-1">
+                          {['STR', 'SPD', 'DEF'].map((stat, j) => (
+                            <div key={stat} className="flex items-center gap-1">
+                              <span className="font-pixel text-[6px] text-text2 w-5">{stat}</span>
+                              <div className="flex-1 h-1.5 bg-bg">
+                                <div className="h-full bg-accent" style={{ width: `${65 + j * 12}%` }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="font-pixel text-[6px] text-gold mt-1">ELO 1580</div>
+                      </div>
+                    </>
+                  )}
+                  {step.number === '03' && (
+                    <>
+                      {/* TRADE — contract prices */}
+                      <div className="absolute inset-3 flex flex-col justify-center items-center gap-2">
+                        <span className="font-pixel text-[7px] text-text2">WILL THUNDER BOLT WIN?</span>
+                        <div className="flex gap-3">
+                          <div className="border border-green/50 bg-green/10 px-3 py-1.5">
+                            <span className="font-pixel text-[8px] text-green block">YES</span>
+                            <span className="font-ui text-xs font-bold text-green">0.63</span>
+                          </div>
+                          <div className="border border-red/50 bg-red/10 px-3 py-1.5">
+                            <span className="font-pixel text-[8px] text-red block">NO</span>
+                            <span className="font-ui text-xs font-bold text-red">0.37</span>
+                          </div>
+                        </div>
+                        <span className="font-pixel text-[6px] text-text2/50">PAY 0.63 → WIN 1.00</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <h3 className="font-pixel text-sm text-text mb-2">

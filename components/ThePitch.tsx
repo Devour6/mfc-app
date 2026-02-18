@@ -32,12 +32,45 @@ export default function ThePitch() {
           className="w-full max-w-[384px] mx-auto md:mx-0"
         >
           <div
-            className="w-full aspect-[16/10] border border-border bg-surface flex items-center justify-center overflow-hidden"
+            className="w-full aspect-[16/10] border border-border bg-[#000814] overflow-hidden relative"
             style={{ imageRendering: 'pixelated' }}
           >
-            <span className="font-pixel text-xs text-text2 tracking-wider">
-              SCREENSHOT
-            </span>
+            {/* Mini ring floor */}
+            <div className="absolute bottom-0 left-0 right-0 h-[28%] bg-surface border-t border-border" />
+            {/* Ropes */}
+            <div className="absolute left-[8%] right-[8%] top-[30%] h-px bg-accent/15" />
+            <div className="absolute left-[8%] right-[8%] top-[42%] h-px bg-accent/15" />
+            <div className="absolute left-[8%] right-[8%] top-[54%] h-px bg-accent/15" />
+            {/* Corner posts */}
+            <div className="absolute left-[8%] top-[28%] w-1 h-[44%] bg-accent" />
+            <div className="absolute right-[8%] top-[28%] w-1 h-[44%] bg-accent" />
+            {/* Fighter 1 (red) */}
+            <div className="absolute bottom-[28%] left-[30%] -translate-x-1/2">
+              <div className="w-3 h-3 bg-accent mx-auto mb-px" />
+              <div className="w-4 h-5 bg-accent mx-auto" />
+              <div className="flex gap-px justify-center">
+                <div className="w-1.5 h-4 bg-accent" />
+                <div className="w-1.5 h-4 bg-accent" />
+              </div>
+            </div>
+            {/* Fighter 2 (blue) */}
+            <div className="absolute bottom-[28%] right-[30%] translate-x-1/2">
+              <div className="w-3 h-3 bg-accent2 mx-auto mb-px" />
+              <div className="w-4 h-5 bg-accent2 mx-auto" />
+              <div className="flex gap-px justify-center">
+                <div className="w-1.5 h-4 bg-accent2" />
+                <div className="w-1.5 h-4 bg-accent2" />
+              </div>
+            </div>
+            {/* VS text */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="font-pixel text-xs text-text2/20">VS</span>
+            </div>
+            {/* LIVE indicator */}
+            <div className="absolute top-2 right-3 flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-green animate-pulse" />
+              <span className="font-pixel text-[8px] text-green">LIVE</span>
+            </div>
           </div>
         </motion.div>
 

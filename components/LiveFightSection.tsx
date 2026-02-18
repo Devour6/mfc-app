@@ -26,8 +26,8 @@ interface LiveFightSectionProps {
   simplified?: boolean
 }
 
-// Sample fighter data
-const sampleFighters: Fighter[] = [
+// Fallback fighters when DB is unavailable
+const FALLBACK_FIGHTERS: Fighter[] = [
   {
     id: 'ironclad-7',
     name: 'IRONCLAD-7',
@@ -70,6 +70,12 @@ const sampleFighters: Fighter[] = [
   }
 ]
 
+function pickRandomPair(pool: Fighter[]): [Fighter, Fighter] {
+  if (pool.length < 2) return [FALLBACK_FIGHTERS[0], FALLBACK_FIGHTERS[1]]
+  const shuffled = [...pool].sort(() => Math.random() - 0.5)
+  return [shuffled[0], shuffled[1]]
+}
+
 export default function LiveFightSection({
   onFightComplete,
   simplified = false,
@@ -93,6 +99,25 @@ export default function LiveFightSection({
   const [settledBets, setSettledBets] = useState<SettledBet[]>([])
   const [showSettlement, setShowSettlement] = useState(false)
 
+  // Active fighter pair (DB-backed or fallback)
+  const [fighters, setFighters] = useState<Fighter[]>(FALLBACK_FIGHTERS)
+  const leaderboardFighters = useGameStore(state => state.leaderboardFighters)
+  const fetchLeaderboard = useGameStore(state => state.fetchLeaderboard)
+  const leaderboardFightersRef = useRef(leaderboardFighters)
+  useEffect(() => { leaderboardFightersRef.current = leaderboardFighters }, [leaderboardFighters])
+  const pairInitialized = useRef(false)
+
+  // Fetch fighters from DB on mount
+  useEffect(() => { fetchLeaderboard() }, [fetchLeaderboard])
+
+  // Pick initial pair when leaderboard loads
+  useEffect(() => {
+    if (leaderboardFighters.length >= 2 && !pairInitialized.current) {
+      pairInitialized.current = true
+      setFighters(pickRandomPair(leaderboardFighters))
+    }
+  }, [leaderboardFighters])
+
   // Connect to game store for reactive credits + role
   const credits = useGameStore(state => state.user.credits)
   const isAgent = useGameStore(state => state.user.isAgent)
@@ -113,7 +138,7 @@ export default function LiveFightSection({
 
   // In onboarding, YES = "picked fighter wins". If user picked fighter2,
   // we need to flip the market's yesPrice (which always represents fighter1).
-  const pickedIsFighter2 = pickedFighter === sampleFighters[1].id
+  const pickedIsFighter2 = pickedFighter === fighters[1].id
 
   // Show simplified market panel when onboarding reaches market-open step
   const showSimplifiedMarket = simplified && (
@@ -162,8 +187,8 @@ export default function LiveFightSection({
 
   // Initialize fight and market engines
   useEffect(() => {
-    const fighter1 = sampleFighters[0]
-    const fighter2 = sampleFighters[1]
+    const fighter1 = fighters[0]
+    const fighter2 = fighters[1]
 
     // Build bias config for first fight in simplified (onboarding) mode
     const biasConfig: FightBiasConfig | undefined =
@@ -248,22 +273,26 @@ export default function LiveFightSection({
             }
           }
 
-          // Auto-restart after delay if enabled
+          // Auto-restart after delay if enabled — pick new fighter pair
           if (autoRestartRef.current) {
             restartTimerRef.current = setTimeout(() => {
               restartTimerRef.current = null
-              fight.restart()
-              // Stop old market engine before creating new one
-              marketEngineRef.current?.stop()
-              const newMarket = new MarketEngine(
-                `Will ${fighter1.name} win?`,
-                0.5 + (Math.random() - 0.5) * 0.2, // Slight random variation
-                setMarketState
-              )
-              newMarket.start()
-              marketEngineRef.current = newMarket
-              setShowFightCard(true)
-              setTimeout(() => setShowFightCard(false), 3000)
+              const pool = leaderboardFightersRef.current
+              if (pool.length >= 2) {
+                setFighters(pickRandomPair(pool))
+              } else {
+                fight.restart()
+                marketEngineRef.current?.stop()
+                const newMarket = new MarketEngine(
+                  `Will ${fighter1.name} win?`,
+                  0.5 + (Math.random() - 0.5) * 0.2,
+                  setMarketState
+                )
+                newMarket.start()
+                marketEngineRef.current = newMarket
+                setShowFightCard(true)
+                setTimeout(() => setShowFightCard(false), 3000)
+              }
             }, 5000)
           }
         }
@@ -320,29 +349,28 @@ export default function LiveFightSection({
         restartTimerRef.current = null
       }
     }
-  }, [simplified]) // Re-initialize only if simplified mode changes
+  }, [simplified, fighters]) // Re-initialize when simplified mode or fighters change
 
   const handleRestartFight = () => {
-    if (fightEngine) {
-      fightEngine.restart()
-      setDemoSettlement(null)
+    setDemoSettlement(null)
+    setCommentary([])
+    setCurrentCommentary(null)
 
-      // Stop old market engine before creating new one
+    // Pick new fighter pair if DB fighters available, otherwise restart same fight
+    if (leaderboardFighters.length >= 2) {
+      setFighters(pickRandomPair(leaderboardFighters))
+    } else if (fightEngine) {
+      fightEngine.restart()
       marketEngineRef.current?.stop()
-      const fighter1 = sampleFighters[0]
       const newMarket = new MarketEngine(
-        `Will ${fighter1.name} win?`,
+        `Will ${fighters[0].name} win?`,
         0.5 + (Math.random() - 0.5) * 0.2,
         setMarketState
       )
       newMarket.start()
       marketEngineRef.current = newMarket
-
-      setCommentary([])
-      setCurrentCommentary(null)
       setShowFightCard(true)
       setTimeout(() => setShowFightCard(false), 3000)
-
       soundManager.play('bell', 0.8)
     }
   }
@@ -395,7 +423,7 @@ export default function LiveFightSection({
       {/* Fight Card Overlay */}
       {showFightCard && (
         <FightCard 
-          fighters={sampleFighters}
+          fighters={fighters}
           onDismiss={() => setShowFightCard(false)}
         />
       )}
@@ -430,7 +458,7 @@ export default function LiveFightSection({
           <div className="flex-1 bg-bg relative overflow-hidden">
             <EnhancedFightCanvas 
               fightState={fightState} 
-              fighters={sampleFighters}
+              fighters={fighters}
               onRoundStart={(round) => {
                 setCommentary(prev => [{
                   id: Date.now().toString(),
@@ -578,7 +606,7 @@ export default function LiveFightSection({
               <div className="absolute inset-0 z-30">
                 <FightReplayViewer
                   recording={replayRecording}
-                  fighters={sampleFighters}
+                  fighters={fighters}
                   onClose={() => setShowReplay(false)}
                 />
               </div>
@@ -588,12 +616,12 @@ export default function LiveFightSection({
           {/* Onboarding prompt (simplified mode only) */}
           {simplified && marketState && (
             <OnboardingPrompt
-              fighter1Name={sampleFighters[0].name}
-              fighter2Name={sampleFighters[1].name}
+              fighter1Name={fighters[0].name}
+              fighter2Name={fighters[1].name}
               yesPrice={marketState.yesPrice}
               visible={showOnboardingPrompt}
               onPick={(fighter) => {
-                const fighterId = fighter === 'fighter1' ? sampleFighters[0].id : sampleFighters[1].id
+                const fighterId = fighter === 'fighter1' ? fighters[0].id : fighters[1].id
                 useGameStore.setState({ pickedFighter: fighterId })
                 advanceOnboarding('picked-side')
                 setShowOnboardingPrompt(false)
@@ -604,7 +632,7 @@ export default function LiveFightSection({
           {/* Contract concept card (simplified mode, after fighter pick) */}
           {simplified && marketState && (
             <ContractConceptCard
-              fighterName={pickedIsFighter2 ? sampleFighters[1].name : sampleFighters[0].name}
+              fighterName={pickedIsFighter2 ? fighters[1].name : fighters[0].name}
               fighterColor={pickedIsFighter2 ? 'accent2' : 'accent'}
               yesPrice={pickedIsFighter2 ? 1 - marketState.yesPrice : marketState.yesPrice}
               visible={onboardingStep === 'picked-side'}
@@ -622,7 +650,7 @@ export default function LiveFightSection({
           <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
             {/* Live Stats Overlay */}
             <div className="border-b border-border">
-              <LiveStatsOverlay fightState={fightState} fighters={sampleFighters} />
+              <LiveStatsOverlay fightState={fightState} fighters={fighters} />
             </div>
 
             {/* Trading Panel */}
@@ -630,7 +658,7 @@ export default function LiveFightSection({
               <TradingPanel
                 marketState={marketState}
                 fightState={fightState}
-                fighters={sampleFighters}
+                fighters={fighters}
                 credits={credits}
                 onPlaceBet={(bet: BettingSlip) => {
                   const success = placeBetAndDeduct(bet.amount, `Bet on ${bet.marketId}`)
@@ -657,7 +685,7 @@ export default function LiveFightSection({
         {/* Simplified Market Panel (onboarding mode, after "Got it") */}
         {showSimplifiedMarket && marketState && (
           <SimplifiedMarketPanel
-            fighterName={pickedIsFighter2 ? sampleFighters[1].name : sampleFighters[0].name}
+            fighterName={pickedIsFighter2 ? fighters[1].name : fighters[0].name}
             marketState={pickedIsFighter2 ? { ...marketState, yesPrice: 1 - marketState.yesPrice } : marketState}
             demoCredits={demoCredits}
             demoTrades={demoTrades}

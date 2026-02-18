@@ -359,10 +359,7 @@ export default function EnhancedFightCanvas({
     
     // Draw visual effects
     drawVisualEffects(ctx)
-    
-    // Draw round progress HUD
-    drawRoundProgressHUD(ctx, width, height)
-    
+
     // Draw momentum indicator
     drawMomentumIndicator(ctx, width, height)
   }
@@ -1357,27 +1354,6 @@ export default function EnhancedFightCanvas({
     const flashAlpha = effect.intensity * 0.1 * (1 - (Date.now() % effect.duration) / effect.duration)
     ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`
     ctx.fillRect(-offsetX, -offsetY, ctx.canvas.width, ctx.canvas.height)
-  }
-
-  const drawRoundProgressHUD = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    const hudY = 30
-    
-    // Round timer background
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'
-    ctx.fillRect(width/2 - 80, hudY - 15, 160, 30)
-    
-    // Round number and time
-    ctx.fillStyle = '#ffd700'
-    ctx.font = 'bold 16px "Press Start 2P"'
-    ctx.textAlign = 'center'
-    ctx.fillText(`ROUND ${fightState.round}`, width/2, hudY - 2)
-
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '14px "Inter"'
-    const timeLeft = Math.max(0, fightState.clock) // countdown from 180
-    const minutes = Math.floor(timeLeft / 60)
-    const seconds = timeLeft % 60
-    ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')}`, width/2, hudY + 12)
   }
 
   const drawMomentumIndicator = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
