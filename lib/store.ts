@@ -1,17 +1,19 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { 
-  Fighter, 
-  ExtendedUser, 
-  TournamentBracket, 
-  Achievement, 
+import {
+  Fighter,
+  ExtendedUser,
+  TournamentBracket,
+  Achievement,
   AchievementNotification,
   LoginStreak,
   DailyReward,
   FightHistoryEntry,
   CreditTransaction,
   CreditPurchaseOption,
-  WalletConnection 
+  WalletConnection,
+  OnboardingStep,
+  DemoTrade,
 } from '@/types'
 import { FighterEvolutionEngine } from './evolution-engine'
 import { TournamentEngine } from './tournament-engine'
@@ -57,6 +59,16 @@ interface GameState {
   // Leaderboard
   leaderboardFighters: Fighter[]
   fetchLeaderboard: () => Promise<void>
+
+  // Onboarding (FTUE)
+  onboardingStep: OnboardingStep
+  demoCredits: number
+  demoTrades: DemoTrade[]
+  hasCompletedOnboarding: boolean
+  pickedFighter: string | null
+  advanceOnboarding: (step: OnboardingStep) => void
+  placeDemoTrade: (side: 'yes' | 'no', price: number, quantity: number) => DemoTrade
+  resetOnboarding: () => void
 }
 
 // Sample fighters with evolution data
@@ -583,6 +595,52 @@ export const useGameStore = create<GameState>()(
 
       // Leaderboard
       leaderboardFighters: [],
+
+      // Onboarding (FTUE)
+      onboardingStep: 'watching' as OnboardingStep,
+      demoCredits: 100,
+      demoTrades: [] as DemoTrade[],
+      hasCompletedOnboarding: false,
+      pickedFighter: null,
+
+      advanceOnboarding: (step: OnboardingStep) => {
+        set(state => {
+          const updates: Partial<GameState> = { onboardingStep: step }
+          if (step === 'completed') {
+            updates.hasCompletedOnboarding = true
+          }
+          return updates as GameState
+        })
+      },
+
+      placeDemoTrade: (side: 'yes' | 'no', price: number, quantity: number): DemoTrade => {
+        const cost = price * quantity
+        const trade: DemoTrade = {
+          id: `demo-${Date.now()}`,
+          side,
+          price,
+          quantity,
+          pnl: 0,
+          settled: false,
+        }
+
+        set(state => ({
+          demoCredits: Math.max(0, state.demoCredits - cost),
+          demoTrades: [...state.demoTrades, trade],
+        }))
+
+        return trade
+      },
+
+      resetOnboarding: () => {
+        set({
+          onboardingStep: 'watching' as OnboardingStep,
+          demoCredits: 100,
+          demoTrades: [] as DemoTrade[],
+          hasCompletedOnboarding: false,
+          pickedFighter: null,
+        })
+      },
 
       fetchLeaderboard: async () => {
         try {
