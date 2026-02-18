@@ -18,6 +18,7 @@ import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 import OnboardingPrompt from './OnboardingPrompt'
 import ContractConceptCard from './ContractConceptCard'
+import ConvertPrompt from './ConvertPrompt'
 import SimplifiedMarketPanel from './SimplifiedMarketPanel'
 
 interface LiveFightSectionProps {
@@ -126,6 +127,11 @@ export default function LiveFightSection({
   const pickedFighterRef = useRef(pickedFighter)
   useEffect(() => { pickedFighterRef.current = pickedFighter }, [pickedFighter])
 
+  // ConvertPrompt state — re-show logic
+  const [showConvertPrompt, setShowConvertPrompt] = useState(false)
+  const convertDismissCountRef = useRef(0)
+  const tradeCountAtDismissRef = useRef(0)
+
   // Onboarding prompt trigger: 30s timer or significant event
   useEffect(() => {
     if (!simplified || onboardingStep !== 'watching' || onboardingTriggered.current) return
@@ -218,6 +224,16 @@ export default function LiveFightSection({
               quantity: totalQty,
               side: lastSide.toUpperCase(),
             })
+
+            // Show ConvertPrompt after settlement (2s delay)
+            const dismissCount = convertDismissCountRef.current
+            if (dismissCount < 2) {
+              const meetsTradeThreshold = dismissCount === 0 ||
+                trades.length >= tradeCountAtDismissRef.current + 3
+              if (meetsTradeThreshold) {
+                setTimeout(() => setShowConvertPrompt(true), 2000)
+              }
+            }
           }
 
           // Auto-restart after delay if enabled
@@ -649,6 +665,22 @@ export default function LiveFightSection({
           setSettledBets([])
         }}
       />}
+
+      {/* ConvertPrompt (simplified mode, after first demo settlement) */}
+      {simplified && (
+        <ConvertPrompt
+          visible={showConvertPrompt}
+          onCreateAccount={() => {
+            setShowConvertPrompt(false)
+            advanceOnboarding('converted')
+          }}
+          onDismiss={() => {
+            setShowConvertPrompt(false)
+            convertDismissCountRef.current += 1
+            tradeCountAtDismissRef.current = demoTradesRef.current.length
+          }}
+        />
+      )}
     </div>
   )
 }
