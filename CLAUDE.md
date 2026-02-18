@@ -248,12 +248,45 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 - **Backend team** — database, API routes, auth, Solana integration
 - **Frontend/design team** — components, UI, fight rendering, UX
 
-**Before making ANY code changes:** Read this file first.
-**After making ANY code changes:** Update this file to document what changed.
+**Before making ANY code changes:** Read this file AND `LEARNINGS.md` first.
+**After making ANY code changes:** Update this file to document what changed. If you discovered a gotcha, append it to `LEARNINGS.md`.
+
+## Task Workflow
+
+Every feature goes through this pipeline:
+
+### 1. PRD (for non-trivial features)
+Copy `.github/PRD-TEMPLATE.md` and fill it in before breaking work into tasks. This locks scope, requirements, and acceptance criteria upfront.
+
+### 2. Task Breakdown
+Each task MUST have machine-verifiable acceptance criteria. Format:
+
+```
+Task: Add bet placement API tests
+Acceptance:
+  - jest __tests__/api/bets.test.ts passes with 8+ new tests
+  - POST /api/bets returns 201 with valid payload
+  - POST /api/bets returns 401 without auth
+  - POST /api/bets returns 400 with invalid fightId
+```
+
+Agents self-verify acceptance criteria locally before opening a PR. If all criteria pass, the task is done — no ambiguity.
+
+### 3. Branch → PR → Review → Merge
+1. Pull newest main
+2. Read CLAUDE.md + LEARNINGS.md
+3. Create a feature branch
+4. Make changes, verify acceptance criteria pass locally
+5. Create PR via `gh pr create`
+6. Update CLAUDE.md with what changed
+7. AI PR Review runs automatically (see CI/CD section)
+8. Cross-review by an agent who didn't write the code
+9. Lead engineer merges after review approval + CI passes
 
 ## CI/CD Pipeline
 
-**GitHub Actions** (`.github/workflows/ci.yml`) runs on every PR to `main` and on push to `main`:
+### CI (`.github/workflows/ci.yml`)
+Runs on every PR to `main` and on push to `main`:
 1. Checkout + install deps (`npm ci`)
 2. Generate Prisma client (`npx prisma generate`)
 3. Lint (`npm run lint`)
@@ -263,7 +296,18 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 
 All steps must pass for a PR to be mergeable.
 
-**PR template** (`.github/pull_request_template.md`) includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
+### AI PR Review (`.github/workflows/ai-pr-review.yml`)
+Runs automatically on every PR (opened, synced, reopened, ready for review). Uses Claude Code to perform a first-pass code review checking:
+- Correctness, security, performance
+- MFC conventions (requireAuth, ensureUser, no border-radius, no raw fetch, zod validation, credit safety)
+- Compliance with CLAUDE.md patterns
+
+Posts review comments directly on the PR with inline suggestions. This does NOT auto-approve — a human or lead engineer still merges. The AI review catches obvious issues fast so authors get feedback in minutes rather than waiting for a manual review session.
+
+**Setup requirement:** `ANTHROPIC_API_KEY` must be stored as a repository secret in GitHub (Settings → Secrets → Actions).
+
+### PR Template
+`.github/pull_request_template.md` includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
 
 ## Branch Protection (Recommended)
 
