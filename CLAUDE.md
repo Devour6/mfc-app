@@ -23,7 +23,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 
 ```
 app/                  → Next.js App Router (layout, page, globals.css)
-components/           → 28 React components (~7,300 lines) — see UI Architecture below
+components/           → 34 React components (~8,500 lines) — see UI Architecture below
 lib/                  → Core engines (~3,400 lines)
   ├── fight-engine.ts       → Tick-based combat simulation
   ├── market-engine.ts      → Price discovery + order book
@@ -118,7 +118,7 @@ Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
-- `placeBetAndDeduct()` — atomic credit deduction (balance check inside `set()` callback prevents TOCTOU race), returns success/failure
+- `placeBetAndDeduct(amount, desc, betDetails?)` — atomic credit deduction with optional API backend. When `betDetails` (fightId, side, odds) provided, fires `POST /api/bets` with optimistic local deduction + rollback on failure. Syncs credits from server on success.
 - `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
 - Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
 - Persists to localStorage
@@ -205,16 +205,16 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 98 tests: 91 API integration + 7 credit safety (atomic deduction, TOCTOU prevention, insufficient balance rejection)
+- 163+ tests passing: 91 API integration + 27 Solana + 45 frontend (component, credit-safety, navigation, fight)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
+- Store → API wiring: `placeBetAndDeduct` fires `POST /api/bets` with optimistic deduction + `fetchCredits()` rollback; `spendCreditsTraining` fires `POST /api/training`; `addFighter` fires `POST /api/fighters`; `fetchLeaderboard` uses `GET /api/fighters`
+- Solana wallet connect/disconnect in ArenaTopBar (shows truncated address + SOL balance when connected)
+- SOL↔credits deposit/withdrawal modal (`SolCreditBridgeModal.tsx`) — builds SOL transfer tx, calls `confirmDeposit()` to credit account
+- Credit safety: optimistic updates use `fetchCredits()` for server-sync on success and rollback on failure (no blind `credits + amount`)
 
 **Not Yet Built:**
 - Stripe frontend integration (CreditPurchase component exists but not wired to checkout-session API)
-- Solana wallet connect button in ArenaTopBar (provider already in app layout, hook built)
-- SOL↔credits deposit/withdrawal UI (credit-bridge.ts built, needs modal + frontend wiring)
-- Store → API migration (placeBetAndDeduct, training, fighter creation still use local state only)
-- Frontend component tests outdated (reference old 6-tab nav, need updating for ArenaTopBar/TradingPanel)
 - Multiplayer (mock data only)
 - Deployment/environment setup
 
@@ -258,7 +258,7 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 2. Generate Prisma client (`npx prisma generate`)
 3. Lint (`npm run lint`)
 4. Type check (`npm run type-check`)
-5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests only (frontend tests need prop fixes)
+5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests in CI; frontend tests also passing locally
 6. Build (`npm run build`)
 
 All steps must pass for a PR to be mergeable.
@@ -277,7 +277,7 @@ These settings should be configured by the repo admin on the `main` branch:
 ## Testing
 
 Jest 30 with three projects:
-- **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
+- **frontend** (`jsdom`) — component tests in `__tests__/` (45 tests, all passing)
 - **api** (`node`) — API route integration tests in `__tests__/api/` (43 tests, all passing)
 - **solana** — Solana module tests in `__tests__/solana/` (27 tests, all passing). Per-file `@jest-environment` directives (node for credit-bridge, jsdom for use-wallet hook).
 
