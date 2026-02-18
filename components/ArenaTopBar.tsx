@@ -12,6 +12,7 @@ interface ArenaTopBarProps {
   onToggleSound: () => void
   onGoHome: () => void
   onOpenSection: (section: ArenaSection) => void
+  onOpenBridge?: () => void
 }
 
 const dropdownSections: { id: ArenaSection; label: string; icon: string }[] = [
@@ -28,6 +29,7 @@ export default function ArenaTopBar({
   onToggleSound,
   onGoHome,
   onOpenSection,
+  onOpenBridge,
 }: ArenaTopBarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -108,9 +110,13 @@ export default function ArenaTopBar({
 
       {/* Right: Credits + Sound toggle */}
       <div className="flex items-center gap-3">
-        <div className="font-pixel text-[10px] text-gold">
+        <button
+          onClick={onOpenBridge}
+          className="font-pixel text-[10px] text-gold hover:text-gold/80 transition-colors"
+          title="SOL Bridge — deposit or withdraw"
+        >
           ${credits.toLocaleString()}
-        </div>
+        </button>
         <button
           onClick={onToggleSound}
           className="font-pixel text-[10px] text-text2 hover:text-text transition-colors"
