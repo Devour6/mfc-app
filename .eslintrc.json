@@ -4,7 +4,7 @@
   "rules": {
     "react-hooks/exhaustive-deps": "warn",
     "@next/next/no-img-element": "off",
-    "mfc/no-rounded-corners": "warn",
+    "mfc/no-rounded-corners": "error",
     "mfc/no-raw-fetch-in-components": "error"
   }
 }
