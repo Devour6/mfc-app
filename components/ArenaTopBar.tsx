@@ -55,6 +55,7 @@ export default function ArenaTopBar({
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false)
+        setTooltipItem(null)
       }
     }
     if (dropdownOpen) {
@@ -62,6 +63,43 @@ export default function ArenaTopBar({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [dropdownOpen])
+
+  // --- Locked menu item state ---
+  const [unlockStage, setUnlockStage] = useState<'locked' | 'animating' | 'done'>(
+    onboardingMode ? 'locked' : 'done'
+  )
+  const unlockPlayedRef = useRef(!onboardingMode)
+
+  // Detect onboarding completion (transition from locked → ready to animate)
+  useEffect(() => {
+    if (!onboardingMode && !unlockPlayedRef.current) {
+      // Will animate on next dropdown open
+    }
+  }, [onboardingMode])
+
+  // Play unlock animation on first dropdown open after onboarding completes
+  useEffect(() => {
+    if (!dropdownOpen || onboardingMode || unlockStage !== 'locked' || unlockPlayedRef.current) return
+
+    setUnlockStage('animating')
+    const totalMs = dropdownSections.length * 100 + 500
+    setTimeout(() => {
+      setUnlockStage('done')
+      unlockPlayedRef.current = true
+    }, totalMs)
+  }, [dropdownOpen, onboardingMode, unlockStage])
+
+  // Tooltip for locked items
+  const [tooltipItem, setTooltipItem] = useState<ArenaSection | null>(null)
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showTooltip = (id: ArenaSection) => {
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+    tooltipTimerRef.current = setTimeout(() => setTooltipItem(id), 200)
+  }
+  const hideTooltip = () => {
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+    setTooltipItem(null)
+  }
 
   const truncatedAddress = address ? `${address.slice(0, 4)}...${address.slice(-4)}` : null
 
@@ -87,8 +125,8 @@ export default function ArenaTopBar({
           <span className="font-pixel text-[10px] text-green">LIVE</span>
         </div>
 
-        {/* More dropdown (hidden during onboarding) */}
-        {!onboardingMode && <div className="relative" ref={dropdownRef}>
+        {/* More dropdown — always visible, items locked during onboarding */}
+        <div className="relative" ref={dropdownRef}>
           <motion.button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-1 font-pixel text-[10px] text-text2 hover:text-text transition-colors px-2 py-1"
@@ -107,23 +145,70 @@ export default function ArenaTopBar({
                 transition={{ duration: 0.15 }}
                 className="absolute top-full left-0 mt-1 bg-surface2 border border-border z-50 min-w-[180px] shadow-lg shadow-black/40"
               >
-                {dropdownSections.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => {
-                      onOpenSection(section.id)
-                      setDropdownOpen(false)
-                    }}
-                    className="w-full text-left px-3 py-2.5 font-pixel text-[10px] text-text2 hover:text-text hover:bg-surface transition-colors flex items-center gap-2"
-                  >
-                    <span>{section.icon}</span>
-                    <span>{section.label}</span>
-                  </button>
-                ))}
+                {dropdownSections.map((section, index) => {
+                  const isLocked = unlockStage === 'locked'
+
+                  return (
+                    <div key={section.id} className="relative">
+                      <motion.button
+                        initial={false}
+                        animate={
+                          unlockStage === 'animating'
+                            ? {
+                                opacity: [0.4, 1, 1],
+                                color: ['rgba(136,136,153,0.4)', '#ffd700', '#888899'],
+                              }
+                            : isLocked
+                            ? { opacity: 0.4, color: 'rgba(136,136,153,0.4)' }
+                            : { opacity: 1, color: '#888899' }
+                        }
+                        transition={
+                          unlockStage === 'animating'
+                            ? { delay: index * 0.1, duration: 0.5, times: [0, 0.6, 1], ease: 'easeOut' }
+                            : { duration: 0 }
+                        }
+                        whileHover={!isLocked ? { color: '#e8e8f0', backgroundColor: '#12121a' } : undefined}
+                        onClick={() => {
+                          if (isLocked) {
+                            setTooltipItem(tooltipItem === section.id ? null : section.id)
+                            return
+                          }
+                          onOpenSection(section.id)
+                          setDropdownOpen(false)
+                        }}
+                        onMouseEnter={() => isLocked ? showTooltip(section.id) : undefined}
+                        onMouseLeave={() => isLocked ? hideTooltip() : undefined}
+                        className={`w-full text-left px-3 py-2.5 font-pixel text-[10px] flex items-center gap-2 ${
+                          isLocked ? 'cursor-not-allowed' : 'cursor-pointer'
+                        }`}
+                      >
+                        <span>{section.icon}</span>
+                        <span>{section.label}</span>
+                      </motion.button>
+
+                      {/* Locked item tooltip */}
+                      <AnimatePresence>
+                        {tooltipItem === section.id && isLocked && (
+                          <motion.div
+                            initial={{ opacity: 0, x: -4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-surface2 border border-border px-3 py-2 z-50 max-w-[200px] whitespace-nowrap"
+                          >
+                            <span className="font-ui text-xs text-text2">Complete onboarding to unlock</span>
+                            {/* Arrow pointing left */}
+                            <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[6px] border-r-surface2" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )
+                })}
               </motion.div>
             )}
           </AnimatePresence>
-        </div>}
+        </div>
       </div>
 
       {/* Right: Wallet + Credits + Buy + Sound toggle */}
