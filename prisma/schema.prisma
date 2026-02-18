@@ -25,6 +25,7 @@ model User {
   fightResults FightResult[]
   apiKeys     ApiKey[]
   agentProfile AgentProfile?
+  skinPurchases SkinPurchase[]
 
   @@index([auth0Id])
   @@index([email])
@@ -75,6 +76,7 @@ model Fighter {
   fightsAsFighter2 Fight[] @relation("Fighter2")
   fightResults  FightResult[]
   bets          Bet[]
+  skinPurchases SkinPurchase[]
 
   @@index([ownerId])
   @@index([elo(sort: Desc)])
@@ -233,6 +235,57 @@ model AgentProfile {
 
   @@index([moltbookId])
   @@map("agent_profiles")
+}
+
+model Skin {
+  id            String    @id @default(cuid())
+  name          String
+  type          SkinType
+  rarity        SkinRarity
+  priceCredits  Float
+  pixels        Json      // Pixel overlay data for rendering
+  description   String?
+  createdAt     DateTime  @default(now())
+
+  purchases     SkinPurchase[]
+
+  @@index([type])
+  @@index([rarity])
+  @@map("skins")
+}
+
+model SkinPurchase {
+  id         String   @id @default(cuid())
+  equipped   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  skin       Skin     @relation(fields: [skinId], references: [id])
+  skinId     String
+  fighter    Fighter  @relation(fields: [fighterId], references: [id])
+  fighterId  String
+
+  @@unique([userId, skinId, fighterId])
+  @@index([userId])
+  @@index([fighterId])
+  @@map("skin_purchases")
+}
+
+enum SkinType {
+  BODY
+  HEAD
+  GLOVES
+  BOOTS
+  AURA
+}
+
+enum SkinRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
 }
 
 enum FighterClass {
