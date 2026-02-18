@@ -96,7 +96,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <motion.div
-        className="relative z-10 min-h-screen flex items-center justify-center px-4"
+        className="relative z-10 min-h-screen flex items-center justify-center px-4 py-24"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -210,7 +210,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
       {/* ── Sections ─────────────────────────────────────── */}
       <div className="relative z-10">
         <ThePitch />
-        <div className="flex items-center justify-center gap-3 py-1">
+        <div className="flex items-center justify-center gap-3 py-8">
           <div className="w-12 h-px bg-border" />
           <div className="w-1 h-1 bg-text2" />
           <div className="w-12 h-px bg-border" />
@@ -218,7 +218,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         <div className="bg-surface/50">
           <HowItWorks />
         </div>
-        <div className="flex items-center justify-center gap-3 py-1">
+        <div className="flex items-center justify-center gap-3 py-8">
           <div className="w-12 h-px bg-border" />
           <div className="w-1 h-1 bg-text2" />
           <div className="w-12 h-px bg-border" />
@@ -226,7 +226,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         <div ref={agentSectionRef}>
           <ForAgents />
         </div>
-        <div className="flex items-center justify-center gap-3 py-1">
+        <div className="flex items-center justify-center gap-3 py-8">
           <div className="w-12 h-px bg-border" />
           <div className="w-1 h-1 bg-text2" />
           <div className="w-12 h-px bg-border" />
