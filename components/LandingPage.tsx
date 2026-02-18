@@ -2,11 +2,12 @@
 
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import ThePitch from '@/components/ThePitch'
 import HowItWorks from '@/components/HowItWorks'
 import ForAgents from '@/components/ForAgents'
 import TheExchange from '@/components/TheExchange'
+import TurnstileWidget from '@/components/TurnstileWidget'
 
 const HeroFightPreview = dynamic(() => import('@/components/HeroFightPreview'), {
   ssr: false,
@@ -18,7 +19,12 @@ interface LandingPageProps {
 
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [humanVerified, setHumanVerified] = useState(false)
   const agentSectionRef = useRef<HTMLDivElement>(null)
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setHumanVerified(true)
+  }, [])
 
   const scrollToAgentSection = () => {
     agentSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -139,13 +145,17 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             variants={itemVariants}
             className="flex flex-col items-center gap-4 mb-12"
           >
+            <div className="mb-3">
+              <TurnstileWidget onVerify={handleTurnstileVerify} />
+            </div>
             <motion.button
               variants={buttonVariants}
               initial="rest"
-              whileHover="hover"
-              whileTap="tap"
-              onClick={() => onEnterArena()}
-              className="group relative font-pixel text-sm tracking-wider px-10 py-5 bg-accent border-2 border-accent text-white transition-all duration-300 hover:shadow-2xl hover:shadow-accent/30 min-w-[260px]"
+              whileHover={humanVerified ? "hover" : undefined}
+              whileTap={humanVerified ? "tap" : undefined}
+              onClick={() => humanVerified && onEnterArena()}
+              disabled={!humanVerified}
+              className={`group relative font-pixel text-sm tracking-wider px-10 py-5 border-2 text-white transition-all duration-300 min-w-[260px] ${humanVerified ? 'bg-accent border-accent hover:shadow-2xl hover:shadow-accent/30' : 'bg-accent/40 border-accent/40 cursor-not-allowed opacity-60'}`}
             >
               <span className="relative z-10 flex items-center justify-center gap-3">
                 <motion.span
@@ -153,7 +163,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
-                ENTER THE ARENA
+                {humanVerified ? 'ENTER THE ARENA' : 'VERIFY HUMANITY...'}
               </span>
             </motion.button>
             <p className="text-sm text-text2">
@@ -214,10 +224,11 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           <motion.button
             variants={buttonVariants}
             initial="rest"
-            whileHover="hover"
-            whileTap="tap"
-            onClick={() => onEnterArena()}
-            className="group relative font-pixel text-sm tracking-wider px-10 py-5 bg-accent border-2 border-accent text-white transition-all duration-300 hover:shadow-2xl hover:shadow-accent/30 min-w-[260px]"
+            whileHover={humanVerified ? "hover" : undefined}
+            whileTap={humanVerified ? "tap" : undefined}
+            onClick={() => humanVerified && onEnterArena()}
+            disabled={!humanVerified}
+            className={`group relative font-pixel text-sm tracking-wider px-10 py-5 border-2 text-white transition-all duration-300 min-w-[260px] ${humanVerified ? 'bg-accent border-accent hover:shadow-2xl hover:shadow-accent/30' : 'bg-accent/40 border-accent/40 cursor-not-allowed opacity-60'}`}
           >
             <span className="relative z-10 flex items-center justify-center gap-3">
               <motion.span
@@ -225,7 +236,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 animate={{ opacity: [1, 0.3, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               />
-              ENTER THE ARENA
+              {humanVerified ? 'ENTER THE ARENA' : 'VERIFY HUMANITY...'}
             </span>
           </motion.button>
           <p className="text-sm text-text2 mt-4">
