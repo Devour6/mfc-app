@@ -83,6 +83,7 @@ export default function LiveFightSection({
   const [showFightCard, setShowFightCard] = useState(!simplified)
   const [autoRestartEnabled, setAutoRestartEnabled] = useState(!simplified)
   const autoRestartRef = useRef(!simplified)
+  useEffect(() => { autoRestartRef.current = autoRestartEnabled }, [autoRestartEnabled])
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [replayRecording, setReplayRecording] = useState<FightRecording | null>(null)
   const [showReplay, setShowReplay] = useState(false)
