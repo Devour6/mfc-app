@@ -145,9 +145,8 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "=== Summary ==="
 if [[ $ERRORS -gt 0 ]]; then
-  echo "WARNING: $ERRORS violation(s) found (non-blocking until Phase 1 cleanup is complete)"
-  # TODO: Change to 'exit 1' after Luna removes rounded corners and Orcus adds ensureUser + tests
-  exit 0
+  echo "FAILED: $ERRORS violation(s) found"
+  exit 1
 else
   echo "PASSED: All MFC route checks clean"
   exit 0

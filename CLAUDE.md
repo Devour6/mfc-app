@@ -214,6 +214,22 @@ Two teams work on this repo:
 - **Backend team** — database, API routes, auth, Solana integration
 - **Frontend/design team** — components, UI, fight rendering, UX
 
+### Frontend team: build-breaking rules
+
+These rules are **error mode** in CI — violations will fail your build:
+
+1. **No `rounded` or `border-radius`** — The ESLint rule `mfc/no-rounded-corners` catches all Tailwind `rounded*` classes and `borderRadius` styles in `.tsx`/`.jsx` files. If you have a legitimate exception (e.g., a drag handle affordance), use:
+   ```tsx
+   {/* eslint-disable-next-line mfc/no-rounded-corners -- reason */}
+   <div className="rounded-full" />
+   ```
+
+2. **No raw `fetch()` in `components/`** — Use `lib/api-client.ts` instead. The ESLint rule `mfc/no-raw-fetch-in-components` enforces this. `fetch()` in `lib/` or `app/api/` is fine.
+
+3. **Every new API route needs a test** — If you add a route file under `app/api/`, it must have a corresponding test in `__tests__/api/`. The CI route linter (`scripts/lint-mfc-routes.sh`) will fail the build otherwise.
+
+4. **API auth changed to role-based** — Routes now use `requireHuman()`, `requireAgent()`, or `requireAnyRole()` instead of plain `requireAuth()`. See the API Routes table for which guard each route uses. Frontend calls are unaffected (Auth0 sessions pass `requireHuman()` automatically).
+
 ## Task Workflow
 
 Every feature goes through this pipeline:
@@ -274,7 +290,7 @@ Runs on every PR. Uses OpenAI (gpt-4o) for first-pass code review checking corre
 - `requireAuth → ensureUser` — auth-required routes must call both.
 - `route test coverage` — every route file needs a corresponding test in `__tests__/api/`.
 
-Route checks currently in **warn mode** (non-blocking).
+Route checks are **error mode** — violations will fail CI.
 
 ### PR Template
 `.github/pull_request_template.md` includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
