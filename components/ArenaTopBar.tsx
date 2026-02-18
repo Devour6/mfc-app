@@ -15,6 +15,7 @@ interface ArenaTopBarProps {
   onOpenSection: (section: ArenaSection) => void
   onOpenBridge?: () => void
   onBuyCredits?: () => void
+  onboardingMode?: boolean
 }
 
 const dropdownSections: { id: ArenaSection; label: string; icon: string }[] = [
@@ -33,6 +34,7 @@ export default function ArenaTopBar({
   onOpenSection,
   onOpenBridge,
   onBuyCredits,
+  onboardingMode = false,
 }: ArenaTopBarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -85,8 +87,8 @@ export default function ArenaTopBar({
           <span className="font-pixel text-[10px] text-green">LIVE</span>
         </div>
 
-        {/* More dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        {/* More dropdown (hidden during onboarding) */}
+        {!onboardingMode && <div className="relative" ref={dropdownRef}>
           <motion.button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-1 font-pixel text-[10px] text-text2 hover:text-text transition-colors px-2 py-1"
@@ -121,7 +123,7 @@ export default function ArenaTopBar({
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </div>}
       </div>
 
       {/* Right: Wallet + Credits + Buy + Sound toggle */}
