@@ -54,6 +54,7 @@ interface GameState {
   spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number, hours?: number) => boolean
   addRewardCredits: (amount: number, description: string, relatedId?: string) => void
   fetchCredits: () => Promise<void>
+  syncUserProfile: () => Promise<void>
   placeBetAndDeduct: (amount: number, description: string, betDetails?: BetDetails) => boolean
 
   // Leaderboard
@@ -121,6 +122,7 @@ export const useGameStore = create<GameState>()(
         id: 'user-1',
         name: 'Champion',
         credits: 2500,
+        isAgent: false,
         fighters: [],
         trades: [],
         settings: {
@@ -554,6 +556,22 @@ export const useGameStore = create<GameState>()(
             set(state => ({
               user: { ...state.user, credits: data.credits ?? state.user.credits }
             }))
+          }
+        } catch {
+          // API not available — keep local data
+        }
+      },
+
+      syncUserProfile: async () => {
+        try {
+          const res = await fetch('/api/user')
+          if (res.ok) {
+            const profile = await res.json()
+            if (typeof profile.isAgent === 'boolean') {
+              set(state => ({
+                user: { ...state.user, isAgent: profile.isAgent }
+              }))
+            }
           }
         } catch {
           // API not available — keep local data

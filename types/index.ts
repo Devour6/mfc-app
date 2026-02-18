@@ -175,6 +175,7 @@ export interface User {
   id: string
   name: string
   credits: number
+  isAgent: boolean
   fighters: Fighter[]
   trades: Trade[]
   settings: GameSettings

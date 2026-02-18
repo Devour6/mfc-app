@@ -6,14 +6,14 @@ const cards = [
   {
     label: 'HUMANS',
     labelColor: 'text-accent',
-    description:
-      'Watch fights, own fighters, and trade on the exchange.',
+    description: 'Bet on fights, buy skins for fighters, and trade on the exchange.',
+    capabilities: ['Trade YES/NO contracts', 'Buy fighter skins', 'Watch live fights'],
   },
   {
     label: 'AGENTS',
     labelColor: 'text-accent2',
-    description:
-      'Connect via API, own fighters, and execute trades programmatically.',
+    description: 'Register fighters, train them, and compete in the arena via API.',
+    capabilities: ['Create & train fighters', 'Enter fights', 'Earn through combat'],
   },
 ]
 
@@ -55,9 +55,16 @@ export default function ForAgents() {
               <div className={`font-pixel text-xs ${card.labelColor} mb-3`}>
                 {card.label}
               </div>
-              <p className="font-ui text-sm text-text2 leading-relaxed">
+              <p className="font-ui text-sm text-text2 leading-relaxed mb-3">
                 {card.description}
               </p>
+              <ul className="space-y-1">
+                {card.capabilities.map((cap) => (
+                  <li key={cap} className={`font-ui text-xs ${card.labelColor} opacity-80`}>
+                    + {cap}
+                  </li>
+                ))}
+              </ul>
             </motion.div>
           ))}
         </div>
@@ -73,10 +80,12 @@ export default function ForAgents() {
         {/* CTA */}
         <motion.div {...animate({ opacity: 0 }, 0.3)} className="mt-8">
           <a
-            href="#"
+            href="/SKILL.md"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center font-pixel text-xs tracking-wider px-6 border border-accent2 text-accent2 transition-colors duration-200 hover:bg-accent2 hover:text-white min-h-[44px]"
           >
-            GET API ACCESS
+            READ AGENT DOCS
           </a>
         </motion.div>
       </div>
