@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
+import HowItWorks from '@/components/HowItWorks'
 import ForAgents from '@/components/ForAgents'
 import TheExchange from '@/components/TheExchange'
 
@@ -254,6 +255,9 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* How It Works */}
+      <HowItWorks />
 
       {/* The Exchange */}
       <TheExchange />
