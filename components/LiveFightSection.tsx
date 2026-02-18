@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import EnhancedFightCanvas from './EnhancedFightCanvas'
-import MarketSidebar from './MarketSidebar'
 import FightCard from './FightCard'
 import CommentaryBar from './CommentaryBar'
-import LiveBettingInterface from './LiveBettingInterface'
+import TradingPanel, { BettingSlip } from './TradingPanel'
 import LiveStatsOverlay from './LiveStatsOverlay'
 import FightReplayViewer from './FightReplayViewer'
 import BetSettlementOverlay, { SettledBet } from './BetSettlementOverlay'
@@ -423,20 +422,21 @@ export default function LiveFightSection({
           <CommentaryBar commentary={currentCommentary} />
         </div>
 
-        {/* Right Sidebar - Markets & Betting - Always visible */}
+        {/* Right Sidebar - Unified Trading Panel */}
         <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
           {/* Live Stats Overlay */}
           <div className="border-b border-border">
             <LiveStatsOverlay fightState={fightState} fighters={sampleFighters} />
           </div>
 
-          {/* Live Betting Interface */}
-          <div className="border-b border-border p-4">
-            <LiveBettingInterface
+          {/* Trading Panel */}
+          <div className="flex-1 overflow-hidden">
+            <TradingPanel
+              marketState={marketState}
               fightState={fightState}
               fighters={sampleFighters}
-              creditBalance={credits}
-              onPlaceBet={(bet) => {
+              credits={credits}
+              onPlaceBet={(bet: BettingSlip) => {
                 const success = placeBetAndDeduct(bet.amount, `Bet on ${bet.marketId}`)
                 if (success) {
                   setActiveBets(prev => [...prev, {
@@ -451,18 +451,8 @@ export default function LiveFightSection({
                   soundManager.play('punch-light', 0.4)
                 }
               }}
-              onMarketUpdate={(marketId) => {
-                console.log('Market updated:', marketId)
-              }}
-            />
-          </div>
-
-          {/* Market Sidebar */}
-          <div className="flex-1 overflow-hidden">
-            <MarketSidebar
-              marketState={marketState}
-              fighters={sampleFighters}
-              onTrade={handleTrade}
+              onPlaceTrade={handleTrade}
+              activeBets={activeBets}
             />
           </div>
         </div>
