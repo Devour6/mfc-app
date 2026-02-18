@@ -179,7 +179,7 @@ export default function WalletConnect({
                       )}
                     </button>
                   </div>
-                  <div className="font-ui text-sm text-text1 bg-surface2 rounded px-2 py-1">
+                  <div className="font-ui text-sm text-text1 bg-surface2 px-2 py-1">
                     {walletConnection.address}
                   </div>
                 </div>

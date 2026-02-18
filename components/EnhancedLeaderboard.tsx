@@ -140,7 +140,7 @@ export default function EnhancedLeaderboard({
               <button
                 key={period}
                 onClick={() => onTimeframeChange?.(period)}
-                className={`px-3 py-1 font-pixel text-xs transition-colors rounded ${
+                className={`px-3 py-1 font-pixel text-xs transition-colors ${
                   timeframe === period
                     ? 'bg-accent text-white'
                     : 'text-text2 hover:text-text'
@@ -161,7 +161,7 @@ export default function EnhancedLeaderboard({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-bg border border-border rounded px-2 py-1 text-sm text-text"
+              className="bg-bg border border-border px-2 py-1 text-sm text-text"
             >
               <option value="elo">ELO Rating</option>
               <option value="winRate">Win Rate</option>
@@ -176,7 +176,7 @@ export default function EnhancedLeaderboard({
             <select
               value={filterClass}
               onChange={(e) => setFilterClass(e.target.value)}
-              className="bg-bg border border-border rounded px-2 py-1 text-sm text-text"
+              className="bg-bg border border-border px-2 py-1 text-sm text-text"
             >
               <option value="all">All Classes</option>
               <option value="lightweight">Lightweight</option>
@@ -270,8 +270,8 @@ export default function EnhancedLeaderboard({
 
               {/* Streak */}
               <div className="col-span-2 flex items-center gap-2">
-                <div className={`px-2 py-1 rounded font-pixel text-xs ${
-                  fighter.streak.type === 'win' 
+                <div className={`px-2 py-1 font-pixel text-xs ${
+                  fighter.streak.type === 'win'
                     ? 'bg-green text-white' 
                     : 'bg-red text-white'
                 }`}>
