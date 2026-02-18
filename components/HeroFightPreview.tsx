@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 /* ── Canvas constants ──────────────────────────────────── */
 const W = 480
 const H = 280
-const S = 3 // pixel scale (smaller than full canvas's 4)
+const P = 3 // pixel block size (matches arena's P=4 scaled down)
 const TICK_MS = 200
 const PRICE_MS = 2000
 const RESTART_MS = 3000
@@ -48,6 +48,251 @@ function newFight(): Fight {
   }
 }
 
+/* ── Pixel helpers (ported from EnhancedFightCanvas) ───── */
+function px(c: CanvasRenderingContext2D, x: number, y: number, color: string) {
+  c.fillStyle = color
+  c.fillRect(x, y, P, P)
+}
+
+function pxo(c: CanvasRenderingContext2D, x: number, y: number, color: string) {
+  c.fillStyle = '#111'
+  c.fillRect(x - 1, y - 1, P + 2, P + 2)
+  c.fillStyle = color
+  c.fillRect(x, y, P, P)
+}
+
+function drawSprite(c: CanvasRenderingContext2D, ox: number, oy: number, grid: string[][]) {
+  for (let row = 0; row < grid.length; row++) {
+    for (let col = 0; col < grid[row].length; col++) {
+      const color = grid[row][col]
+      if (color) px(c, ox + col * P, oy + row * P, color)
+    }
+  }
+}
+
+function shade(hex: string): string {
+  const r = Math.max(0, parseInt(hex.slice(1, 3), 16) - 40)
+  const g = Math.max(0, parseInt(hex.slice(3, 5), 16) - 40)
+  const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 40)
+  return `rgb(${r},${g},${b})`
+}
+
+function highlight(hex: string): string {
+  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + 50)
+  const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + 50)
+  const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + 50)
+  return `rgb(${r},${g},${b})`
+}
+
+/* ── Body part drawing (ported from EnhancedFightCanvas) ── */
+function drawHead(c: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, anim: string, hp: number) {
+  const s = shade(color)
+  const h = highlight(color)
+  const ox = x - P * 3
+  const oy = y - P * 4
+
+  const O = '#111'
+  const C = color
+  const head: string[][] = [
+    ['',  O,  O,  O,  O, ''],
+    [ O,  h,  C,  C,  s,  O],
+    [ O,  C,  C,  C,  C,  O],
+    [ O,  C,  C,  C,  C,  O],
+    [ O,  C,  C,  C,  C,  O],
+    ['',  O,  C,  C,  O, ''],
+    ['', '',  O,  O, '', ''],
+  ]
+  drawSprite(c, ox, oy, head)
+
+  if (anim === 'hit') {
+    px(c, ox + P * 1, oy + P * 2, '#ff0')
+    px(c, ox + P * 4, oy + P * 2, '#ff0')
+    px(c, ox + P * 2, oy + P * 4, '#c00')
+    px(c, ox + P * 3, oy + P * 4, '#c00')
+  } else if (hp < 25) {
+    px(c, ox + P * 1, oy + P * 2, '#800')
+    px(c, ox + P * 4, oy + P * 2, '#800')
+    px(c, ox + P * 2, oy + P * 4, '#c00')
+  } else {
+    px(c, ox + P * 1, oy + P * 2, '#fff')
+    px(c, ox + P * 4, oy + P * 2, '#fff')
+    const pupilOff = facing > 0 ? 1 : 0
+    px(c, ox + P * (1 + pupilOff), oy + P * 2, '#000')
+    px(c, ox + P * (4 + pupilOff), oy + P * 2, '#000')
+    px(c, ox + P * 2, oy + P * 4, '#000')
+    px(c, ox + P * 3, oy + P * 4, '#000')
+  }
+}
+
+function drawTorso(c: CanvasRenderingContext2D, x: number, y: number, color: string, anim: string) {
+  const s = shade(color)
+  const h = highlight(color)
+  const O = '#111'
+  const C = color
+  const T = anim === 'hit' ? '#cc0000' : '#222'
+
+  const ox = x - P * 4
+  const oy = y
+
+  const torso: string[][] = [
+    ['',  O,  O,  C,  C,  O,  O, ''],
+    [ O,  h,  C,  C,  C,  C,  s,  O],
+    [ O,  C,  h,  C,  C,  s,  C,  O],
+    [ O,  C,  C,  C,  C,  C,  C,  O],
+    [ O,  C,  C,  s,  s,  C,  C,  O],
+    [ O,  C,  C,  C,  C,  C,  C,  O],
+    ['',  O,  T,  T,  T,  T,  O, ''],
+    ['',  O,  T,  T,  T,  T,  O, ''],
+    ['', '',  O,  T,  T,  O, '', ''],
+    ['', '',  O,  O,  O,  O, '', ''],
+  ]
+  drawSprite(c, ox, oy, torso)
+}
+
+function drawArm(c: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, isFront: boolean, extension: number, isPunching: boolean) {
+  const s = shade(color)
+  const G = isPunching && isFront ? '#ffdd00' : '#eee'
+  const GS = isPunching && isFront ? '#cc9900' : '#bbb'
+
+  c.save()
+  c.translate(x, y)
+  if (isFront && isPunching) {
+    const angle = extension > 15 ? 55 : 45
+    c.rotate(facing * angle * Math.PI / 180)
+  }
+
+  const armLen = Math.floor((20 + extension) / P)
+  const ox = -P
+
+  for (let i = 0; i < Math.floor(armLen * 0.5); i++) {
+    pxo(c, ox, i * P, color)
+    pxo(c, ox + P, i * P, s)
+  }
+
+  const forearmStart = Math.floor(armLen * 0.5) * P
+  for (let i = 0; i < Math.floor(armLen * 0.4); i++) {
+    pxo(c, ox, forearmStart + i * P, color)
+    pxo(c, ox + P, forearmStart + i * P, s)
+  }
+
+  const gloveY = (armLen - 2) * P
+  for (let gy = 0; gy < 3; gy++) {
+    for (let gx = 0; gx < 3; gx++) {
+      const gc = (gy === 0 || gx === 0) ? G : GS
+      pxo(c, ox - P + gx * P, gloveY + gy * P, gc)
+    }
+  }
+
+  if (isPunching && isFront) {
+    c.fillStyle = 'rgba(255,221,0,0.3)'
+    c.fillRect(ox - P * 2, gloveY - P, P * 5, P * 5)
+  }
+
+  c.restore()
+}
+
+function drawLeg(c: CanvasRenderingContext2D, x: number, y: number, color: string, isFront: boolean, walkOffset: number) {
+  const s = shade(color)
+
+  c.save()
+  c.translate(x, y + walkOffset)
+
+  const legLen = Math.floor(28 / P)
+  const ox = -P
+
+  for (let i = 0; i < Math.floor(legLen * 0.5); i++) {
+    pxo(c, ox, i * P, color)
+    pxo(c, ox + P, i * P, s)
+    if (i < 2) pxo(c, ox + P * 2, i * P, s)
+  }
+
+  const shinStart = Math.floor(legLen * 0.5) * P
+  for (let i = 0; i < Math.floor(legLen * 0.4); i++) {
+    pxo(c, ox, shinStart + i * P, color)
+    pxo(c, ox + P, shinStart + i * P, s)
+  }
+
+  const bootY = (legLen - 2) * P
+  pxo(c, ox - P, bootY, '#111')
+  pxo(c, ox, bootY, '#222')
+  pxo(c, ox + P, bootY, '#222')
+  pxo(c, ox + P * 2, bootY, '#111')
+  pxo(c, ox - P, bootY + P, '#111')
+  pxo(c, ox, bootY + P, '#111')
+  pxo(c, ox + P, bootY + P, '#111')
+  pxo(c, ox + P * 2, bootY + P, '#111')
+
+  c.restore()
+}
+
+/* ── Composite humanoid fighter drawing ────────────────── */
+function drawHumanoid(c: CanvasRenderingContext2D, sim: Sim, color: string) {
+  const x = sim.x
+  const baseY = FLOOR_Y - 15
+
+  // Animation state
+  const headY = baseY - 50
+  let torsoY = baseY - 35
+  let armY = baseY - 30
+  const legY = baseY - 10
+  let bodyLean = 0
+  let armExtension = 0
+  const isPunching = sim.anim === 'punching'
+
+  switch (sim.anim) {
+    case 'punching':
+      armExtension = 18
+      bodyLean = sim.facing * 5
+      break
+    case 'hit':
+      bodyLean = -sim.facing * 10
+      torsoY += 2
+      break
+    case 'walking':
+      bodyLean = sim.facing * 2
+      break
+  }
+
+  c.save()
+
+  // Hit flash
+  if (sim.anim === 'hit' && sim.frame % 4 < 2) {
+    c.globalAlpha = 0.7
+  }
+
+  // Body lean
+  c.translate(x, baseY)
+  c.rotate(bodyLean * Math.PI / 180)
+  c.translate(-x, -baseY)
+
+  // Walk animation offsets for legs
+  const walkOff = sim.anim === 'walking' ? Math.sin(sim.frame * 0.5) * 3 : 0
+
+  // Back leg
+  const backLegX = sim.facing === 1 ? x - 6 : x + 6
+  drawLeg(c, backLegX, legY, color, false, -walkOff)
+
+  // Back arm
+  const backArmX = sim.facing === 1 ? x - 12 : x + 12
+  drawArm(c, backArmX, armY, color, sim.facing, false, 0, false)
+
+  // Torso
+  drawTorso(c, x, torsoY, color, sim.anim)
+
+  // Head
+  drawHead(c, x, headY, color, sim.facing, sim.anim, sim.hp)
+
+  // Front arm (punching arm)
+  const frontArmX = sim.facing === 1 ? x + 12 : x - 12
+  drawArm(c, frontArmX, armY, color, sim.facing, true, armExtension, isPunching)
+
+  // Front leg
+  const frontLegX = sim.facing === 1 ? x + 6 : x - 6
+  drawLeg(c, frontLegX, legY, color, true, walkOff)
+
+  c.restore()
+}
+
 /* ── Ring drawing ──────────────────────────────────────── */
 function drawRing(c: CanvasRenderingContext2D) {
   c.fillStyle = '#0a0a0f'
@@ -85,131 +330,31 @@ function drawRing(c: CanvasRenderingContext2D) {
   c.restore()
 }
 
-/* ── Fighter sprite: idle ──────────────────────────────── */
-function drawIdle(
-  c: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  color: string,
-  f: number,
-) {
-  // Head
-  c.fillStyle = color
-  c.fillRect(x + 2 * S, y, 4 * S, 4 * S)
-
-  // Eyes
-  c.fillStyle = '#ffffff'
-  if (f === 1) {
-    c.fillRect(x + 4 * S, y + S, S, S)
-    c.fillRect(x + 2 * S, y + S, S, S)
-  } else {
-    c.fillRect(x + 3 * S, y + S, S, S)
-    c.fillRect(x + 5 * S, y + S, S, S)
-  }
-
-  // Body
-  c.fillStyle = color
-  c.fillRect(x + S, y + 4 * S, 6 * S, 6 * S)
-
-  // Arms (guard position)
-  if (f === 1) {
-    c.fillRect(x + 7 * S, y + 3 * S, 2 * S, 3 * S)
-    c.fillRect(x - S, y + 4 * S, 2 * S, 3 * S)
-  } else {
-    c.fillRect(x - S, y + 3 * S, 2 * S, 3 * S)
-    c.fillRect(x + 7 * S, y + 4 * S, 2 * S, 3 * S)
-  }
-
-  // Gloves
-  c.fillStyle = '#ffffff'
-  if (f === 1) {
-    c.fillRect(x + 7 * S, y + 2 * S, 2 * S, 2 * S)
-    c.fillRect(x - S, y + 3 * S, 2 * S, 2 * S)
-  } else {
-    c.fillRect(x - S, y + 2 * S, 2 * S, 2 * S)
-    c.fillRect(x + 7 * S, y + 3 * S, 2 * S, 2 * S)
-  }
-
-  // Legs
-  c.fillStyle = color
-  c.fillRect(x + S, y + 10 * S, 2 * S, 5 * S)
-  c.fillRect(x + 5 * S, y + 10 * S, 2 * S, 5 * S)
-}
-
-/* ── Fighter sprite: punching ──────────────────────────── */
-function drawPunch(
-  c: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  color: string,
-  f: number,
-) {
-  drawIdle(c, x, y, color, f)
-
-  // Extended arm + glove
-  c.fillStyle = color
-  if (f === 1) {
-    c.fillRect(x + 7 * S, y + 4 * S, 8 * S, 2 * S)
-    c.fillStyle = '#ffffff'
-    c.fillRect(x + 14 * S, y + 3 * S, 3 * S, 3 * S)
-  } else {
-    c.fillRect(x - 7 * S, y + 4 * S, 8 * S, 2 * S)
-    c.fillStyle = '#ffffff'
-    c.fillRect(x - 9 * S, y + 3 * S, 3 * S, 3 * S)
-  }
-}
-
-/* ── Fighter sprite: walking ───────────────────────────── */
-function drawWalk(
-  c: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  color: string,
-  f: number,
-  frame: number,
-) {
-  drawIdle(c, x, y, color, f)
-
-  const off = Math.sin(frame * 0.3) * S
-  c.fillStyle = color
-  c.fillRect(x + S, y + 10 * S + off, 2 * S, 5 * S - Math.abs(off))
-  c.fillRect(x + 5 * S, y + 10 * S - off, 2 * S, 5 * S - Math.abs(off))
-}
-
-/* ── Fighter composite (sprite + name + HP bar) ────────── */
+/* ── Fighter composite (humanoid + name + HP bar) ──────── */
 function drawFighter(
   c: CanvasRenderingContext2D,
   sim: Sim,
   name: string,
   color: string,
 ) {
-  const bx = sim.x - 6 * S
-  const by = FLOOR_Y - 20 - 16 * S
-
   c.save()
 
-  // Hit flash effect
-  if (sim.anim === 'hit' && sim.frame % 4 < 2) {
-    c.globalAlpha = 0.7
-    c.filter = 'brightness(1.5)'
-  }
+  // Dynamic shadow
+  c.fillStyle = 'rgba(0,0,0,0.3)'
+  c.save()
+  c.scale(1, 0.2)
+  c.beginPath()
+  c.arc(sim.x, (FLOOR_Y + 5) / 0.2, 18, 0, Math.PI * 2)
+  c.fill()
+  c.restore()
 
-  switch (sim.anim) {
-    case 'punching':
-      drawPunch(c, bx, by, color, sim.facing)
-      break
-    case 'walking':
-      drawWalk(c, bx, by, color, sim.facing, sim.frame)
-      break
-    default:
-      drawIdle(c, bx, by, color, sim.facing)
-      break
-  }
+  // Draw humanoid sprite
+  drawHumanoid(c, sim, color)
 
   c.restore()
 
-  // HP bar — 64x4, centered above fighter, 20px above head
-  const hpY = by - 20
+  // HP bar — centered above fighter
+  const hpY = FLOOR_Y - 85
   const hpX = sim.x - 32
 
   c.fillStyle = '#12121a'
@@ -220,14 +365,14 @@ function drawFighter(
   c.lineWidth = 1
   c.strokeRect(hpX, hpY, 64, 4)
 
-  // Fighter name — 12px above HP bar
+  // Fighter name
   c.fillStyle = color
   c.font = '10px "Press Start 2P"'
   c.textAlign = 'center'
-  c.fillText(name, sim.x, hpY - 12)
+  c.fillText(name, sim.x, hpY - 10)
 }
 
-/* ── HUD — round counter only ──────────────────────────── */
+/* ── HUD ───────────────────────────────────────────────── */
 function drawHUD(c: CanvasRenderingContext2D, round: number) {
   c.fillStyle = 'rgba(10,10,15,0.7)'
   c.fillRect(W / 2 - 40, 8, 80, 24)
@@ -246,7 +391,6 @@ function tick(fight: Fight): void {
 
   const { f1, f2 } = fight
 
-  // Advance animations
   for (const f of [f1, f2]) {
     if (f.dur > 0) {
       f.frame++
@@ -261,39 +405,13 @@ function tick(fight: Fight): void {
   const dist = Math.abs(f1.x - f2.x)
 
   if (dist > 80) {
-    // Far — approach quickly
-    if (f1.anim === 'idle') {
-      f1.x += 5
-      f1.anim = 'walking'
-      f1.dur = 3
-      f1.frame = 0
-    }
-    if (f2.anim === 'idle') {
-      f2.x -= 5
-      f2.anim = 'walking'
-      f2.dur = 3
-      f2.frame = 0
-    }
+    if (f1.anim === 'idle') { f1.x += 5; f1.anim = 'walking'; f1.dur = 3; f1.frame = 0 }
+    if (f2.anim === 'idle') { f2.x -= 5; f2.anim = 'walking'; f2.dur = 3; f2.frame = 0 }
   } else if (dist > 60) {
-    // Mid-range — approach slowly
-    if (f1.anim === 'idle') {
-      f1.x += 3
-      f1.anim = 'walking'
-      f1.dur = 2
-      f1.frame = 0
-    }
-    if (f2.anim === 'idle') {
-      f2.x -= 3
-      f2.anim = 'walking'
-      f2.dur = 2
-      f2.frame = 0
-    }
+    if (f1.anim === 'idle') { f1.x += 3; f1.anim = 'walking'; f1.dur = 2; f1.frame = 0 }
+    if (f2.anim === 'idle') { f2.x -= 3; f2.anim = 'walking'; f2.dur = 2; f2.frame = 0 }
   } else {
-    // In range — combat
-    for (const [atk, def] of [
-      [f1, f2],
-      [f2, f1],
-    ] as [Sim, Sim][]) {
+    for (const [atk, def] of [[f1, f2], [f2, f1]] as [Sim, Sim][]) {
       if (atk.anim !== 'idle' || atk.stamina < 5) continue
       if (Math.random() < 0.18) {
         atk.anim = 'punching'
@@ -301,7 +419,6 @@ function tick(fight: Fight): void {
         atk.frame = 0
         atk.stamina = Math.max(0, atk.stamina - 3)
 
-        // Hit check
         if (Math.random() < 0.55) {
           const dmg = 5 + Math.random() * 10
           const power = Math.random() < 0.15
@@ -314,12 +431,10 @@ function tick(fight: Fight): void {
     }
   }
 
-  // Stamina regen when idle
   for (const f of [f1, f2]) {
     if (f.anim === 'idle') f.stamina = Math.min(100, f.stamina + 1)
   }
 
-  // Bounds + minimum gap
   f1.x = Math.max(60, Math.min(420, f1.x))
   f2.x = Math.max(60, Math.min(420, f2.x))
   if (f2.x - f1.x < 30) {
@@ -328,14 +443,12 @@ function tick(fight: Fight): void {
     f2.x = mid + 15
   }
 
-  // Clock
   fight.tick++
   if (fight.tick >= TICKS_PER_SEC) {
     fight.tick = 0
     fight.clock--
   }
 
-  // KO / round / decision
   if (f1.hp <= 0 || f2.hp <= 0) {
     fight.phase = 'ended'
   } else if (fight.clock <= 0) {
@@ -372,7 +485,6 @@ export default function HeroFightPreview() {
   const [prices, setPrices] = useState({ yes: 0.5, no: 0.5 })
   const [reduced, setReduced] = useState(false)
 
-  // Detect prefers-reduced-motion
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     setReduced(mq.matches)
@@ -381,7 +493,6 @@ export default function HeroFightPreview() {
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Main effect: simulation + rendering
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -390,7 +501,6 @@ export default function HeroFightPreview() {
     ctx.imageSmoothingEnabled = false
 
     if (reduced) {
-      // Static fallback: idle fighters, fixed HP, R2
       const f = newFight()
       f.f1.hp = 72
       f.f2.hp = 58
@@ -401,7 +511,6 @@ export default function HeroFightPreview() {
       return
     }
 
-    // Start simulation
     fightRef.current = newFight()
 
     const scheduleRestart = () => {
@@ -427,7 +536,6 @@ export default function HeroFightPreview() {
       }
     }, TICK_MS)
 
-    // Price ticker — update every 2s
     const priceId = setInterval(() => {
       const f = fightRef.current
       const total = f.f1.hp + f.f2.hp
@@ -437,7 +545,6 @@ export default function HeroFightPreview() {
       }
     }, PRICE_MS)
 
-    // rAF render loop
     const draw = () => {
       renderFrame(ctx, fightRef.current)
       rafRef.current = requestAnimationFrame(draw)
