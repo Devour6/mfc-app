@@ -138,6 +138,19 @@ export const registerAgentSchema = z.object({
   challengeAnswer: z.number({ message: 'Challenge answer must be a number' }),
 })
 
+// ─── Billing ──────────────────────────────────────────────────────────────
+
+export const BillingStatus = z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PAID'])
+
+export const createBillingRequestSchema = z.object({
+  amount: z.number().positive('Amount must be greater than 0'),
+  reason: z.string().min(1, 'Reason is required').max(500, 'Reason must be at most 500 characters'),
+})
+
+export const updateBillingRequestSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED']),
+})
+
 // ─── Stripe ────────────────────────────────────────────────────────────────
 
 export const checkoutSessionSchema = z.object({

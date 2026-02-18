@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const apiKeyValue = `mfc_sk_${randomBytes(32).toString('hex')}`
 
     // Create user + agent profile + API key in one transaction
-    const result = await prisma.$transaction(async (tx: any) => {
+    const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           auth0Id: agentAuthId,
