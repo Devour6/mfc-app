@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * Basic integration tests to ensure testing infrastructure works
  */
@@ -17,7 +19,7 @@ describe('Basic Integration Tests', () => {
     const testComponent = () => {
       return <div data-testid="test">Test Component</div>;
     };
-    
+
     expect(testComponent).toBeDefined();
   });
 
