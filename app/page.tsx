@@ -11,6 +11,7 @@ import RankingsSection from '@/components/RankingsSection'
 import TournamentBracket from '@/components/TournamentBracket'
 import AchievementSystem from '@/components/AchievementSystem'
 import FightersSection from '@/components/FightersSection'
+import SolCreditBridgeModal from '@/components/SolCreditBridgeModal'
 import CreditPurchase from '@/components/CreditPurchase'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
@@ -163,6 +164,7 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<'landing' | 'arena'>('landing')
   const [drawerSection, setDrawerSection] = useState<ArenaSection | null>(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [showBridge, setShowBridge] = useState(false)
   const [showPurchase, setShowPurchase] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
 
@@ -256,6 +258,7 @@ export default function Home() {
               onToggleSound={handleToggleSound}
               onGoHome={goHome}
               onOpenSection={handleOpenSection}
+              onOpenBridge={() => setShowBridge(true)}
               onBuyCredits={() => setShowPurchase(true)}
             />
 
@@ -343,6 +346,13 @@ export default function Home() {
               </AnimatePresence>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SOL Bridge Modal */}
+      <AnimatePresence>
+        {showBridge && (
+          <SolCreditBridgeModal credits={credits} onClose={() => setShowBridge(false)} />
         )}
       </AnimatePresence>
 

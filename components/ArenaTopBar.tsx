@@ -13,6 +13,7 @@ interface ArenaTopBarProps {
   onToggleSound: () => void
   onGoHome: () => void
   onOpenSection: (section: ArenaSection) => void
+  onOpenBridge?: () => void
   onBuyCredits?: () => void
 }
 
@@ -30,6 +31,7 @@ export default function ArenaTopBar({
   onToggleSound,
   onGoHome,
   onOpenSection,
+  onOpenBridge,
   onBuyCredits,
 }: ArenaTopBarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -143,6 +145,16 @@ export default function ArenaTopBar({
             className="font-pixel text-[10px] text-text2 border border-border px-2 py-1 hover:text-text hover:border-accent2 transition-colors disabled:opacity-50"
           >
             {connecting ? 'CONNECTING...' : 'WALLET'}
+          </button>
+        )}
+
+        {onOpenBridge && (
+          <button
+            onClick={onOpenBridge}
+            className="font-pixel text-[10px] text-gold hover:text-gold/80 transition-colors"
+            title="SOL Bridge — deposit or withdraw"
+          >
+            BRIDGE
           </button>
         )}
 
