@@ -111,6 +111,20 @@ export default function LiveFightSection({
     onboardingStep === 'converted'
   )
 
+  // Demo trade settlement state
+  const [demoSettlement, setDemoSettlement] = useState<{
+    won: boolean
+    winnerName: string
+    payout: number
+    profit: number
+    quantity: number
+    side: string
+  } | null>(null)
+  const demoTradesRef = useRef(demoTrades)
+  useEffect(() => { demoTradesRef.current = demoTrades }, [demoTrades])
+  const pickedFighterRef = useRef(pickedFighter)
+  useEffect(() => { pickedFighterRef.current = pickedFighter }, [pickedFighter])
+
   // Onboarding prompt trigger: 30s timer or significant event
   useEffect(() => {
     if (!simplified || onboardingStep !== 'watching' || onboardingTriggered.current) return
@@ -175,6 +189,29 @@ export default function LiveFightSection({
             }
             return []
           })
+
+          // Settle demo trades (onboarding mode)
+          if (demoTradesRef.current.length > 0) {
+            const winnerId = state.result!.winner
+            const trades = demoTradesRef.current
+            const totalQty = trades.reduce((s, t) => s + t.quantity, 0)
+            const totalCost = trades.reduce((s, t) => s + t.price * t.quantity, 0)
+            const lastSide = trades[trades.length - 1].side
+            // YES wins if picked fighter (fighter1 by convention for YES) won
+            const yesWins = winnerId === fighter1.id
+            const won = (lastSide === 'yes' && yesWins) || (lastSide === 'no' && !yesWins)
+            const payout = won ? totalQty : 0
+            const profit = payout - totalCost
+
+            setDemoSettlement({
+              won,
+              winnerName: winnerId === fighter1.id ? fighter1.name : fighter2.name,
+              payout,
+              profit,
+              quantity: totalQty,
+              side: lastSide.toUpperCase(),
+            })
+          }
 
           // Auto-restart after delay if enabled
           if (autoRestartEnabled) {
@@ -244,6 +281,7 @@ export default function LiveFightSection({
   const handleRestartFight = () => {
     if (fightEngine) {
       fightEngine.restart()
+      setDemoSettlement(null)
 
       // Stop old market engine before creating new one
       marketEngineRef.current?.stop()
@@ -436,6 +474,57 @@ export default function LiveFightSection({
                       </motion.button>
                     )}
                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Demo trade settlement overlay (simplified mode) */}
+            {simplified && fightState.result && demoSettlement && (
+              <motion.div
+                className="absolute inset-0 bg-black/90 flex items-center justify-center z-25"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.5 }}
+              >
+                <div className="text-center px-4 max-w-sm">
+                  {demoSettlement.won ? (
+                    <>
+                      <motion.div
+                        className="font-pixel text-2xl text-gold mb-3"
+                        animate={{
+                          textShadow: [
+                            '0 0 20px rgba(255,215,0,0.4)',
+                            '0 0 40px rgba(255,215,0,0.7)',
+                            '0 0 20px rgba(255,215,0,0.4)',
+                          ],
+                        }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        {demoSettlement.winnerName} wins!
+                      </motion.div>
+                      <div className="font-ui text-sm text-text mb-1">
+                        Your {demoSettlement.quantity} {demoSettlement.side} contracts pay {demoSettlement.payout.toFixed(2)}
+                      </div>
+                      <div className="font-pixel text-lg text-green mt-2">
+                        Profit: +{demoSettlement.profit.toFixed(2)}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-pixel text-2xl text-text2 mb-3">
+                        {demoSettlement.winnerName} wins.
+                      </div>
+                      <div className="font-ui text-sm text-text mb-1">
+                        Your {demoSettlement.quantity} {demoSettlement.side} contracts expire at 0.00
+                      </div>
+                      <div className="font-pixel text-lg text-red mt-2">
+                        Loss: {demoSettlement.profit.toFixed(2)}
+                      </div>
+                      <div className="font-ui text-xs text-text2 mt-4">
+                        Next fight starts in 10 seconds. Try again?
+                      </div>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}
