@@ -96,7 +96,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <motion.div
-        className="relative z-10 min-h-screen flex items-center justify-center px-4 py-24"
+        className="relative z-10 min-h-screen flex flex-col items-center justify-start px-4 pt-20 md:pt-28 pb-16"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
