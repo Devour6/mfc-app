@@ -12,6 +12,7 @@ interface ArenaTopBarProps {
   onToggleSound: () => void
   onGoHome: () => void
   onOpenSection: (section: ArenaSection) => void
+  onBuyCredits?: () => void
 }
 
 const dropdownSections: { id: ArenaSection; label: string; icon: string }[] = [
@@ -28,6 +29,7 @@ export default function ArenaTopBar({
   onToggleSound,
   onGoHome,
   onOpenSection,
+  onBuyCredits,
 }: ArenaTopBarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -106,11 +108,19 @@ export default function ArenaTopBar({
         </div>
       </div>
 
-      {/* Right: Credits + Sound toggle */}
+      {/* Right: Credits + Buy + Sound toggle */}
       <div className="flex items-center gap-3">
         <div className="font-pixel text-[10px] text-gold">
           ${credits.toLocaleString()}
         </div>
+        {onBuyCredits && (
+          <button
+            onClick={onBuyCredits}
+            className="font-pixel text-[8px] text-bg bg-gold px-2 py-1 hover:bg-gold/80 transition-colors"
+          >
+            BUY
+          </button>
+        )}
         <button
           onClick={onToggleSound}
           className="font-pixel text-[10px] text-text2 hover:text-text transition-colors"

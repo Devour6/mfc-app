@@ -301,9 +301,6 @@ export default function CreditsDashboard({
       <AnimatePresence>
         {activeModal === 'purchase' && (
           <CreditPurchase
-            walletConnection={walletConnection}
-            onConnectWallet={onConnectWallet}
-            onPurchase={onPurchaseCredits}
             onClose={() => setActiveModal(null)}
           />
         )}
