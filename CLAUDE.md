@@ -329,14 +329,14 @@ Posts review comments directly on the PR with inline suggestions. This does NOT 
 ### Custom Linters
 
 **ESLint rules** (via `eslint-plugin-mfc` in `eslint-rules/`):
-- `mfc/no-rounded-corners` (warn) — flags `rounded`, `rounded-*` Tailwind classes and `borderRadius` styles. MFC uses sharp corners only.
-- `mfc/no-raw-fetch-in-components` (error) — flags raw `fetch()` calls in `components/`. Use `lib/api-client.ts` instead.
+- `mfc/no-rounded-corners` (**error**) — flags `rounded`, `rounded-*` Tailwind classes and `borderRadius` styles. MFC uses sharp corners only. Adding rounded corners will fail the build.
+- `mfc/no-raw-fetch-in-components` (**error**) — flags raw `fetch()` calls in `components/`. Use `lib/api-client.ts` instead.
 
 **CI route checks** (`scripts/lint-mfc-routes.sh`):
 - `requireAuth → ensureUser` — auth-required routes must call both `requireAuth()` and `ensureUser()`.
 - `route test coverage` — every route file needs a corresponding test in `__tests__/api/`.
 
-Both currently in **warn mode** (non-blocking). Will be promoted to error after existing violations are cleaned up.
+Route checks currently in **warn mode** (non-blocking). Will be promoted to error after Orcus adds missing test files.
 
 ### PR Template
 `.github/pull_request_template.md` includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
