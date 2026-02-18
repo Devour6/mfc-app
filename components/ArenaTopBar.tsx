@@ -70,13 +70,6 @@ export default function ArenaTopBar({
   )
   const unlockPlayedRef = useRef(!onboardingMode)
 
-  // Detect onboarding completion (transition from locked → ready to animate)
-  useEffect(() => {
-    if (!onboardingMode && !unlockPlayedRef.current) {
-      // Will animate on next dropdown open
-    }
-  }, [onboardingMode])
-
   // Play unlock animation on first dropdown open after onboarding completes
   useEffect(() => {
     if (!dropdownOpen || onboardingMode || unlockStage !== 'locked' || unlockPlayedRef.current) return

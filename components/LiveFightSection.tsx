@@ -135,6 +135,8 @@ export default function LiveFightSection({
   const [showConvertPrompt, setShowConvertPrompt] = useState(false)
   const convertDismissCountRef = useRef(0)
   const tradeCountAtDismissRef = useRef(0)
+  const convertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => { return () => { if (convertTimerRef.current) clearTimeout(convertTimerRef.current) } }, [])
 
   // Onboarding prompt trigger: 30s timer or significant event
   useEffect(() => {
@@ -235,7 +237,7 @@ export default function LiveFightSection({
               const meetsTradeThreshold = dismissCount === 0 ||
                 trades.length >= tradeCountAtDismissRef.current + 3
               if (meetsTradeThreshold) {
-                setTimeout(() => setShowConvertPrompt(true), 2000)
+                convertTimerRef.current = setTimeout(() => setShowConvertPrompt(true), 2000)
               }
             }
           }
