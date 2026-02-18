@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ArrowDown, Loader } from 'lucide-react'
 import { useSolanaWallet } from '@/lib/solana/use-wallet'
-import { getSolanaConfig, buildDepositTransaction, requestWithdrawal } from '@/lib/solana/credit-bridge'
+import { getSolanaConfig, buildDepositTransaction, confirmDeposit, requestWithdrawal } from '@/lib/solana/credit-bridge'
 import type { SolanaConfig } from '@/lib/solana/credit-bridge'
 
 interface SolCreditBridgeModalProps {
@@ -51,7 +51,9 @@ export default function SolCreditBridgeModal({ credits, onClose }: SolCreditBrid
     setError(null)
     try {
       const { transaction } = await buildDepositTransaction(connection, publicKey, numAmount)
-      await signAndSend(transaction)
+      const signature = await signAndSend(transaction)
+      // Credit the user's account — auth0Id ignored by session-based API
+      await confirmDeposit('', numAmount, signature)
       setSuccess(`Deposited ${numAmount} SOL for ${Math.round(numAmount * creditsPerSol).toLocaleString()} credits`)
       setAmount('')
       getBalance().then(setSolBalance)
