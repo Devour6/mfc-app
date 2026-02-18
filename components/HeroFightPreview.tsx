@@ -575,7 +575,7 @@ export default function HeroFightPreview() {
         <span className="font-ui text-sm font-semibold text-green">
           {prices.yes.toFixed(2)}
         </span>
-        <span className="text-border">&vert;</span>
+        <span className="text-border">|</span>
         <span className="font-pixel text-xs text-red">NO</span>
         <span className="font-ui text-sm font-semibold text-red">
           {prices.no.toFixed(2)}
