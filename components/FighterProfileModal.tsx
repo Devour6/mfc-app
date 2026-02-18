@@ -92,6 +92,7 @@ interface FighterProfileModalProps {
   onClose: () => void
   onTrainFighter?: (fighterId: string, statType: string) => void
   onChallengeFighter?: (fighterId: string) => void
+  onUpdateFighter?: (fighterId: string, data: { name?: string; emoji?: string }) => Promise<void>
 }
 
 export default function FighterProfileModal({
@@ -99,10 +100,15 @@ export default function FighterProfileModal({
   isOpen,
   onClose,
   onTrainFighter,
-  onChallengeFighter
+  onChallengeFighter,
+  onUpdateFighter
 }: FighterProfileModalProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'history' | 'analytics'>('overview')
   const [statComparison, setStatComparison] = useState<boolean>(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editEmoji, setEditEmoji] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   if (!fighter) return null
 
@@ -153,30 +159,82 @@ export default function FighterProfileModal({
           >
             {/* Header */}
             <div className="bg-bg border-b border-border p-6 flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-6xl">{fighter.emoji}</div>
-                <div>
-                  <h2 className="font-pixel text-2xl text-text mb-1">{fighter.name}</h2>
-                  <div className="flex items-center gap-4 text-sm text-text2">
-                    <span>{fighter.class}</span>
-                    <span>•</span>
-                    <span>ELO: {fighter.elo}</span>
-                    <span>•</span>
-                    <span>Owner: {fighter.owner}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-lg font-pixel text-text">
-                      {fighter.record.wins}-{fighter.record.losses}-{fighter.record.draws}
-                    </span>
-                    <span className="text-text2">({winPercentage}% win rate)</span>
+              {!isEditing ? (
+                <div className="flex items-center gap-4">
+                  <div className="text-6xl">{fighter.emoji}</div>
+                  <div>
+                    <h2 className="font-pixel text-2xl text-text mb-1">{fighter.name}</h2>
+                    <div className="flex items-center gap-4 text-sm text-text2">
+                      <span>{fighter.class}</span>
+                      <span>•</span>
+                      <span>ELO: {fighter.elo}</span>
+                      <span>•</span>
+                      <span>Owner: {fighter.owner}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-lg font-pixel text-text">
+                        {fighter.record.wins}-{fighter.record.losses}-{fighter.record.draws}
+                      </span>
+                      <span className="text-text2">({winPercentage}% win rate)</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
+              ) : (
+                <div className="flex items-center gap-4">
+                  <input
+                    value={editEmoji}
+                    onChange={(e) => setEditEmoji(e.target.value)}
+                    className="w-16 h-16 text-4xl text-center bg-surface2 border border-border font-ui"
+                    maxLength={4}
+                  />
+                  <div className="flex flex-col gap-2">
+                    <input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="bg-surface2 border border-border px-3 py-2 font-pixel text-lg text-text"
+                      maxLength={30}
+                      minLength={2}
+                    />
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={async () => {
+                          setIsSaving(true)
+                          await onUpdateFighter?.(fighter.id, { name: editName, emoji: editEmoji })
+                          setIsSaving(false)
+                          setIsEditing(false)
+                        }}
+                        disabled={isSaving || editName.length < 2}
+                        className="px-3 py-1 bg-accent text-white font-pixel text-xs disabled:opacity-50"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {isSaving ? 'SAVING...' : 'SAVE'}
+                      </motion.button>
+                      <motion.button
+                        onClick={() => setIsEditing(false)}
+                        className="px-3 py-1 border border-border text-text2 font-pixel text-xs"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        CANCEL
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
+                {onUpdateFighter && !isEditing && (
+                  <motion.button
+                    onClick={() => { setIsEditing(true); setEditName(fighter.name); setEditEmoji(fighter.emoji) }}
+                    className="px-4 py-2 border border-border text-text2 font-pixel text-xs hover:border-accent hover:text-accent transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    EDIT
+                  </motion.button>
+                )}
                 <motion.button
                   onClick={() => onChallengeFighter?.(fighter.id)}
-                  className="px-4 py-2 bg-accent text-white font-pixel text-xs rounded hover:bg-accent/80"
+                  className="px-4 py-2 bg-accent text-white font-pixel text-xs hover:bg-accent/80"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

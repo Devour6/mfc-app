@@ -1,4 +1,5 @@
 import { FightState, FighterState, FightAction, Fighter, Commentary } from '@/types'
+import { FightRecorder, FightRecording } from './fight-recorder'
 
 export class FightEngine {
   private fightState: FightState
@@ -9,15 +10,24 @@ export class FightEngine {
   private intervalId?: NodeJS.Timeout
   private tickCounter: number = 0
   private ticksPerSecond: number = 12 // 1000ms / 80ms ≈ 12.5, round to 12
+  private recorder?: FightRecorder
+  private fighter1Meta?: { id: string; name: string; emoji: string }
+  private fighter2Meta?: { id: string; name: string; emoji: string }
 
   constructor(
     fighter1: Fighter,
     fighter2: Fighter,
     onStateUpdate?: (state: FightState) => void,
-    onCommentary?: (comment: Commentary) => void
+    onCommentary?: (comment: Commentary) => void,
+    enableRecording: boolean = false
   ) {
     this.onStateUpdate = onStateUpdate
     this.onCommentary = onCommentary
+    if (enableRecording) {
+      this.recorder = new FightRecorder(3)
+      this.fighter1Meta = { id: fighter1.id, name: fighter1.name, emoji: fighter1.emoji }
+      this.fighter2Meta = { id: fighter2.id, name: fighter2.name, emoji: fighter2.emoji }
+    }
     
     this.fightState = {
       round: 1,
@@ -70,7 +80,13 @@ export class FightEngine {
     this.resetFighterState(this.fightState.fighter2)
     this.tickCounter = 0
     this.commentary = []
+    this.recorder?.reset()
     this.start()
+  }
+
+  public getRecording(): FightRecording | null {
+    if (!this.recorder || !this.fighter1Meta || !this.fighter2Meta) return null
+    return this.recorder.finalize([this.fighter1Meta, this.fighter2Meta])
   }
 
   private resetFighterState(fighter: FighterState): void {
@@ -98,6 +114,9 @@ export class FightEngine {
     // Check for round/fight end
     this.checkFightEnd()
     
+    // Record tick for replay
+    this.recorder?.recordTick(this.fightState)
+
     // Broadcast state update
     this.onStateUpdate?.(this.fightState)
   }
@@ -500,6 +519,7 @@ export class FightEngine {
     }
     
     this.commentary.push(comment)
+    this.recorder?.recordCommentary(comment)
     this.onCommentary?.(comment)
   }
 
