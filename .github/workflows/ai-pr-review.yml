@@ -208,9 +208,12 @@ jobs:
             "
           fi
 
-          STATE=$(cat state.txt)
-          DESC=$(cat description.txt)
-          echo "{\"state\":\"$STATE\",\"description\":\"$DESC\"}" > status.json
+          node -e "
+          const fs = require('fs');
+          const state = fs.readFileSync('state.txt', 'utf8').trim() || 'success';
+          const desc = fs.readFileSync('description.txt', 'utf8').trim() || 'AI Review completed';
+          fs.writeFileSync('status.json', JSON.stringify({ state, description: desc }));
+          "
 
       - name: Post PR review
         env:
@@ -218,17 +221,46 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Try posting with inline comments first
           jq -n \
             --arg event "${REVIEW_EVENT}" \
             --arg body "$(cat review.md)" \
             --argjson comments "$(cat comments.json)" \
             '{ event: $event, body: $body, comments: $comments }' > review_payload.json
 
-          gh api \
+          if ! gh api \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             "repos/${{ github.repository }}/pulls/$PR/reviews" \
-            --input review_payload.json
+            --input review_payload.json 2>/dev/null; then
+
+            echo "Inline comments failed (line numbers likely don't match diff). Posting summary only..."
+
+            # Append inline comments as text to the review body
+            BODY=$(cat review.md)
+            COMMENT_COUNT=$(jq length comments.json)
+            if [ "$COMMENT_COUNT" -gt 0 ]; then
+              BODY="${BODY}
+
+          ### Inline Comments
+
+          $(node -e "
+          const comments = JSON.parse(require('fs').readFileSync('comments.json', 'utf8'));
+          comments.forEach(c => console.log('- **' + c.path + ':' + c.line + '** — ' + c.body));
+          ")"
+            fi
+
+            jq -n \
+              --arg event "${REVIEW_EVENT}" \
+              --arg body "$BODY" \
+              '{ event: $event, body: $body, comments: [] }' > review_payload_fallback.json
+
+            gh api \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${{ github.repository }}/pulls/$PR/reviews" \
+              --input review_payload_fallback.json
+          fi
 
       - name: Set commit status
         if: always()
