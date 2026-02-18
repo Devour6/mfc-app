@@ -19,6 +19,7 @@ import { useGameStore } from '@/lib/store'
 
 interface LiveFightSectionProps {
   onFightComplete?: (fighterId: string, fightData: any) => void
+  simplified?: boolean
 }
 
 // Sample fighter data
@@ -66,7 +67,8 @@ const sampleFighters: Fighter[] = [
 ]
 
 export default function LiveFightSection({
-  onFightComplete
+  onFightComplete,
+  simplified = false,
 }: LiveFightSectionProps) {
   const [fightState, setFightState] = useState<FightState | null>(null)
   const [marketState, setMarketState] = useState<MarketState | null>(null)
@@ -74,8 +76,8 @@ export default function LiveFightSection({
   const [currentCommentary, setCurrentCommentary] = useState<Commentary | null>(null)
   const [fightEngine, setFightEngine] = useState<FightEngine | null>(null)
   const marketEngineRef = useRef<MarketEngine | null>(null)
-  const [showFightCard, setShowFightCard] = useState(true)
-  const [autoRestartEnabled, setAutoRestartEnabled] = useState(true)
+  const [showFightCard, setShowFightCard] = useState(!simplified)
+  const [autoRestartEnabled, setAutoRestartEnabled] = useState(!simplified)
   const [replayRecording, setReplayRecording] = useState<FightRecording | null>(null)
   const [showReplay, setShowReplay] = useState(false)
   const [activeBets, setActiveBets] = useState<Array<{
@@ -194,16 +196,18 @@ export default function LiveFightSection({
     fight.start()
     market.start()
 
-    // Show fight card initially
-    setShowFightCard(true)
-    setTimeout(() => setShowFightCard(false), 3000)
+    // Show fight card initially (skip in simplified mode)
+    if (!simplified) {
+      setShowFightCard(true)
+      setTimeout(() => setShowFightCard(false), 3000)
+    }
 
     // Cleanup
     return () => {
       fight.stop()
       marketEngineRef.current?.stop()
     }
-  }, [autoRestartEnabled]) // Re-initialize if auto-restart setting changes
+  }, [autoRestartEnabled, simplified]) // Re-initialize if auto-restart or simplified changes
 
   const handleRestartFight = () => {
     if (fightEngine) {
@@ -283,7 +287,7 @@ export default function LiveFightSection({
       )}
 
       {/* Main Fight Layout - Responsive: stacked on mobile, sidebar on desktop */}
-      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_380px] overflow-y-auto lg:overflow-hidden">
+      <div className={`flex-1 flex flex-col ${simplified ? '' : 'lg:grid lg:grid-cols-[1fr_380px]'} overflow-y-auto lg:overflow-hidden`}>
         {/* Fight Area */}
         <div className="flex flex-col min-h-[50vh] lg:min-h-0 lg:overflow-hidden">
           {/* Fight Header */}
@@ -410,45 +414,47 @@ export default function LiveFightSection({
           <CommentaryBar commentary={currentCommentary} />
         </div>
 
-        {/* Right Sidebar - Unified Trading Panel */}
-        <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
-          {/* Live Stats Overlay */}
-          <div className="border-b border-border">
-            <LiveStatsOverlay fightState={fightState} fighters={sampleFighters} />
-          </div>
+        {/* Right Sidebar - Unified Trading Panel (hidden in simplified mode) */}
+        {!simplified && (
+          <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
+            {/* Live Stats Overlay */}
+            <div className="border-b border-border">
+              <LiveStatsOverlay fightState={fightState} fighters={sampleFighters} />
+            </div>
 
-          {/* Trading Panel */}
-          <div className="flex-1 overflow-hidden">
-            <TradingPanel
-              marketState={marketState}
-              fightState={fightState}
-              fighters={sampleFighters}
-              credits={credits}
-              onPlaceBet={(bet: BettingSlip) => {
-                const success = placeBetAndDeduct(bet.amount, `Bet on ${bet.marketId}`)
-                if (success) {
-                  setActiveBets(prev => [...prev, {
-                    id: `bet-${Date.now()}`,
-                    marketTitle: bet.marketId,
-                    side: bet.optionId ?? bet.marketId,
-                    amount: bet.amount,
-                    odds: (bet.potentialPayout ?? bet.amount * 2) / bet.amount,
-                    optionId: bet.optionId ?? 'fighter1',
-                  }])
-                } else {
-                  soundManager.play('punch-light', 0.4)
-                }
-              }}
-              onPlaceTrade={handleTrade}
-              activeBets={activeBets}
-            />
+            {/* Trading Panel */}
+            <div className="flex-1 overflow-hidden">
+              <TradingPanel
+                marketState={marketState}
+                fightState={fightState}
+                fighters={sampleFighters}
+                credits={credits}
+                onPlaceBet={(bet: BettingSlip) => {
+                  const success = placeBetAndDeduct(bet.amount, `Bet on ${bet.marketId}`)
+                  if (success) {
+                    setActiveBets(prev => [...prev, {
+                      id: `bet-${Date.now()}`,
+                      marketTitle: bet.marketId,
+                      side: bet.optionId ?? bet.marketId,
+                      amount: bet.amount,
+                      odds: (bet.potentialPayout ?? bet.amount * 2) / bet.amount,
+                      optionId: bet.optionId ?? 'fighter1',
+                    }])
+                  } else {
+                    soundManager.play('punch-light', 0.4)
+                  }
+                }}
+                onPlaceTrade={handleTrade}
+                activeBets={activeBets}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
-      {/* Bet Settlement Overlay */}
-      <BetSettlementOverlay
+      {/* Bet Settlement Overlay (hidden in simplified mode) */}
+      {!simplified && <BetSettlementOverlay
         settledBets={settledBets}
         newBalance={credits}
         isVisible={showSettlement}
@@ -456,7 +462,7 @@ export default function LiveFightSection({
           setShowSettlement(false)
           setSettledBets([])
         }}
-      />
+      />}
     </div>
   )
 }
