@@ -26,6 +26,8 @@ model User {
   apiKeys     ApiKey[]
   agentProfile AgentProfile?
   skinPurchases SkinPurchase[]
+  ownedAgents  AgentProfile[] @relation("AgentOwner")
+  billingRequests BillingRequest[] @relation("BillingOwner")
 
   @@index([auth0Id])
   @@index([email])
@@ -228,12 +230,16 @@ model AgentProfile {
   agentName   String
   description String?
   moltbookId  String?  @unique
+  ownerId     String?  // Human user who deployed this agent
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  owner       User?    @relation("AgentOwner", fields: [ownerId], references: [id])
+  billingRequests BillingRequest[]
 
   @@index([moltbookId])
+  @@index([ownerId])
   @@map("agent_profiles")
 }
 
@@ -286,6 +292,34 @@ enum SkinRarity {
   RARE
   EPIC
   LEGENDARY
+}
+
+model BillingRequest {
+  id          String   @id @default(cuid())
+  amount      Float    // Requested credit amount
+  reason      String   // Why the agent needs credits
+  status      BillingStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+
+  // Relationships
+  agent       AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId     String
+  ownerId     String   // Human owner who will approve/reject
+  owner       User     @relation("BillingOwner", fields: [ownerId], references: [id])
+
+  @@index([agentId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("billing_requests")
+}
+
+enum BillingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
 }
 
 enum FighterClass {
