@@ -34,8 +34,8 @@ export class FightEngine {
       maxRounds: 3,
       clock: 180,
       phase: 'intro',
-      fighter1: this.createFighterState(fighter1, 120, 1),
-      fighter2: this.createFighterState(fighter2, 360, -1),
+      fighter1: this.createFighterState(fighter1, 180, 1),
+      fighter2: this.createFighterState(fighter2, 300, -1),
     }
   }
 
@@ -156,25 +156,29 @@ export class FightEngine {
     const distance = Math.abs(f1.position.x - f2.position.x)
     
     // Only fight if in range and not stunned
-    if (distance <= 100 && f1.modifiers.stunned === 0 && f2.modifiers.stunned === 0) {
-      
+    if (distance <= 60 && f1.modifiers.stunned === 0 && f2.modifiers.stunned === 0) {
+
       // Fighter 1 actions
       if (this.shouldAttemptAction(f1, f2)) {
         const action = this.selectAction(f1, f2, distance)
         this.executeAction(action, f1, f2)
       }
-      
+
       // Fighter 2 actions (slight delay for more realistic timing)
       if (Math.random() > 0.3 && this.shouldAttemptAction(f2, f1)) {
         const action = this.selectAction(f2, f1, distance)
         this.executeAction(action, f2, f1)
       }
     }
-    
-    // Movement when out of range
-    if (distance > 120) {
+
+    // Movement when out of range — approach quickly
+    if (distance > 80) {
       this.moveTowardsOpponent(f1, f2)
       this.moveTowardsOpponent(f2, f1)
+    } else if (distance > 60) {
+      // Auto-approach when idle in mid-range
+      if (f1.animation.state === 'idle') this.moveTowardsOpponent(f1, f2)
+      if (f2.animation.state === 'idle') this.moveTowardsOpponent(f2, f1)
     }
   }
 
@@ -184,11 +188,11 @@ export class FightEngine {
     
     if (attacker.stamina < 20) probability *= 0.3
     if (attacker.modifiers.stunned > 0) return false
-    if (attacker.animation.state === 'punching') return false
+    if (attacker.animation.state === 'punching' || attacker.animation.state === 'kicking') return false
     
     // Higher probability if opponent is vulnerable
     if (defender.modifiers.stunned > 0) probability *= 2
-    if (defender.animation.state === 'punching') probability *= 1.5
+    if (defender.animation.state === 'punching' || defender.animation.state === 'kicking') probability *= 1.5
     
     return Math.random() < probability
   }
@@ -204,16 +208,22 @@ export class FightEngine {
         { action: { type: 'hook', fighter: attacker === this.fightState.fighter1 ? 1 : 2, power: 1.2 }, weight: 15 },
       )
       
+      // Kick actions
+      actions.push(
+        { action: { type: 'kick', fighter: attacker === this.fightState.fighter1 ? 1 : 2, power: 1.0 }, weight: 12 },
+      )
+
       if (attacker.stamina > 25) {
         actions.push(
           { action: { type: 'uppercut', fighter: attacker === this.fightState.fighter1 ? 1 : 2, power: 1.5 }, weight: 10 },
+          { action: { type: 'roundhouse', fighter: attacker === this.fightState.fighter1 ? 1 : 2, power: 1.4 }, weight: 8 },
           { action: { type: 'combo', fighter: attacker === this.fightState.fighter1 ? 1 : 2, sequence: ['jab', 'cross'] }, weight: 8 }
         )
       }
     }
     
     // Defensive options
-    if (defender.animation.state === 'punching' || defender.modifiers.charging > 0) {
+    if (defender.animation.state === 'punching' || defender.animation.state === 'kicking' || defender.modifiers.charging > 0) {
       actions.push(
         { action: { type: 'dodge', fighter: attacker === this.fightState.fighter1 ? 1 : 2, direction: Math.random() > 0.5 ? 'left' : 'right' }, weight: 25 },
         { action: { type: 'block', fighter: attacker === this.fightState.fighter1 ? 1 : 2, success: Math.random() > 0.3 }, weight: 20 }
@@ -221,14 +231,14 @@ export class FightEngine {
     }
     
     // Movement options
-    if (distance > 80 || distance < 40) {
+    if (distance > 50 || distance < 25) {
       actions.push(
-        { action: { type: 'move', fighter: attacker === this.fightState.fighter1 ? 1 : 2, direction: distance > 80 ? 'forward' : 'back' }, weight: 15 }
+        { action: { type: 'move', fighter: attacker === this.fightState.fighter1 ? 1 : 2, direction: distance > 50 ? 'forward' : 'back' }, weight: 15 }
       )
     }
-    
+
     // Clinch when close and low stamina
-    if (distance < 50 && attacker.stamina < 30) {
+    if (distance < 30 && attacker.stamina < 30) {
       actions.push(
         { action: { type: 'clinch', fighter: attacker === this.fightState.fighter1 ? 1 : 2 }, weight: 12 }
       )
@@ -255,6 +265,10 @@ export class FightEngine {
       case 'uppercut':
         this.executeStrike(action, attacker, defender)
         break
+      case 'kick':
+      case 'roundhouse':
+        this.executeKick(action, attacker, defender)
+        break
       case 'combo':
         this.executeCombo(action, attacker, defender)
         break
@@ -276,6 +290,7 @@ export class FightEngine {
   private executeStrike(action: FightAction & { type: 'jab' | 'cross' | 'hook' | 'uppercut' }, attacker: FighterState, defender: FighterState): void {
     attacker.stats.strikes++
     attacker.animation.state = 'punching'
+    attacker.animation.attackType = action.type
     attacker.animation.duration = action.type === 'jab' ? 8 : action.type === 'uppercut' ? 15 : 12
     
     const staminaCost = action.power * 2
@@ -294,6 +309,59 @@ export class FightEngine {
       this.landStrike(action, attacker, defender)
     } else {
       this.addCommentary(this.getMissCommentary(action.type), 'action', 'low')
+    }
+  }
+
+  private executeKick(action: FightAction & { type: 'kick' | 'roundhouse' }, attacker: FighterState, defender: FighterState): void {
+    attacker.stats.strikes++
+    attacker.animation.state = 'kicking'
+    attacker.animation.attackType = action.type
+    attacker.animation.duration = action.type === 'kick' ? 12 : 16
+
+    const staminaCost = action.power * 3
+    attacker.stamina = Math.max(0, attacker.stamina - staminaCost)
+
+    // Hit calculation — same logic as punches
+    let hitChance = 0.50 // Slightly lower base than punches
+    if (defender.modifiers.dodging > 0) hitChance *= 0.3
+    if (defender.modifiers.blocking > 0) hitChance *= 0.4
+    if (defender.modifiers.stunned > 0) hitChance *= 1.8
+    if (attacker.combo.count > 0) hitChance *= 1.2
+
+    if (Math.random() < hitChance) {
+      this.landKick(action, attacker, defender)
+    } else {
+      this.addCommentary(this.getMissCommentary(action.type), 'action', 'low')
+    }
+  }
+
+  private landKick(action: FightAction & { type: 'kick' | 'roundhouse' }, attacker: FighterState, defender: FighterState): void {
+    attacker.stats.landed++
+    attacker.combo.count++
+    attacker.combo.lastHit = 0
+
+    let damage = action.power * (10 + Math.random() * 8) // 10-18 base damage (higher than punches)
+
+    const powerChance = action.type === 'roundhouse' ? 0.25 : 0.18
+    const isPowerShot = Math.random() < powerChance
+
+    if (isPowerShot) {
+      damage *= 2.5
+      attacker.stats.powerShots++
+      defender.modifiers.stunned = 18 // Kicks stun slightly longer
+      this.addCommentary(this.getPowerShotCommentary(action.type), 'action', 'high')
+    } else {
+      this.addCommentary(this.getHitCommentary(action.type), 'action', 'medium')
+    }
+
+    defender.hp = Math.max(0, defender.hp - damage)
+    defender.animation.state = 'hit'
+    defender.animation.duration = isPowerShot ? 14 : 8
+
+    if (defender.hp <= 0) {
+      this.endFight(attacker.id, 'KO')
+    } else if (defender.hp < 15 && Math.random() < 0.3) {
+      this.endFight(attacker.id, 'TKO')
     }
   }
 
@@ -434,7 +502,7 @@ export class FightEngine {
 
   private moveTowardsOpponent(attacker: FighterState, defender: FighterState): void {
     const direction = defender.position.x > attacker.position.x ? 1 : -1
-    attacker.position.x += direction * 2
+    attacker.position.x += direction * 5
     attacker.position.x = Math.max(60, Math.min(420, attacker.position.x))
   }
 
@@ -472,8 +540,8 @@ export class FightEngine {
     this.fightState.fighter2.stamina = Math.min(100, this.fightState.fighter2.stamina + 30)
     
     // Reset positions
-    this.fightState.fighter1.position.x = 120
-    this.fightState.fighter2.position.x = 360
+    this.fightState.fighter1.position.x = 180
+    this.fightState.fighter2.position.x = 300
     
     this.addCommentary(`Round ${this.fightState.round} begins!`, 'general', 'high')
   }
@@ -528,7 +596,9 @@ export class FightEngine {
       jab: ['Clean jab lands!', 'Sharp jab connects!', 'Nice jab to the head!'],
       cross: ['Hard cross finds its mark!', 'Power cross lands flush!', 'Big right hand connects!'],
       hook: ['Devastating hook!', 'Crushing hook to the body!', 'Wicked left hook!'],
-      uppercut: ['Thunderous uppercut!', 'Brutal uppercut snaps the head back!', 'Devastating uppercut!']
+      uppercut: ['Thunderous uppercut!', 'Brutal uppercut snaps the head back!', 'Devastating uppercut!'],
+      kick: ['Solid front kick connects!', 'Hard kick to the body!', 'Sharp kick lands!'],
+      roundhouse: ['Massive roundhouse kick!', 'Spinning roundhouse connects!', 'Thunderous roundhouse!']
     }
     
     const options = comments[strikeType as keyof typeof comments] || comments.jab
@@ -540,7 +610,9 @@ export class FightEngine {
       jab: ['MASSIVE jab! That rocked them!', 'HUGE power jab!'],
       cross: ['DEVASTATING cross! What a shot!', 'THUNDEROUS right hand!'],
       hook: ['CRUSHING hook! They\'re hurt!', 'VICIOUS hook to the body!'],
-      uppercut: ['BRUTAL uppercut! Down goes the fighter!', 'NUCLEAR uppercut!']
+      uppercut: ['BRUTAL uppercut! Down goes the fighter!', 'NUCLEAR uppercut!'],
+      kick: ['DEVASTATING front kick! That hurt!', 'HUGE kick to the chest!'],
+      roundhouse: ['BRUTAL roundhouse! They\'re rocked!', 'VICIOUS spinning kick!']
     }
     
     const options = comments[strikeType as keyof typeof comments] || comments.cross

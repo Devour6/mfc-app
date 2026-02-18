@@ -98,9 +98,10 @@ export interface FighterState {
     facing: 1 | -1 // 1 for right, -1 for left
   }
   animation: {
-    state: 'idle' | 'walking' | 'punching' | 'dodging' | 'blocking' | 'hit' | 'down'
+    state: 'idle' | 'walking' | 'punching' | 'kicking' | 'dodging' | 'blocking' | 'hit' | 'down'
     frameCount: number
     duration: number
+    attackType?: string
   }
   stats: {
     strikes: number
@@ -199,11 +200,13 @@ export interface FightCard {
 }
 
 // Action types for the fight simulation
-export type FightAction = 
+export type FightAction =
   | { type: 'jab'; fighter: 1 | 2; power: number }
   | { type: 'cross'; fighter: 1 | 2; power: number }
   | { type: 'hook'; fighter: 1 | 2; power: number }
   | { type: 'uppercut'; fighter: 1 | 2; power: number }
+  | { type: 'kick'; fighter: 1 | 2; power: number }
+  | { type: 'roundhouse'; fighter: 1 | 2; power: number }
   | { type: 'combo'; fighter: 1 | 2; sequence: string[] }
   | { type: 'dodge'; fighter: 1 | 2; direction: 'left' | 'right' | 'back' }
   | { type: 'block'; fighter: 1 | 2; success: boolean }
