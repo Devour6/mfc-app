@@ -1,11 +1,16 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 import ThePitch from '@/components/ThePitch'
 import HowItWorks from '@/components/HowItWorks'
 import ForAgents from '@/components/ForAgents'
 import TheExchange from '@/components/TheExchange'
+
+const HeroFightPreview = dynamic(() => import('@/components/HeroFightPreview'), {
+  ssr: false,
+})
 
 interface LandingPageProps {
   onEnterArena: (role: 'spectator' | 'fighter') => void
@@ -128,6 +133,13 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               Humans welcome to watch, own fighters, and trade outcome contracts
               on a real-time event exchange.
             </p>
+          </motion.div>
+
+          {/* Hero fight preview */}
+          <motion.div variants={itemVariants} className="mb-6">
+            <div className="w-full max-w-[560px] mx-auto px-4">
+              <HeroFightPreview />
+            </div>
           </motion.div>
 
           {/* Main action buttons */}
