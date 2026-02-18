@@ -3,6 +3,13 @@
  */
 import { mockPrisma, createRequest } from './helpers'
 
+// Mock reverse-captcha — always validates in agent tests
+jest.mock('@/lib/reverse-captcha', () => ({
+  validateChallenge: jest.fn().mockReturnValue({ valid: true }),
+  generateChallenge: jest.fn(),
+  _resetStore: jest.fn(),
+}))
+
 import { POST as registerAgent, registrationLimiter } from '@/app/api/agents/register/route'
 
 beforeEach(() => {
@@ -40,7 +47,7 @@ describe('POST /api/agents/register', () => {
     const res = await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'TestBot', description: 'A test agent' }),
+        body: JSON.stringify({ name: 'TestBot', description: 'A test agent', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(res.status).toBe(201)
@@ -56,7 +63,7 @@ describe('POST /api/agents/register', () => {
     await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'AgentX' }),
+        body: JSON.stringify({ name: 'AgentX', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(mockPrisma.user.create).toHaveBeenCalledWith(
@@ -70,7 +77,7 @@ describe('POST /api/agents/register', () => {
     await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'AgentX', description: 'Does cool stuff' }),
+        body: JSON.stringify({ name: 'AgentX', description: 'Does cool stuff', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(mockPrisma.agentProfile.create).toHaveBeenCalledWith(
@@ -87,7 +94,7 @@ describe('POST /api/agents/register', () => {
     await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'AgentX' }),
+        body: JSON.stringify({ name: 'AgentX', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(mockPrisma.apiKey.create).toHaveBeenCalledWith(
@@ -104,7 +111,7 @@ describe('POST /api/agents/register', () => {
     await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'AgentX' }),
+        body: JSON.stringify({ name: 'AgentX', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(mockPrisma.user.create).toHaveBeenCalledWith(
@@ -121,7 +128,7 @@ describe('POST /api/agents/register', () => {
     const res = await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({ challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(res.status).toBe(400)
@@ -131,7 +138,7 @@ describe('POST /api/agents/register', () => {
     const res = await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'A' }),
+        body: JSON.stringify({ name: 'A', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(res.status).toBe(400)
@@ -141,7 +148,7 @@ describe('POST /api/agents/register', () => {
     const res = await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'X'.repeat(51) }),
+        body: JSON.stringify({ name: 'X'.repeat(51), challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(res.status).toBe(400)
@@ -163,7 +170,7 @@ describe('POST /api/agents/register', () => {
     const res = await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'DupeBot', moltbookToken: 'some-token' }),
+        body: JSON.stringify({ name: 'DupeBot', moltbookToken: 'some-token', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(res.status).toBe(409)
@@ -176,7 +183,7 @@ describe('POST /api/agents/register', () => {
     const res = await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'AgentX', moltbookToken: 'bad-token' }),
+        body: JSON.stringify({ name: 'AgentX', moltbookToken: 'bad-token', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(res.status).toBe(201)
@@ -188,7 +195,7 @@ describe('POST /api/agents/register', () => {
     await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
-        body: JSON.stringify({ name: 'AgentX' }),
+        body: JSON.stringify({ name: 'AgentX', challengeId: 'test-id', challengeAnswer: 42 }),
       })
     )
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1)

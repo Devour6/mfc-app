@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, validationError, serverError } from '@/lib/api-utils'
+import { validateChallenge } from '@/lib/reverse-captcha'
 import { registerAgentSchema } from '@/lib/validations'
 import { RateLimiter, checkRateLimit } from '@/lib/rate-limit'
 
@@ -18,7 +19,13 @@ export async function POST(request: Request) {
     const parsed = registerAgentSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { name, description, moltbookToken } = parsed.data
+    const { name, description, moltbookToken, challengeId, challengeAnswer } = parsed.data
+
+    // Validate reverse CAPTCHA challenge
+    const challengeResult = validateChallenge(challengeId, challengeAnswer)
+    if (!challengeResult.valid) {
+      return errorResponse(challengeResult.error || 'Challenge validation failed', 403)
+    }
 
     // Optional: verify Moltbook identity token
     let moltbookId: string | null = null
