@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { submitFightResultSchema, updateFightStatusSchema, isLegalStatusTransition } from '@/lib/validations'
 import { requireAuth } from '@/lib/auth-guard'
+import { ensureUser } from '@/lib/user-sync'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -31,14 +32,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // POST /api/fights/:id — Submit fight result (auth required)
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAuth()
+    const session = await requireAuth()
+    const dbUser = await ensureUser(session)
     const { id } = await params
     const body = await request.json()
 
     const parsed = submitFightResultSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { method, round, time, winnerId, fighter1Stats, fighter2Stats, fighter1EloChange, fighter2EloChange, userId } = parsed.data
+    const { method, round, time, winnerId, fighter1Stats, fighter2Stats, fighter1EloChange, fighter2EloChange } = parsed.data
 
     const fight = await prisma.fight.findUnique({ where: { id } })
     if (!fight) return notFound('Fight')
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           fighter2Stats: (fighter2Stats ?? {}) as any,
           fighter1EloChange: fighter1EloChange ?? 0,
           fighter2EloChange: fighter2EloChange ?? 0,
-          userId,
+          userId: dbUser.id,
         },
       })
 

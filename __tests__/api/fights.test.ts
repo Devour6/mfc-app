@@ -194,8 +194,7 @@ describe('POST /api/fights/:id (submit result)', () => {
           method: 'KO',
           round: 2,
           winnerId: 'f1',
-          userId: 'u1',
-        }),
+                  }),
       }),
       params('fight1')
     )

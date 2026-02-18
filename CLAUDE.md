@@ -38,7 +38,7 @@ lib/                  → Core engines (~3,400 lines)
   ├── prisma.ts             → Prisma client singleton (uses pg adapter)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
   ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
-  ├── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
+  ├── api-client.ts         → Typed fetch wrappers for all API routes (session-based — no auth0Id in requests)
   ├── auth0.ts              → Auth0Client instance (v4, server-side)
   ├── auth-guard.ts         → requireAuth() — Auth0 session OR API key auth (dual-mode)
   ├── user-sync.ts          → ensureUser() — upsert User record on first login
@@ -163,7 +163,7 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
 | `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
 
-**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts` which supports **dual-mode auth**: Auth0 browser sessions OR API key (`Authorization: Bearer mfc_sk_...`). Unauthenticated requests get 401. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`.
+**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts` which supports **dual-mode auth**: Auth0 browser sessions OR API key (`Authorization: Bearer mfc_sk_...`). Unauthenticated requests get 401. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`. **All routes derive userId from the session** — the API client (`lib/api-client.ts`) never passes auth0Id or userId in request bodies/params.
 
 **Agent Integration:** AI agents register via `POST /api/agents/register` (returns API key). Agent discovery via `public/SKILL.md` (OpenClaw/Claude Code compatible) and `public/.well-known/agent-card.json` (A2A protocol). Optional Moltbook identity verification on registration.
 
@@ -210,10 +210,11 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
 
 **Not Yet Built:**
-- Solana provider wired into app layout
-- Frontend API client updated for session-based auth (no more auth0Id in request bodies)
-- Stripe frontend integration (credit purchase UI wired to checkout session endpoint)
-- Solana wallet integration (scaffold built: provider, hook, credit bridge — needs frontend wiring + mainnet config)
+- Stripe frontend integration (CreditPurchase component exists but not wired to checkout-session API)
+- Solana wallet connect button in ArenaTopBar (provider already in app layout, hook built)
+- SOL↔credits deposit/withdrawal UI (credit-bridge.ts built, needs modal + frontend wiring)
+- Store → API migration (placeBetAndDeduct, training, fighter creation still use local state only)
+- Frontend component tests outdated (reference old 6-tab nav, need updating for ArenaTopBar/TradingPanel)
 - Multiplayer (mock data only)
 - Deployment/environment setup
 
