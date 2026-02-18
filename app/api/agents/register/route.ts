@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const parsed = registerAgentSchema.safeParse(body)
     if (!parsed.success) return validationError(parsed.error)
 
-    const { name, description, moltbookToken } = parsed.data
+    const { name, description, moltbookToken, ownerEmail } = parsed.data
 
     // Optional: verify Moltbook identity token
     let moltbookId: string | null = null
@@ -55,6 +55,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // Optional: look up owner by email
+    let ownerId: string | null = null
+    if (ownerEmail) {
+      const owner = await prisma.user.findUnique({
+        where: { email: ownerEmail },
+        select: { id: true, isAgent: true },
+      })
+      if (owner && !owner.isAgent) {
+        ownerId = owner.id
+      }
+    }
+
     // Generate synthetic auth0Id (agent_ prefix never collides with Auth0's auth0| or google-oauth2| patterns)
     const agentAuthId = `agent_${randomBytes(16).toString('hex')}`
     const agentEmail = `${agentAuthId}@agent.mfc.gg`
@@ -79,6 +91,7 @@ export async function POST(request: Request) {
           agentName: name,
           description: description ?? null,
           moltbookId,
+          ownerId,
         },
       })
 

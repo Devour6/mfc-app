@@ -134,6 +134,20 @@ export const registerAgentSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be at most 50 characters'),
   description: z.string().max(500).optional(),
   moltbookToken: z.string().optional(),
+  ownerEmail: z.string().email('Invalid owner email').optional(),
+})
+
+// ─── Billing ──────────────────────────────────────────────────────────────
+
+export const BillingStatus = z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PAID'])
+
+export const createBillingRequestSchema = z.object({
+  amount: z.number().positive('Amount must be greater than 0'),
+  reason: z.string().min(1, 'Reason is required').max(500, 'Reason must be at most 500 characters'),
+})
+
+export const updateBillingRequestSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED']),
 })
 
 // ─── Stripe ────────────────────────────────────────────────────────────────
