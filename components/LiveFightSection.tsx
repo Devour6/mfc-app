@@ -9,7 +9,7 @@ import TradingPanel, { BettingSlip } from './TradingPanel'
 import LiveStatsOverlay from './LiveStatsOverlay'
 import FightReplayViewer from './FightReplayViewer'
 import BetSettlementOverlay, { SettledBet } from './BetSettlementOverlay'
-import { FightEngine } from '@/lib/fight-engine'
+import { FightEngine, FightBiasConfig } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
 import { FightRecording } from '@/lib/fight-recorder'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
@@ -103,6 +103,7 @@ export default function LiveFightSection({
   const placeDemoTrade = useGameStore(state => state.placeDemoTrade)
   const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false)
   const onboardingTriggered = useRef(false)
+  const isFirstFight = useRef(true)
 
   // Show simplified market panel when onboarding reaches market-open step
   const showSimplifiedMarket = simplified && (
@@ -145,6 +146,12 @@ export default function LiveFightSection({
   useEffect(() => {
     const fighter1 = sampleFighters[0]
     const fighter2 = sampleFighters[1]
+
+    // Build bias config for first fight in simplified (onboarding) mode
+    const biasConfig: FightBiasConfig | undefined =
+      simplified && isFirstFight.current && pickedFighterRef.current
+        ? { favoredFighterId: pickedFighterRef.current, damageModifier: 0.15 }
+        : undefined
 
     // Create fight engine with recording enabled
     const fight = new FightEngine(
@@ -248,8 +255,12 @@ export default function LiveFightSection({
           setTimeout(() => soundManager.play('crowd-cheer', 0.7), 500)
         }
       },
-      true // enableRecording for replay
+      true, // enableRecording for replay
+      biasConfig
     )
+
+    // After first fight initializes, mark it as no longer first
+    if (biasConfig) isFirstFight.current = false
 
     // Create market engine
     const market = new MarketEngine(
