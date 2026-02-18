@@ -83,6 +83,9 @@ module.exports = {
         for (const quasi of node.quasis) {
           checkString(context, quasi, quasi.value.raw);
         }
+        for (const expr of node.expressions) {
+          checkExpression(context, expr);
+        }
       }
 
       // String literal in expression: {"px-4 rounded-lg"}
