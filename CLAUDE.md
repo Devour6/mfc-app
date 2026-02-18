@@ -23,8 +23,8 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 
 ```
 app/                  → Next.js App Router (layout, page, globals.css)
-components/           → 34 React components (~8,500 lines) — see UI Architecture below
-lib/                  → Core engines (~3,400 lines)
+components/           → React components — see UI Architecture below
+lib/                  → Core engines + infrastructure
   ├── fight-engine.ts       → Tick-based combat simulation
   ├── market-engine.ts      → Price discovery + order book
   ├── evolution-engine.ts   → Fighter traits + signature moves
@@ -37,10 +37,12 @@ lib/                  → Core engines (~3,400 lines)
   ├── store.ts              → Zustand state management
   ├── prisma.ts             → Prisma client singleton (uses pg adapter)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
-  ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
+  ├── validations.ts        → Zod schemas for all API inputs
   ├── api-client.ts         → Typed fetch wrappers for all API routes (session-based — no auth0Id in requests)
   ├── auth0.ts              → Auth0Client instance (v4, server-side)
   ├── auth-guard.ts         → requireAuth() — Auth0 session OR API key auth (dual-mode)
+  ├── role-guard.ts         → requireHuman(), requireAgent(), requireAnyRole() — RBAC composable guards
+  ├── reverse-captcha.ts    → Obfuscated math challenges for AI agent verification (30s TTL, one-time use)
   ├── user-sync.ts          → ensureUser() — upsert User record on first login
   ├── rate-limit.ts         → In-memory sliding window rate limiter (RateLimiter class + helpers)
   ├── stripe.ts             → Stripe client singleton + credit packages
@@ -53,7 +55,6 @@ prisma/schema.prisma  → DB models: User, Fighter, Training, Fight, FightResult
 public/SKILL.md       → Agent discovery document (how AI agents interact with MFC)
 public/.well-known/agent-card.json → A2A protocol agent card
 prisma.config.ts      → Prisma 7 config (holds DATABASE_URL for migrations)
-public/sounds/        → 10 MP3 sound effects
 scripts/seed.ts       → DB seed script (creates sample users, fighters, fights, bets)
 .env.example          → Environment variable template
 app/api/              → API routes (see API Routes section below)
@@ -88,11 +89,10 @@ app/api/              → API routes (see API Routes section below)
 - Slim single-row bar: MFC logo (→ landing), LIVE pill, "More" dropdown, credits, sound toggle
 - "More" dropdown contains secondary sections: Rankings, Fighters, Tournaments, Rewards, Achievements
 - Clicking a dropdown item opens that section in a **slide-over drawer** (overlays the fight, doesn't replace it)
-- Replaces the old 6-tab navigation bar that swapped out the fight view when switching sections
 - Fight canvas + trading sidebar are **always visible** — they never get unmounted
 
 ### Trading — TradingPanel (`components/TradingPanel.tsx`)
-- Unified Polymarket/Kalshi-style trading panel (replaces separate LiveBettingInterface + MarketSidebar)
+- Unified Polymarket/Kalshi-style trading panel
 - Structure: Market question → YES/NO buttons (cent prices, trend arrows) → Amount chips (10/25/50/100 + custom) → Cost/win summary → BUY button
 - Collapsible accordion sections: Live Props (in-fight micro-markets), Order Book (bids/asks depth), Your Positions (active bets + recent trades)
 - Props: `marketState`, `fightState`, `fighters`, `credits`, `onPlaceBet`, `onPlaceTrade`, `activeBets`
@@ -107,16 +107,14 @@ app/api/              → API routes (see API Routes section below)
 - Orchestrates: FightEngine + MarketEngine + recording + settlement
 - Layout: Fight header (round/clock/LIVE) → EnhancedFightCanvas → CommentaryBar | right sidebar: LiveStatsOverlay + TradingPanel
 - Responsive: sidebar on desktop (380px), stacked on mobile
-
-### Deleted Components (kept in git history, no longer imported)
-- `LiveBettingInterface.tsx` — replaced by TradingPanel's collapsible Live Props section
-- `MarketSidebar.tsx` — replaced by TradingPanel's main YES/NO trading + Order Book section
+- Supports `simplified` prop for onboarding first-time users
 
 ## State Management
 
 Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
+- Onboarding state (hasCompletedOnboarding, hasSeenFirstFight, etc.)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
 - `placeBetAndDeduct(amount, desc, betDetails?)` — atomic credit deduction with optional API backend. When `betDetails` (fightId, side, odds) provided, fires `POST /api/bets` with optimistic local deduction + rollback on failure. Syncs credits from server on success.
 - `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
@@ -134,7 +132,7 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 - `lib/prisma.ts` — uses `@prisma/adapter-pg` with a `pg` Pool for runtime connections
 - `scripts/seed.ts` — seeds sample data (run `npm run db:seed` or `npm run db:reset`)
 
-**Status:** Database is connected, migrated, and seeded with sample data (2 users, 5 fighters, fights, bets). PostgreSQL 16 runs locally via Homebrew at `~/.homebrew/opt/postgresql@16/`. Start with: `pg_ctl -D ~/.homebrew/var/postgresql@16 start`
+**Status:** Database connected, migrated, and seeded. PostgreSQL 16 via Homebrew. Start with: `pg_ctl -D ~/.homebrew/var/postgresql@16 start`
 
 **Note:** Both `prisma.config.ts` and `scripts/seed.ts` load `.env.local` first (Next.js convention), then `.env` as fallback.
 
@@ -143,98 +141,62 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | Route | Methods | Auth | Description |
 |-------|---------|------|-------------|
 | `/api/fighters` | GET | Public | List fighters (with filters) |
-| `/api/fighters` | POST | Required | Create fighter (owner set from session) |
+| `/api/fighters` | POST | Human | Create fighter (owner set from session) |
 | `/api/fighters/[id]` | GET | Public | Get fighter details |
-| `/api/fighters/[id]` | PATCH | Required | Update fighter stats (must own fighter) |
+| `/api/fighters/[id]` | PATCH | Human | Update fighter stats (must own fighter) |
 | `/api/fights` | GET | Public | List fights (with status filter) |
-| `/api/fights` | POST | Required | Create fight |
+| `/api/fights` | POST | Human | Create fight |
 | `/api/fights/[id]` | GET | Public | Get fight details |
-| `/api/fights/[id]` | POST | Required | Submit fight result |
-| `/api/fights/[id]` | PATCH | Required | Update fight status |
-| `/api/user` | GET, POST, PATCH | Required | Get/sync/update user profile (uses session, auto-creates on first login) |
+| `/api/fights/[id]` | POST | Human | Submit fight result |
+| `/api/fights/[id]` | PATCH | Human | Update fight status |
+| `/api/user` | GET, POST, PATCH | Required | Get/sync/update user profile (auto-creates on first login) |
 | `/api/user/credits` | GET, POST | Required | Get credit balance, add/deduct credits (transaction-safe) |
-| `/api/bets` | GET, POST | Required | List user's bets, place bet (deducts credits) |
-| `/api/bets/[id]` | GET, PATCH | Required | Get bet details, settle/cancel bet |
-| `/api/training` | GET, POST | Required | List user's training sessions, create session |
-| `/api/training/[id]` | GET | Required | Get training session details |
-| `/api/stripe/checkout-session` | POST | Required | Create Stripe Checkout Session for credit purchase |
+| `/api/bets` | GET, POST | Human | List user's bets, place bet (deducts credits) |
+| `/api/bets/[id]` | GET, PATCH | Human | Get bet details, settle/cancel bet |
+| `/api/training` | GET, POST | Human | List training sessions, create session |
+| `/api/training/[id]` | GET | Human | Get training session details |
+| `/api/stripe/checkout-session` | POST | Human | Create Stripe Checkout Session for credit purchase |
 | `/api/stripe/webhook` | POST | Public* | Handle Stripe webhook events (signature-verified) |
-| `/api/agents/register` | POST | Public | Register an AI agent, returns API key |
+| `/api/agents/challenge` | GET | Public | Get a reverse CAPTCHA challenge for agent registration |
+| `/api/agents/register` | POST | Public | Register an AI agent (requires solved challenge), returns API key |
 | `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
 | `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
 
-**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts` which supports **dual-mode auth**: Auth0 browser sessions OR API key (`Authorization: Bearer mfc_sk_...`). Unauthenticated requests get 401. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`. **All routes derive userId from the session** — the API client (`lib/api-client.ts`) never passes auth0Id or userId in request bodies/params.
+**Authentication:** `requireAuth()` from `lib/auth-guard.ts` supports **dual-mode auth**: Auth0 browser sessions OR API key (`Authorization: Bearer mfc_sk_...`). Unauthenticated requests get 401. User records auto-created on first request via `ensureUser()`. **All routes derive userId from the session** — never pass auth0Id or userId in request bodies.
 
-**Agent Integration:** AI agents register via `POST /api/agents/register` (returns API key). Agent discovery via `public/SKILL.md` (OpenClaw/Claude Code compatible) and `public/.well-known/agent-card.json` (A2A protocol). Optional Moltbook identity verification on registration.
+**Role Guards:** `lib/role-guard.ts` provides composable RBAC guards built on top of `requireAuth()`:
+- `requireHuman()` — blocks agent API keys (humans only)
+- `requireAgent()` — blocks browser sessions (agents only)
+- `requireAnyRole()` — allows both humans and agents
 
-**Validation:** All routes use zod schemas from `lib/validations.ts` for input validation. Invalid requests return `{ error: "Validation failed", issues: [...] }` with 400 status.
+Auth column in the table above: "Human" = `requireHuman()`, "Required" = `requireAnyRole()`, "Public" = no auth.
 
-**Fight status transitions:** SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED. All other transitions are rejected.
+**Agent Integration:** Agents register via `POST /api/agents/register` with a solved reverse CAPTCHA challenge. Discovery via `public/SKILL.md` and `public/.well-known/agent-card.json` (A2A protocol).
 
-All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 middleware active in `proxy.ts`. Protect API routes with `requireAuth()` from `lib/auth-guard.ts`.
+**Validation:** All routes use zod schemas from `lib/validations.ts`. Invalid requests return `{ error: "Validation failed", issues: [...] }` with 400.
 
-## What Works (Prototype Status)
+**Fight status transitions:** SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED. All other transitions rejected.
 
-**Functional:**
-- Full fight simulation engine with tick-based combat (clock runs at real-time 1s/tick)
-- Real-time market pricing reacting to fight state
-- Pixel-block canvas fight rendering (16-bit Street Fighter II style sprites using fillRect grid)
-- Achievement and daily reward systems
-- Credit economy with purchase/withdrawal UI
-- Fighter progression with traits and signature moves
-- Tournament bracket structure
-- Sound effects system
-- Slim top bar navigation with "More" dropdown — fight always visible, secondary sections in slide-over drawer
-- Unified TradingPanel: Polymarket-style YES/NO trading with collapsible live props, order book, positions
-- Responsive layout: TradingPanel sidebar on desktop (380px), stacked below fight on mobile
-- Slide-over drawer with Escape key close, ARIA dialog accessibility, full-width on mobile
-- Zustand persistence
-- Reactive credit balance: store reads from `/api/user/credits` on mount, falls back to local data
-- Live betting deducts credits from Zustand store via `placeBetAndDeduct` (atomic — balance check inside set() callback)
-- CLOB trades (YES/NO contracts) deduct credits via `placeBetAndDeduct` before `marketEngine.placeTrade`
-- Fight replay: records tick snapshots, "WATCH REPLAY" button after KO, playback with speed controls
-- Bet settlement animations: tracks active bets, shows win/loss overlay with P&L summary after fight
-- Leaderboard: RankingsSection wired to store via `fetchLeaderboard()` (hybrid API/local)
-- Fighter customization: inline name/emoji editing in FighterProfileModal
-- Agent landing page: "I'M AN AI AGENT" button, 3-step onboarding flow, copyable SKILL.md URL
-- Kick/roundhouse mechanics with separate animation states and boot glow VFX
+## Current Status
 
-**Backend (In Progress):**
-- PostgreSQL 16 connected locally, migrated, and seeded with sample data
-- API routes exist for all entities with zod validation and auth guards
-- Seed script working (`npm run db:seed` / `npm run db:reset`)
-- Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
-- CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 163+ tests passing: 91 API integration + 27 Solana + 45 frontend (component, credit-safety, navigation, fight)
-- Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
-- Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
-- Store → API wiring: `placeBetAndDeduct` fires `POST /api/bets` with optimistic deduction + `fetchCredits()` rollback; `spendCreditsTraining` fires `POST /api/training`; `addFighter` fires `POST /api/fighters`; `fetchLeaderboard` uses `GET /api/fighters`
-- Solana wallet connect/disconnect in ArenaTopBar (shows truncated address + SOL balance when connected)
-- SOL↔credits deposit/withdrawal modal (`SolCreditBridgeModal.tsx`) — builds SOL transfer tx, calls `confirmDeposit()` to credit account
-- Credit safety: optimistic updates use `fetchCredits()` for server-sync on success and rollback on failure (no blind `credits + amount`)
-
-**Not Yet Built:**
-- Stripe frontend integration (CreditPurchase component exists but not wired to checkout-session API)
-- Multiplayer (mock data only)
-- Deployment/environment setup
+**Not yet built:** Multiplayer (mock data only), deployment/environment setup.
 
 ## Scripts
 
 ```
 npm run dev          → Start dev server
 npm run build        → Production build
-npm run lint         → ESLint (runs `eslint .` directly — `next lint` removed in Next.js 16)
+npm run lint         → ESLint (runs `eslint .` — `next lint` removed in Next.js 16)
 npm run type-check   → TypeScript checking
 npm run db:migrate   → Prisma migrations
 npm run db:generate  → Prisma client generation
-npm run db:studio    → Prisma Studio
 npm run db:seed      → Seed database with sample data
 npm run db:reset     → Clean + re-seed database
 ```
 
 ## Design System
 
-See `DESIGN_SYSTEM.md` for the complete visual specification: colors, typography, spacing, borders, buttons, animations, component patterns, and anti-patterns.
+See `DESIGN_SYSTEM.md` for full visual specification. Key rule: **no border-radius anywhere** — sharp corners, pixel aesthetic.
 
 ## Environment Setup
 
@@ -242,41 +204,22 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 - `DATABASE_URL` — PostgreSQL connection string
 - `AUTH0_*` — Auth0 tenant credentials (when auth is enabled)
 
-## Recent Workflow Changes (2026-02-18) — READ THIS
-
-The following changes affect **ALL agents on ALL teams**:
-
-1. **New file: `LEARNINGS.md`** — Shared knowledge base at repo root. Contains gotchas about Prisma 7, Next.js 16, Jest/ESM, multi-agent git, auth patterns, credit safety, and canvas rendering. **You must read this before starting work.** If you discover a new gotcha, append it here.
-
-2. **New file: `.github/PRD-TEMPLATE.md`** — For non-trivial features, copy this template and fill it in before breaking work into tasks. Locks scope + acceptance criteria.
-
-3. **Tasks now require acceptance criteria** — Every task must have machine-verifiable pass/fail conditions (e.g., "test X passes", "route returns 200"). Self-verify locally before opening a PR.
-
-4. **AI PR Review runs on every PR** — An automated Claude Code reviewer will post comments on your PR within minutes of opening it. It checks correctness, security, and MFC conventions (requireAuth, no border-radius, zod validation, etc.). This does NOT replace human review — it's a first pass. Fix any issues it flags.
-
-5. **PR checklist updated** — Now requires reading `LEARNINGS.md`, verifying acceptance criteria, and noting new gotchas.
-
-6. **PR #68 (2026-02-18) — Border-radius removal complete** — All 44 instances of `rounded`, `border-radius`, and `borderRadius` removed from 14 component files. Components now comply with pixel-art design system (sharp corners only). This is Phase 1 of custom linter plan; Phase 2 will add ESLint rule.
-
-**No changes to existing code, components, or APIs.** These are process/workflow additions only.
-
 ---
 
 ## Team Coordination
 
-**This file (CLAUDE.md) is the master coordination document.** Two teams work on this repo:
+**This file (CLAUDE.md) is the master coordination document.** Read this file AND `LEARNINGS.md` before making any code changes. Update both after changes.
+
+Two teams work on this repo:
 - **Backend team** — database, API routes, auth, Solana integration
 - **Frontend/design team** — components, UI, fight rendering, UX
-
-**Before making ANY code changes:** Read this file AND `LEARNINGS.md` first.
-**After making ANY code changes:** Update this file to document what changed. If you discovered a gotcha, append it to `LEARNINGS.md`.
 
 ## Task Workflow
 
 Every feature goes through this pipeline:
 
 ### 1. PRD (for non-trivial features)
-Copy `.github/PRD-TEMPLATE.md` and fill it in before breaking work into tasks. This locks scope, requirements, and acceptance criteria upfront.
+Copy `.github/PRD-TEMPLATE.md` and fill it in before breaking work into tasks.
 
 ### 2. Task Breakdown
 Each task MUST have machine-verifiable acceptance criteria. Format:
@@ -290,7 +233,7 @@ Acceptance:
   - POST /api/bets returns 400 with invalid fightId
 ```
 
-Agents self-verify acceptance criteria locally before opening a PR. If all criteria pass, the task is done — no ambiguity.
+Self-verify acceptance criteria locally before opening a PR.
 
 ### 3. Branch → PR → Review → Merge
 1. Pull newest main
@@ -311,53 +254,39 @@ Runs on every PR to `main` and on push to `main`:
 2. Generate Prisma client (`npx prisma generate`)
 3. Lint (`npm run lint`)
 4. Type check (`npm run type-check`)
-5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests in CI; frontend tests also passing locally
+5. Test (`npm test -- --selectProjects=api --no-coverage`)
 6. Build (`npm run build`)
 
 All steps must pass for a PR to be mergeable.
 
 ### AI PR Review (`.github/workflows/ai-pr-review.yml`)
-Runs automatically on every PR (opened, synced, reopened, ready for review). Uses OpenAI (gpt-4o) to perform a first-pass code review checking:
-- Correctness, security, performance
-- MFC conventions (requireAuth, ensureUser, no border-radius, no raw fetch, zod validation, credit safety)
-- Compliance with CLAUDE.md patterns
+Runs on every PR. Uses OpenAI (gpt-4o) for first-pass code review checking correctness, security, and MFC conventions. Posts inline review comments. Does NOT auto-approve — lead engineer still merges.
 
-Posts review comments directly on the PR with inline suggestions. This does NOT auto-approve — a human or lead engineer still merges. The AI review catches obvious issues fast so authors get feedback in minutes rather than waiting for a manual review session.
-
-**Setup requirement:** `OPENAI_API_KEY` must be stored as a repository secret in GitHub (Settings → Secrets → Actions).
+**Setup:** `OPENAI_API_KEY` repository secret required.
 
 ### Custom Linters
 
 **ESLint rules** (via `eslint-plugin-mfc` in `eslint-rules/`):
-- `mfc/no-rounded-corners` (**error**) — flags `rounded`, `rounded-*` Tailwind classes and `borderRadius` styles. MFC uses sharp corners only. Adding rounded corners will fail the build.
-- `mfc/no-raw-fetch-in-components` (**error**) — flags raw `fetch()` calls in `components/`. Use `lib/api-client.ts` instead.
+- `mfc/no-rounded-corners` (**error**) — flags `rounded`, `rounded-*` Tailwind classes and `borderRadius` styles. Will fail the build.
+- `mfc/no-raw-fetch-in-components` (**error**) — flags raw `fetch()` in `components/`. Use `lib/api-client.ts` instead.
 
 **CI route checks** (`scripts/lint-mfc-routes.sh`):
-- `requireAuth → ensureUser` — auth-required routes must call both `requireAuth()` and `ensureUser()`.
+- `requireAuth → ensureUser` — auth-required routes must call both.
 - `route test coverage` — every route file needs a corresponding test in `__tests__/api/`.
 
-Route checks currently in **warn mode** (non-blocking). Will be promoted to error after Orcus adds missing test files.
+Route checks currently in **warn mode** (non-blocking).
 
 ### PR Template
 `.github/pull_request_template.md` includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
 
-## Branch Protection (Recommended)
-
-These settings should be configured by the repo admin on the `main` branch:
-- Require pull request before merging (no direct pushes)
-- Require status checks to pass before merging (CI workflow)
-- Require at least 1 approval before merging
-- Dismiss stale pull request approvals when new commits are pushed
-- Do not allow bypassing the above settings
-
 ## Testing
 
 Jest 30 with three projects:
-- **frontend** (`jsdom`) — component tests in `__tests__/` (45 tests, all passing)
-- **api** (`node`) — API route integration tests in `__tests__/api/` (43 tests, all passing)
-- **solana** — Solana module tests in `__tests__/solana/` (27 tests, all passing). Per-file `@jest-environment` directives (node for credit-bridge, jsdom for use-wallet hook).
+- **api** (`node`) — API route tests in `__tests__/api/` (118 tests, 11 suites)
+- **frontend** (`jsdom`) — component tests in `__tests__/` (52 tests, 8 suites)
+- **solana** — Solana module tests in `__tests__/solana/` (27 tests, 2 suites). Per-file `@jest-environment` directives.
 
-API tests mock the Prisma client, Auth0 session (`requireAuth`), and user sync (`ensureUser`) in `__tests__/api/helpers.ts` and test route handlers directly.
+API tests mock Prisma, Auth0 session, and user sync in `__tests__/api/helpers.ts`. CI runs API tests only (`--selectProjects=api`).
 
 ```
 npm test                              → Run all tests
@@ -366,27 +295,3 @@ npm test -- --selectProjects=solana   → Run only Solana tests
 npm run test:watch                    → Watch mode
 npm run test:coverage                 → With coverage
 ```
-
-## Brand Direction
-
-- Pixel-art with serious sports presentation (not parody)
-- ESPN-style overlays, professional tone
-- Real rankings, belt system, divisions
-- Color scheme: dark bg (#0a0a0f), red accent (#ff4444), blue accent (#4488ff), gold (#ffd700)
-- No border-radius anywhere — sharp corners, pixel aesthetic
-- See `DESIGN_SYSTEM.md` for full rules
-
-## Compliance
-
-- Structured as an event contract exchange for simulated combat outcomes
-- Not a casino, not a sportsbook, not a counterparty
-- Compliance pathway TBD with legal counsel
-
-## Revenue Model
-
-| Stream | Description |
-|--------|-------------|
-| Trading fees | Maker/taker on contract trades |
-| Training fees | Fighter progression costs |
-| Featured fights | Promoted fight placement |
-| Sponsorships | Brand integrations |
