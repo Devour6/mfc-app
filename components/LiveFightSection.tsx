@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import EnhancedFightCanvas from './EnhancedFightCanvas'
 import FightCard from './FightCard'
@@ -73,10 +73,9 @@ export default function LiveFightSection({
   const [commentary, setCommentary] = useState<Commentary[]>([])
   const [currentCommentary, setCurrentCommentary] = useState<Commentary | null>(null)
   const [fightEngine, setFightEngine] = useState<FightEngine | null>(null)
-  const [marketEngine, setMarketEngine] = useState<MarketEngine | null>(null)
+  const marketEngineRef = useRef<MarketEngine | null>(null)
   const [showFightCard, setShowFightCard] = useState(true)
   const [autoRestartEnabled, setAutoRestartEnabled] = useState(true)
-  const [soundEnabled, setSoundEnabled] = useState(true)
   const [replayRecording, setReplayRecording] = useState<FightRecording | null>(null)
   const [showReplay, setShowReplay] = useState(false)
   const [activeBets, setActiveBets] = useState<Array<{
@@ -107,13 +106,13 @@ export default function LiveFightSection({
         setFightState(state)
         
         // Update market based on fight state if market engine exists
-        if (marketEngine && state.phase === 'fighting') {
-          marketEngine.updateBasedOnFightState(state)
+        if (marketEngineRef.current && state.phase === 'fighting') {
+          marketEngineRef.current.updateBasedOnFightState(state)
         }
-        
+
         // Handle fight end
-        if (state.result && marketEngine) {
-          marketEngine.settleMarket(state.result.winner, {
+        if (state.result && marketEngineRef.current) {
+          marketEngineRef.current.settleMarket(state.result.winner, {
             fighter1: fighter1.name,
             fighter2: fighter2.name
           })
@@ -147,13 +146,15 @@ export default function LiveFightSection({
           if (autoRestartEnabled) {
             setTimeout(() => {
               fight.restart()
+              // Stop old market engine before creating new one
+              marketEngineRef.current?.stop()
               const newMarket = new MarketEngine(
                 `Will ${fighter1.name} win?`,
                 0.5 + (Math.random() - 0.5) * 0.2, // Slight random variation
                 setMarketState
               )
               newMarket.start()
-              setMarketEngine(newMarket)
+              marketEngineRef.current = newMarket
               setShowFightCard(true)
               setTimeout(() => setShowFightCard(false), 3000)
             }, 5000)
@@ -187,7 +188,7 @@ export default function LiveFightSection({
     )
 
     setFightEngine(fight)
-    setMarketEngine(market)
+    marketEngineRef.current = market
 
     // Start both engines
     fight.start()
@@ -200,15 +201,16 @@ export default function LiveFightSection({
     // Cleanup
     return () => {
       fight.stop()
-      market.stop()
+      marketEngineRef.current?.stop()
     }
   }, [autoRestartEnabled]) // Re-initialize if auto-restart setting changes
 
   const handleRestartFight = () => {
-    if (fightEngine && marketEngine) {
+    if (fightEngine) {
       fightEngine.restart()
-      
-      // Create new market
+
+      // Stop old market engine before creating new one
+      marketEngineRef.current?.stop()
       const fighter1 = sampleFighters[0]
       const newMarket = new MarketEngine(
         `Will ${fighter1.name} win?`,
@@ -216,40 +218,39 @@ export default function LiveFightSection({
         setMarketState
       )
       newMarket.start()
-      setMarketEngine(newMarket)
-      
+      marketEngineRef.current = newMarket
+
       setCommentary([])
       setCurrentCommentary(null)
       setShowFightCard(true)
       setTimeout(() => setShowFightCard(false), 3000)
-      
+
       soundManager.play('bell', 0.8)
     }
   }
 
   const handleTrade = (side: 'yes' | 'no', price: number, quantity: number) => {
-    const cost = price * quantity
-    
-    if (marketEngine) {
-      const trade = marketEngine.placeTrade(side, price, quantity)
-      
+    const cost = Math.round(price * quantity * 100) / 100
+
+    // Deduct credits before placing the trade
+    const canAfford = placeBetAndDeduct(cost, `Trade: ${side.toUpperCase()} ${quantity} @ ${price.toFixed(2)}`)
+    if (!canAfford) {
+      soundManager.play('punch-light', 0.4)
+      return null
+    }
+
+    if (marketEngineRef.current) {
+      const trade = marketEngineRef.current.placeTrade(side, price, quantity)
+
       if (trade.status === 'filled') {
         soundManager.play('notification', 0.6)
-        // Simulate potential profit/loss (simplified)
-        const outcome = Math.random()
-        const won = (side === 'yes' && outcome > 0.5) || (side === 'no' && outcome <= 0.5)
-        
-        // For now, just play success sound - real credit integration would be added later
-        if (won) {
-          soundManager.play('bell', 0.5)
-        }
       } else {
         soundManager.play('punch-light', 0.4)
       }
-      
+
       return trade
     }
-    
+
     soundManager.play('punch-light', 0.4)
     return null
   }

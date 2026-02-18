@@ -23,7 +23,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 
 ```
 app/                  → Next.js App Router (layout, page, globals.css)
-components/           → 30 React components (~8,000 lines)
+components/           → 34 React components (~8,500 lines) — see UI Architecture below
 lib/                  → Core engines (~3,400 lines)
   ├── fight-engine.ts       → Tick-based combat simulation
   ├── market-engine.ts      → Price discovery + order book
@@ -38,7 +38,7 @@ lib/                  → Core engines (~3,400 lines)
   ├── prisma.ts             → Prisma client singleton (uses pg adapter)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
   ├── validations.ts        → Zod schemas for all API inputs (fighters, fights, bets, training, user, credits)
-  ├── api-client.ts         → Typed fetch wrappers for all API routes (frontend→backend bridge)
+  ├── api-client.ts         → Typed fetch wrappers for all API routes (session-based — no auth0Id in requests)
   ├── auth0.ts              → Auth0Client instance (v4, server-side)
   ├── auth-guard.ts         → requireAuth() — Auth0 session OR API key auth (dual-mode)
   ├── user-sync.ts          → ensureUser() — upsert User record on first login
@@ -82,13 +82,43 @@ app/api/              → API routes (see API Routes section below)
 - Signature moves with unlock conditions
 - Age-based peak performance (25-35)
 
+## UI Architecture
+
+### Navigation — ArenaTopBar (`components/ArenaTopBar.tsx`)
+- Slim single-row bar: MFC logo (→ landing), LIVE pill, "More" dropdown, credits, sound toggle
+- "More" dropdown contains secondary sections: Rankings, Fighters, Tournaments, Rewards, Achievements
+- Clicking a dropdown item opens that section in a **slide-over drawer** (overlays the fight, doesn't replace it)
+- Replaces the old 6-tab navigation bar that swapped out the fight view when switching sections
+- Fight canvas + trading sidebar are **always visible** — they never get unmounted
+
+### Trading — TradingPanel (`components/TradingPanel.tsx`)
+- Unified Polymarket/Kalshi-style trading panel (replaces separate LiveBettingInterface + MarketSidebar)
+- Structure: Market question → YES/NO buttons (cent prices, trend arrows) → Amount chips (10/25/50/100 + custom) → Cost/win summary → BUY button
+- Collapsible accordion sections: Live Props (in-fight micro-markets), Order Book (bids/asks depth), Your Positions (active bets + recent trades)
+- Props: `marketState`, `fightState`, `fighters`, `credits`, `onPlaceBet`, `onPlaceTrade`, `activeBets`
+
+### Arena Layout (`app/page.tsx`)
+- Landing view → Arena view (state-driven, no routing)
+- Arena: `ArenaTopBar` (fixed top) + `LiveFightSection` (fills remaining height)
+- Secondary sections rendered inside a slide-over drawer (animated, spring physics, backdrop click/Escape to close, ARIA dialog attributes)
+- Drawer overlays on top of the fight area — fight engine continues running behind it
+
+### Fight Section (`components/LiveFightSection.tsx`)
+- Orchestrates: FightEngine + MarketEngine + recording + settlement
+- Layout: Fight header (round/clock/LIVE) → EnhancedFightCanvas → CommentaryBar | right sidebar: LiveStatsOverlay + TradingPanel
+- Responsive: sidebar on desktop (380px), stacked on mobile
+
+### Deleted Components (kept in git history, no longer imported)
+- `LiveBettingInterface.tsx` — replaced by TradingPanel's collapsible Live Props section
+- `MarketSidebar.tsx` — replaced by TradingPanel's main YES/NO trading + Order Book section
+
 ## State Management
 
 Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
-- `placeBetAndDeduct()` — deducts credits with balance check, returns success/failure
+- `placeBetAndDeduct(amount, desc, betDetails?)` — atomic credit deduction with optional API backend. When `betDetails` (fightId, side, odds) provided, fires `POST /api/bets` with optimistic local deduction + rollback on failure. Syncs credits from server on success.
 - `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
 - Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
 - Persists to localStorage
@@ -133,7 +163,7 @@ Enums: `FighterClass` (LIGHTWEIGHT/MIDDLEWEIGHT/HEAVYWEIGHT), `FightStatus`, `Fi
 | `/api/solana/config` | GET | Public | Returns treasury wallet address and credits-per-SOL rate |
 | `/api/health` | GET | Public | Health check — returns `{ status, timestamp, db }` |
 
-**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts` which supports **dual-mode auth**: Auth0 browser sessions OR API key (`Authorization: Bearer mfc_sk_...`). Unauthenticated requests get 401. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`.
+**Authentication:** Auth-required routes use `requireAuth()` from `lib/auth-guard.ts` which supports **dual-mode auth**: Auth0 browser sessions OR API key (`Authorization: Bearer mfc_sk_...`). Unauthenticated requests get 401. User records are auto-created on first authenticated request via `ensureUser()` from `lib/user-sync.ts`. **All routes derive userId from the session** — the API client (`lib/api-client.ts`) never passes auth0Id or userId in request bodies/params.
 
 **Agent Integration:** AI agents register via `POST /api/agents/register` (returns API key). Agent discovery via `public/SKILL.md` (OpenClaw/Claude Code compatible) and `public/.well-known/agent-card.json` (A2A protocol). Optional Moltbook identity verification on registration.
 
@@ -154,10 +184,14 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Fighter progression with traits and signature moves
 - Tournament bracket structure
 - Sound effects system
-- Responsive UI with mobile nav — betting sidebar visible on all screen sizes (stacked on mobile, sidebar on desktop)
+- Slim top bar navigation with "More" dropdown — fight always visible, secondary sections in slide-over drawer
+- Unified TradingPanel: Polymarket-style YES/NO trading with collapsible live props, order book, positions
+- Responsive layout: TradingPanel sidebar on desktop (380px), stacked below fight on mobile
+- Slide-over drawer with Escape key close, ARIA dialog accessibility, full-width on mobile
 - Zustand persistence
 - Reactive credit balance: store reads from `/api/user/credits` on mount, falls back to local data
-- Live betting deducts credits from Zustand store via `placeBetAndDeduct`
+- Live betting deducts credits from Zustand store via `placeBetAndDeduct` (atomic — balance check inside set() callback)
+- CLOB trades (YES/NO contracts) deduct credits via `placeBetAndDeduct` before `marketEngine.placeTrade`
 - Fight replay: records tick snapshots, "WATCH REPLAY" button after KO, playback with speed controls
 - Bet settlement animations: tracks active bets, shows win/loss overlay with P&L summary after fight
 - Leaderboard: RankingsSection wired to store via `fetchLeaderboard()` (hybrid API/local)
@@ -171,15 +205,16 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 91 API integration tests covering all route handlers, auth protection, user sync, agent registration (with auth mocks)
+- 163+ tests passing: 91 API integration + 27 Solana + 45 frontend (component, credit-safety, navigation, fight)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
+- Store → API wiring: `placeBetAndDeduct` fires `POST /api/bets` with optimistic deduction + `fetchCredits()` rollback; `spendCreditsTraining` fires `POST /api/training`; `addFighter` fires `POST /api/fighters`; `fetchLeaderboard` uses `GET /api/fighters`
+- Solana wallet connect/disconnect in ArenaTopBar (shows truncated address + SOL balance when connected)
+- SOL↔credits deposit/withdrawal modal (`SolCreditBridgeModal.tsx`) — builds SOL transfer tx, calls `confirmDeposit()` to credit account
+- Credit safety: optimistic updates use `fetchCredits()` for server-sync on success and rollback on failure (no blind `credits + amount`)
 
 **Not Yet Built:**
-- Solana provider wired into app layout
-- Frontend API client updated for session-based auth (no more auth0Id in request bodies)
-- Stripe frontend integration (credit purchase UI wired to checkout session endpoint)
-- Solana wallet integration (scaffold built: provider, hook, credit bridge — needs frontend wiring + mainnet config)
+- Stripe frontend integration (CreditPurchase component exists but not wired to checkout-session API)
 - Multiplayer (mock data only)
 - Deployment/environment setup
 
@@ -223,7 +258,7 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 2. Generate Prisma client (`npx prisma generate`)
 3. Lint (`npm run lint`)
 4. Type check (`npm run type-check`)
-5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests only (frontend tests need prop fixes)
+5. Test (`npm test -- --selectProjects=api --no-coverage`) — API tests in CI; frontend tests also passing locally
 6. Build (`npm run build`)
 
 All steps must pass for a PR to be mergeable.
@@ -242,7 +277,7 @@ These settings should be configured by the repo admin on the `main` branch:
 ## Testing
 
 Jest 30 with three projects:
-- **frontend** (`jsdom`) — component tests in `__tests__/` (pre-existing, some failing)
+- **frontend** (`jsdom`) — component tests in `__tests__/` (45 tests, all passing)
 - **api** (`node`) — API route integration tests in `__tests__/api/` (43 tests, all passing)
 - **solana** — Solana module tests in `__tests__/solana/` (27 tests, all passing). Per-file `@jest-environment` directives (node for credit-bridge, jsdom for use-wallet hook).
 

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
+import { useSolanaWallet } from '@/lib/solana/use-wallet'
 
 export type ArenaSection = 'rankings' | 'fighters' | 'tournaments' | 'rewards' | 'achievements'
 
@@ -12,6 +13,8 @@ interface ArenaTopBarProps {
   onToggleSound: () => void
   onGoHome: () => void
   onOpenSection: (section: ArenaSection) => void
+  onOpenBridge?: () => void
+  onBuyCredits?: () => void
 }
 
 const dropdownSections: { id: ArenaSection; label: string; icon: string }[] = [
@@ -28,9 +31,22 @@ export default function ArenaTopBar({
   onToggleSound,
   onGoHome,
   onOpenSection,
+  onOpenBridge,
+  onBuyCredits,
 }: ArenaTopBarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const { connected, connecting, address, connect, disconnect, getBalance } = useSolanaWallet()
+  const [solBalance, setSolBalance] = useState<number | null>(null)
+
+  // Fetch SOL balance when connected
+  useEffect(() => {
+    if (!connected) { setSolBalance(null); return }
+    let cancelled = false
+    getBalance().then(bal => { if (!cancelled) setSolBalance(bal) })
+    return () => { cancelled = true }
+  }, [connected, getBalance])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -44,6 +60,8 @@ export default function ArenaTopBar({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [dropdownOpen])
+
+  const truncatedAddress = address ? `${address.slice(0, 4)}...${address.slice(-4)}` : null
 
   return (
     <div className="bg-surface border-b border-border px-4 py-2 flex items-center justify-between gap-3 h-12 shrink-0">
@@ -106,11 +124,51 @@ export default function ArenaTopBar({
         </div>
       </div>
 
-      {/* Right: Credits + Sound toggle */}
+      {/* Right: Wallet + Credits + Buy + Sound toggle */}
       <div className="flex items-center gap-3">
+        {/* Solana wallet button */}
+        {connected ? (
+          <button
+            onClick={() => disconnect()}
+            className="flex items-center gap-1.5 font-pixel text-[10px] text-accent2 border border-accent2/30 bg-accent2/10 px-2 py-1 hover:bg-accent2/20 transition-colors"
+            title="Disconnect wallet"
+          >
+            <span>{truncatedAddress}</span>
+            {solBalance !== null && (
+              <span className="text-text2">{solBalance.toFixed(2)} SOL</span>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={() => connect()}
+            disabled={connecting}
+            className="font-pixel text-[10px] text-text2 border border-border px-2 py-1 hover:text-text hover:border-accent2 transition-colors disabled:opacity-50"
+          >
+            {connecting ? 'CONNECTING...' : 'WALLET'}
+          </button>
+        )}
+
+        {onOpenBridge && (
+          <button
+            onClick={onOpenBridge}
+            className="font-pixel text-[10px] text-gold hover:text-gold/80 transition-colors"
+            title="SOL Bridge — deposit or withdraw"
+          >
+            BRIDGE
+          </button>
+        )}
+
         <div className="font-pixel text-[10px] text-gold">
           ${credits.toLocaleString()}
         </div>
+        {onBuyCredits && (
+          <button
+            onClick={onBuyCredits}
+            className="font-pixel text-[8px] text-bg bg-gold px-2 py-1 hover:bg-gold/80 transition-colors"
+          >
+            BUY
+          </button>
+        )}
         <button
           onClick={onToggleSound}
           className="font-pixel text-[10px] text-text2 hover:text-text transition-colors"

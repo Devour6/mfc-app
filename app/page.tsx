@@ -11,6 +11,8 @@ import RankingsSection from '@/components/RankingsSection'
 import TournamentBracket from '@/components/TournamentBracket'
 import AchievementSystem from '@/components/AchievementSystem'
 import FightersSection from '@/components/FightersSection'
+import SolCreditBridgeModal from '@/components/SolCreditBridgeModal'
+import CreditPurchase from '@/components/CreditPurchase'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 // import { LoginStreak, TournamentBracket, TournamentMatch, Fighter } from '@/types'
@@ -24,7 +26,7 @@ interface LoginStreak {
   nextRewardCredits: number
 }
 
-interface TournamentBracket {
+interface TournamentBracketData {
   id: string
   name: string
   status: 'upcoming' | 'in-progress' | 'completed'
@@ -112,7 +114,7 @@ const mockFighters = [
 ]
 
 // Mock tournament data
-const mockTournament: TournamentBracket = {
+const mockTournament: TournamentBracketData = {
   id: 'weekly-championship-001',
   name: 'Weekly Championship',
   status: 'in-progress',
@@ -162,6 +164,8 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<'landing' | 'arena'>('landing')
   const [drawerSection, setDrawerSection] = useState<ArenaSection | null>(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [showBridge, setShowBridge] = useState(false)
+  const [showPurchase, setShowPurchase] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
 
   const credits = useGameStore(state => state.user.credits)
@@ -169,6 +173,16 @@ export default function Home() {
   useEffect(() => {
     setIsLoaded(true)
   }, [])
+
+  // Close drawer on Escape key
+  useEffect(() => {
+    if (!drawerSection) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerSection(null)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [drawerSection])
 
   const enterArena = () => {
     setCurrentView('arena')
@@ -244,6 +258,8 @@ export default function Home() {
               onToggleSound={handleToggleSound}
               onGoHome={goHome}
               onOpenSection={handleOpenSection}
+              onOpenBridge={() => setShowBridge(true)}
+              onBuyCredits={() => setShowPurchase(true)}
             />
 
             {/* Fight always visible — fills remaining space */}
@@ -268,11 +284,14 @@ export default function Home() {
                     {/* Drawer panel */}
                     <motion.div
                       key="drawer-panel"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label={drawerTitle[drawerSection]}
                       initial={{ x: '100%' }}
                       animate={{ x: 0 }}
                       exit={{ x: '100%' }}
                       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                      className="absolute top-0 right-0 bottom-0 w-full max-w-lg bg-bg border-l border-border z-50 flex flex-col overflow-hidden"
+                      className="absolute top-0 right-0 bottom-0 w-full max-w-full sm:max-w-lg bg-bg border-l border-border z-50 flex flex-col overflow-hidden"
                     >
                       {/* Drawer header */}
                       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface shrink-0">
@@ -327,6 +346,20 @@ export default function Home() {
               </AnimatePresence>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SOL Bridge Modal */}
+      <AnimatePresence>
+        {showBridge && (
+          <SolCreditBridgeModal credits={credits} onClose={() => setShowBridge(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Credit Purchase Modal */}
+      <AnimatePresence>
+        {showPurchase && (
+          <CreditPurchase onClose={() => setShowPurchase(false)} />
         )}
       </AnimatePresence>
     </div>
