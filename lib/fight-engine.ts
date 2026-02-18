@@ -1,6 +1,13 @@
 import { FightState, FighterState, FightAction, Fighter, Commentary } from '@/types'
 import { FightRecorder, FightRecording } from './fight-recorder'
 
+export interface FightBiasConfig {
+  /** Fighter ID that receives the advantage */
+  favoredFighterId: string
+  /** Damage multiplier bonus (e.g. 0.15 = favored deals 15% more, takes 15% less) */
+  damageModifier: number
+}
+
 export class FightEngine {
   private fightState: FightState
   private commentary: Commentary[] = []
@@ -13,16 +20,19 @@ export class FightEngine {
   private recorder?: FightRecorder
   private fighter1Meta?: { id: string; name: string; emoji: string }
   private fighter2Meta?: { id: string; name: string; emoji: string }
+  private biasConfig?: FightBiasConfig
 
   constructor(
     fighter1: Fighter,
     fighter2: Fighter,
     onStateUpdate?: (state: FightState) => void,
     onCommentary?: (comment: Commentary) => void,
-    enableRecording: boolean = false
+    enableRecording: boolean = false,
+    biasConfig?: FightBiasConfig
   ) {
     this.onStateUpdate = onStateUpdate
     this.onCommentary = onCommentary
+    this.biasConfig = biasConfig
     if (enableRecording) {
       this.recorder = new FightRecorder(3)
       this.fighter1Meta = { id: fighter1.id, name: fighter1.name, emoji: fighter1.emoji }
@@ -335,6 +345,17 @@ export class FightEngine {
     }
   }
 
+  /** Apply bias damage modifier: favored fighter deals more, takes less */
+  private applyBias(damage: number, attackerId: string): number {
+    if (!this.biasConfig) return damage
+    const { favoredFighterId, damageModifier } = this.biasConfig
+    if (attackerId === favoredFighterId) {
+      return damage * (1 + damageModifier)
+    }
+    // Attacker is the non-favored fighter — reduce their damage
+    return damage * (1 - damageModifier)
+  }
+
   private landKick(action: FightAction & { type: 'kick' | 'roundhouse' }, attacker: FighterState, defender: FighterState): void {
     attacker.stats.landed++
     attacker.combo.count++
@@ -354,6 +375,7 @@ export class FightEngine {
       this.addCommentary(this.getHitCommentary(action.type), 'action', 'medium')
     }
 
+    damage = this.applyBias(damage, attacker.id)
     defender.hp = Math.max(0, defender.hp - damage)
     defender.animation.state = 'hit'
     defender.animation.duration = isPowerShot ? 14 : 8
@@ -369,13 +391,13 @@ export class FightEngine {
     attacker.stats.landed++
     attacker.combo.count++
     attacker.combo.lastHit = 0
-    
+
     let damage = action.power * (8 + Math.random() * 7) // 8-15 base damage
-    
+
     // Power shot chance
     const powerChance = action.type === 'uppercut' ? 0.25 : action.type === 'hook' ? 0.20 : 0.15
     const isPowerShot = Math.random() < powerChance
-    
+
     if (isPowerShot) {
       damage *= 2.5
       attacker.stats.powerShots++
@@ -384,8 +406,9 @@ export class FightEngine {
     } else {
       this.addCommentary(this.getHitCommentary(action.type), 'action', 'medium')
     }
-    
+
     // Apply damage
+    damage = this.applyBias(damage, attacker.id)
     defender.hp = Math.max(0, defender.hp - damage)
     defender.animation.state = 'hit'
     defender.animation.duration = isPowerShot ? 12 : 6
@@ -421,6 +444,7 @@ export class FightEngine {
     if (hits > 0) {
       attacker.combo.count += hits
       attacker.combo.lastHit = 0
+      totalDamage = this.applyBias(totalDamage, attacker.id)
       defender.hp = Math.max(0, defender.hp - totalDamage)
       defender.animation.state = 'hit'
       defender.animation.duration = hits * 4

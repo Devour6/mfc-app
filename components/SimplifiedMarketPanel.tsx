@@ -285,6 +285,7 @@ export default function SimplifiedMarketPanel({
           className="flex justify-center pt-2 pb-3 cursor-pointer"
           onClick={() => setMobileExpanded(!mobileExpanded)}
         >
+          {/* eslint-disable-next-line mfc/no-rounded-corners -- Drag handle is a UI affordance, documented exception */}
           <div className="w-10 h-1 bg-text2/40 rounded-full" />
         </div>
 
