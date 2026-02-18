@@ -242,6 +242,24 @@ Copy `.env.example` to `.env.local` and fill in values. Required for backend:
 - `DATABASE_URL` — PostgreSQL connection string
 - `AUTH0_*` — Auth0 tenant credentials (when auth is enabled)
 
+## Recent Workflow Changes (2026-02-18) — READ THIS
+
+The following changes affect **ALL agents on ALL teams**:
+
+1. **New file: `LEARNINGS.md`** — Shared knowledge base at repo root. Contains gotchas about Prisma 7, Next.js 16, Jest/ESM, multi-agent git, auth patterns, credit safety, and canvas rendering. **You must read this before starting work.** If you discover a new gotcha, append it here.
+
+2. **New file: `.github/PRD-TEMPLATE.md`** — For non-trivial features, copy this template and fill it in before breaking work into tasks. Locks scope + acceptance criteria.
+
+3. **Tasks now require acceptance criteria** — Every task must have machine-verifiable pass/fail conditions (e.g., "test X passes", "route returns 200"). Self-verify locally before opening a PR.
+
+4. **AI PR Review runs on every PR** — An automated Claude Code reviewer will post comments on your PR within minutes of opening it. It checks correctness, security, and MFC conventions (requireAuth, no border-radius, zod validation, etc.). This does NOT replace human review — it's a first pass. Fix any issues it flags.
+
+5. **PR checklist updated** — Now requires reading `LEARNINGS.md`, verifying acceptance criteria, and noting new gotchas.
+
+**No changes to existing code, components, or APIs.** These are process/workflow additions only.
+
+---
+
 ## Team Coordination
 
 **This file (CLAUDE.md) is the master coordination document.** Two teams work on this repo:
