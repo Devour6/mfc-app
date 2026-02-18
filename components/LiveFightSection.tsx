@@ -76,7 +76,6 @@ export default function LiveFightSection({
   const marketEngineRef = useRef<MarketEngine | null>(null)
   const [showFightCard, setShowFightCard] = useState(true)
   const [autoRestartEnabled, setAutoRestartEnabled] = useState(true)
-  const [soundEnabled, setSoundEnabled] = useState(true)
   const [replayRecording, setReplayRecording] = useState<FightRecording | null>(null)
   const [showReplay, setShowReplay] = useState(false)
   const [activeBets, setActiveBets] = useState<Array<{

@@ -23,7 +23,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 
 ```
 app/                  → Next.js App Router (layout, page, globals.css)
-components/           → 30 React components (~8,000 lines) — see UI Architecture below
+components/           → 28 React components (~7,300 lines) — see UI Architecture below
 lib/                  → Core engines (~3,400 lines)
   ├── fight-engine.ts       → Tick-based combat simulation
   ├── market-engine.ts      → Price discovery + order book
@@ -187,9 +187,11 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Slim top bar navigation with "More" dropdown — fight always visible, secondary sections in slide-over drawer
 - Unified TradingPanel: Polymarket-style YES/NO trading with collapsible live props, order book, positions
 - Responsive layout: TradingPanel sidebar on desktop (380px), stacked below fight on mobile
+- Slide-over drawer with Escape key close, ARIA dialog accessibility, full-width on mobile
 - Zustand persistence
 - Reactive credit balance: store reads from `/api/user/credits` on mount, falls back to local data
-- Live betting deducts credits from Zustand store via `placeBetAndDeduct`
+- Live betting deducts credits from Zustand store via `placeBetAndDeduct` (atomic — balance check inside set() callback)
+- CLOB trades (YES/NO contracts) deduct credits via `placeBetAndDeduct` before `marketEngine.placeTrade`
 - Fight replay: records tick snapshots, "WATCH REPLAY" button after KO, playback with speed controls
 - Bet settlement animations: tracks active bets, shows win/loss overlay with P&L summary after fight
 - Leaderboard: RankingsSection wired to store via `fetchLeaderboard()` (hybrid API/local)

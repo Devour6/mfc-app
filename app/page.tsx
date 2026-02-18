@@ -24,7 +24,7 @@ interface LoginStreak {
   nextRewardCredits: number
 }
 
-interface TournamentBracket {
+interface TournamentBracketData {
   id: string
   name: string
   status: 'upcoming' | 'in-progress' | 'completed'
@@ -112,7 +112,7 @@ const mockFighters = [
 ]
 
 // Mock tournament data
-const mockTournament: TournamentBracket = {
+const mockTournament: TournamentBracketData = {
   id: 'weekly-championship-001',
   name: 'Weekly Championship',
   status: 'in-progress',
@@ -169,6 +169,16 @@ export default function Home() {
   useEffect(() => {
     setIsLoaded(true)
   }, [])
+
+  // Close drawer on Escape key
+  useEffect(() => {
+    if (!drawerSection) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerSection(null)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [drawerSection])
 
   const enterArena = (userType: 'spectator' | 'fighter') => {
     setCurrentView('arena')
@@ -268,11 +278,14 @@ export default function Home() {
                     {/* Drawer panel */}
                     <motion.div
                       key="drawer-panel"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label={drawerTitle[drawerSection]}
                       initial={{ x: '100%' }}
                       animate={{ x: 0 }}
                       exit={{ x: '100%' }}
                       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                      className="absolute top-0 right-0 bottom-0 w-full max-w-lg bg-bg border-l border-border z-50 flex flex-col overflow-hidden"
+                      className="absolute top-0 right-0 bottom-0 w-full max-w-full sm:max-w-lg bg-bg border-l border-border z-50 flex flex-col overflow-hidden"
                     >
                       {/* Drawer header */}
                       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface shrink-0">
