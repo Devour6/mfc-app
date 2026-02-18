@@ -82,6 +82,9 @@ export default function LiveFightSection({
   const marketEngineRef = useRef<MarketEngine | null>(null)
   const [showFightCard, setShowFightCard] = useState(!simplified)
   const [autoRestartEnabled, setAutoRestartEnabled] = useState(!simplified)
+  const autoRestartRef = useRef(!simplified)
+  useEffect(() => { autoRestartRef.current = autoRestartEnabled }, [autoRestartEnabled])
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [replayRecording, setReplayRecording] = useState<FightRecording | null>(null)
   const [showReplay, setShowReplay] = useState(false)
   const [activeBets, setActiveBets] = useState<Array<{
@@ -246,8 +249,9 @@ export default function LiveFightSection({
           }
 
           // Auto-restart after delay if enabled
-          if (autoRestartEnabled) {
-            setTimeout(() => {
+          if (autoRestartRef.current) {
+            restartTimerRef.current = setTimeout(() => {
+              restartTimerRef.current = null
               fight.restart()
               // Stop old market engine before creating new one
               marketEngineRef.current?.stop()
@@ -311,8 +315,12 @@ export default function LiveFightSection({
     return () => {
       fight.stop()
       marketEngineRef.current?.stop()
+      if (restartTimerRef.current) {
+        clearTimeout(restartTimerRef.current)
+        restartTimerRef.current = null
+      }
     }
-  }, [autoRestartEnabled, simplified]) // Re-initialize if auto-restart or simplified changes
+  }, [simplified]) // Re-initialize only if simplified mode changes
 
   const handleRestartFight = () => {
     if (fightEngine) {
