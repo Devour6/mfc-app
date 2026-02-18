@@ -169,6 +169,7 @@ export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   const credits = useGameStore(state => state.user.credits)
+  const hasCompletedOnboarding = useGameStore(state => state.hasCompletedOnboarding)
 
   useEffect(() => {
     setIsLoaded(true)
@@ -260,13 +261,17 @@ export default function Home() {
               onOpenSection={handleOpenSection}
               onOpenBridge={() => setShowBridge(true)}
               onBuyCredits={() => setShowPurchase(true)}
+              onboardingMode={!hasCompletedOnboarding}
             />
 
             {/* Fight always visible — fills remaining space */}
             <div className="flex-1 overflow-hidden relative">
-              <LiveFightSection onFightComplete={(fighterId, fightData) => {
-                console.log('Fight completed:', fighterId, fightData)
-              }} />
+              <LiveFightSection
+                simplified={!hasCompletedOnboarding}
+                onFightComplete={(fighterId, fightData) => {
+                  console.log('Fight completed:', fighterId, fightData)
+                }}
+              />
 
               {/* Slide-over drawer for secondary sections */}
               <AnimatePresence>
