@@ -18,6 +18,7 @@ import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 import OnboardingPrompt from './OnboardingPrompt'
 import ContractConceptCard from './ContractConceptCard'
+import SimplifiedMarketPanel from './SimplifiedMarketPanel'
 
 interface LiveFightSectionProps {
   onFightComplete?: (fighterId: string, fightData: any) => void
@@ -97,8 +98,18 @@ export default function LiveFightSection({
   const onboardingStep = useGameStore(state => state.onboardingStep)
   const advanceOnboarding = useGameStore(state => state.advanceOnboarding)
   const pickedFighter = useGameStore(state => state.pickedFighter)
+  const demoCredits = useGameStore(state => state.demoCredits)
+  const demoTrades = useGameStore(state => state.demoTrades)
+  const placeDemoTrade = useGameStore(state => state.placeDemoTrade)
   const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false)
   const onboardingTriggered = useRef(false)
+
+  // Show simplified market panel when onboarding reaches market-open step
+  const showSimplifiedMarket = simplified && (
+    onboardingStep === 'market-open' ||
+    onboardingStep === 'demo-traded' ||
+    onboardingStep === 'converted'
+  )
 
   // Onboarding prompt trigger: 30s timer or significant event
   useEffect(() => {
@@ -308,7 +319,11 @@ export default function LiveFightSection({
       )}
 
       {/* Main Fight Layout - Responsive: stacked on mobile, sidebar on desktop */}
-      <div className={`flex-1 flex flex-col ${simplified ? '' : 'lg:grid lg:grid-cols-[1fr_380px]'} overflow-y-auto lg:overflow-hidden`}>
+      <div className={`flex-1 flex flex-col ${
+        simplified
+          ? (showSimplifiedMarket ? 'lg:grid lg:grid-cols-[1fr_288px]' : '')
+          : 'lg:grid lg:grid-cols-[1fr_380px]'
+      } overflow-y-auto lg:overflow-hidden`}>
         {/* Fight Area */}
         <div className="flex flex-col min-h-[50vh] lg:min-h-0 lg:overflow-hidden">
           {/* Fight Header */}
@@ -504,6 +519,22 @@ export default function LiveFightSection({
               />
             </div>
           </div>
+        )}
+
+        {/* Simplified Market Panel (onboarding mode, after "Got it") */}
+        {showSimplifiedMarket && marketState && (
+          <SimplifiedMarketPanel
+            fighterName={pickedFighter === sampleFighters[1].id ? sampleFighters[1].name : sampleFighters[0].name}
+            marketState={marketState}
+            demoCredits={demoCredits}
+            demoTrades={demoTrades}
+            onBuy={(side, price, qty) => {
+              placeDemoTrade(side, price, qty)
+              if (onboardingStep === 'market-open') {
+                advanceOnboarding('demo-traded')
+              }
+            }}
+          />
         )}
 
       </div>
