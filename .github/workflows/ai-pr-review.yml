@@ -11,13 +11,11 @@ permissions:
 
 env:
   REVIEW_EVENT: COMMENT
-  REVIEW_CLI_BIN: claude
-  REVIEW_CLI_ARGS: --print
+  OPENAI_MODEL: gpt-4o
   SYSTEM_PROMPT: |
     Review this patch like a thoughtful senior engineer on the MFC (Molt Fighting Championship) project.
 
     Context: MFC is a Next.js 16 / TypeScript / Prisma / Solana prediction market exchange.
-    Read CLAUDE.md at the repo root for full project context.
 
     Prioritize:
     1. Correctness — logic errors, race conditions, broken state transitions
@@ -33,12 +31,28 @@ env:
     5. Readability — clear naming, reasonable complexity
 
     Be concise and constructive. Praise good changes. Group related issues.
-    If CLAUDE.md exists, verify the code complies with documented patterns.
+
+    Output format — respond with ONLY this XML, nothing else:
+
+    <review>
+      <summary>Overall assessment in 2-3 sentences.</summary>
+      <comments>
+        <comment>
+          <file>path/to/file.ext</file>
+          <line>123</line>
+          <body>Your comment about this specific line</body>
+        </comment>
+      </comments>
+      <status>
+        <state>success</state>
+        <description>Brief reason (under 120 chars)</description>
+      </status>
+    </review>
 
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     concurrency:
       group: ai-pr-review-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -53,14 +67,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Install Claude Code
-        run: |
-          set -euo pipefail
-          echo "Installing Claude Code via npm..."
-          npm install -g @anthropic-ai/claude-code
-          command -v claude >/dev/null 2>&1 || { echo "claude not found after install" >&2; exit 1; }
-          claude --version || true
 
       - name: Gather PR context
         env:
@@ -77,39 +83,16 @@ jobs:
 
       - name: Run AI review
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           set -euo pipefail
 
-          if [ -n "${ANTHROPIC_API_KEY:-}" ]; then echo "::add-mask::${ANTHROPIC_API_KEY}"; fi
+          if [ -n "${OPENAI_API_KEY:-}" ]; then echo "::add-mask::${OPENAI_API_KEY}"; fi
 
-          INSTRUCTION=$(cat <<'EOF'
-          You are performing a single-pass PR review for the MFC project.
+          DIFF_CONTENT=$(cat diff.patch)
+          PR_TITLE=$(jq -r '.title' pr.json)
 
-          Inputs:
-          - You will receive a unified diff (the PR patch) via stdin.
-          - Comment only on changed/added lines; avoid spam.
-
-          Output format - XML with this exact structure:
-
-          <review>
-            <summary>Overall assessment in 2-3 sentences. Focus on correctness, security, and MFC conventions.</summary>
-            <comments>
-              <comment>
-                <file>path/to/file.ext</file>
-                <line>123</line>
-                <body>Your comment about this specific line</body>
-              </comment>
-            </comments>
-            <status>
-              <state>success</state>
-              <description>Brief reason (under 120 chars)</description>
-            </status>
-          </review>
-          EOF
-          )
-
-          echo "Running AI review..."
+          echo "Running AI review via OpenAI ${OPENAI_MODEL}..."
           echo "Diff size: $(wc -c < diff.patch) bytes"
 
           MAX_RETRIES=3
@@ -118,9 +101,40 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
 
-            if cat diff.patch | timeout 300 "$REVIEW_CLI_BIN" $REVIEW_CLI_ARGS "${SYSTEM_PROMPT}
+            # Build request payload with Node to safely handle special chars in diff
+            node -e "
+            const fs = require('fs');
+            const diff = fs.readFileSync('diff.patch', 'utf8');
+            const systemPrompt = process.env.SYSTEM_PROMPT;
+            const model = process.env.OPENAI_MODEL;
+            const payload = {
+              model: model,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: 'Review this PR patch. Respond with ONLY the XML format specified in your instructions.\n\n' + diff }
+              ],
+              temperature: 0.2,
+              max_tokens: 4096
+            };
+            fs.writeFileSync('request.json', JSON.stringify(payload));
+            "
 
-          ${INSTRUCTION}" > ai_output.xml; then
+            HTTP_CODE=$(curl -s -w '%{http_code}' -o response.json \
+              -X POST https://api.openai.com/v1/chat/completions \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+              -d @request.json \
+              --max-time 120)
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              # Extract the message content
+              node -e "
+              const fs = require('fs');
+              const resp = JSON.parse(fs.readFileSync('response.json', 'utf8'));
+              const content = resp.choices?.[0]?.message?.content || '';
+              fs.writeFileSync('ai_output.xml', content);
+              "
+
               if grep -q "<review>" ai_output.xml && grep -q "<summary>" ai_output.xml && grep -q "</review>" ai_output.xml; then
                 echo "Valid XML review received"
                 break
@@ -129,7 +143,8 @@ jobs:
                 RETRY_COUNT=$((RETRY_COUNT + 1))
               fi
             else
-              echo "AI call failed, retrying..."
+              echo "OpenAI API returned HTTP $HTTP_CODE, retrying..."
+              cat response.json 2>/dev/null || true
               RETRY_COUNT=$((RETRY_COUNT + 1))
             fi
 
@@ -154,6 +169,7 @@ jobs:
 
           echo "AI review completed"
 
+          # Parse XML output
           node -e "
           const fs = require('fs');
           try {
@@ -180,6 +196,7 @@ jobs:
           echo "## AI Review Summary" > review.md
           cat summary.txt >> review.md
 
+          # Extract inline comments
           echo "[]" > comments.json
           if grep -q "<comment>" ai_output.xml; then
             node -e "
@@ -208,6 +225,7 @@ jobs:
             "
           fi
 
+          # Build status JSON safely
           node -e "
           const fs = require('fs');
           const state = fs.readFileSync('state.txt', 'utf8').trim() || 'success';
