@@ -138,6 +138,22 @@ export const registerAgentSchema = z.object({
   challengeAnswer: z.number({ message: 'Challenge answer must be a number' }),
 })
 
+// ─── Skins ─────────────────────────────────────────────────────────────────
+
+export const SkinType = z.enum(['BODY', 'HEAD', 'GLOVES', 'BOOTS', 'AURA'])
+export const SkinRarity = z.enum(['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'])
+
+export const purchaseSkinSchema = z.object({
+  skinId: z.string().min(1, 'Skin ID is required'),
+  fighterId: z.string().min(1, 'Fighter ID is required'),
+})
+
+export const skinQuerySchema = z.object({
+  type: SkinType.optional(),
+  rarity: SkinRarity.optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
 // ─── Stripe ────────────────────────────────────────────────────────────────
 
 export const checkoutSessionSchema = z.object({
