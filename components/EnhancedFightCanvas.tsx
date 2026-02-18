@@ -1516,7 +1516,7 @@ export default function EnhancedFightCanvas({
           {roundEvents.slice(0, 3).map((event, index) => (
             <motion.div
               key={event.id}
-              className={`mb-2 p-2 rounded text-sm font-pixel ${
+              className={`mb-2 p-2 text-sm font-pixel ${
                 event.severity === 'high' ? 'bg-red-600/80 text-white' :
                 event.severity === 'medium' ? 'bg-yellow-600/80 text-white' :
                 'bg-gray-600/80 text-white'
@@ -1533,7 +1533,7 @@ export default function EnhancedFightCanvas({
       </div>
 
       {/* Round Stats Display */}
-      <div className="absolute top-20 right-4 bg-black/70 text-white p-3 rounded text-xs font-ui">
+      <div className="absolute top-20 right-4 bg-black/70 text-white p-3 text-xs font-ui">
         <div className="font-pixel text-sm mb-2">ROUND STATS</div>
         {Object.entries(roundStats).slice(-3).map(([round, stats]) => (
           <div key={round} className="mb-1">

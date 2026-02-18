@@ -285,7 +285,7 @@ export default function FighterProfileModal({
               {activeTab === 'overview' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Quick Stats */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4 flex items-center gap-2">
                       <Activity className="w-4 h-4" />
                       QUICK STATS
@@ -311,7 +311,7 @@ export default function FighterProfileModal({
                   </div>
 
                   {/* Recent Form */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4" />
                       RECENT FORM
@@ -320,7 +320,7 @@ export default function FighterProfileModal({
                       {fighter.recentForm.map((result, index) => (
                         <div
                           key={index}
-                          className={`w-8 h-8 rounded ${getFormColor(result)} flex items-center justify-center text-white text-xs font-bold`}
+                          className={`w-8 h-8 ${getFormColor(result)} flex items-center justify-center text-white text-xs font-bold`}
                         >
                           {result}
                         </div>
@@ -332,7 +332,7 @@ export default function FighterProfileModal({
                   </div>
 
                   {/* Specialties & Weaknesses */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4 flex items-center gap-2">
                       <Star className="w-4 h-4" />
                       SPECIALTIES
@@ -341,7 +341,7 @@ export default function FighterProfileModal({
                       {fighter.specialties.map((specialty, index) => (
                         <span
                           key={index}
-                          className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30"
+                          className="px-2 py-1 bg-green-500/20 text-green-400 text-xs border border-green-500/30"
                         >
                           {specialty}
                         </span>
@@ -352,7 +352,7 @@ export default function FighterProfileModal({
                       {fighter.weaknesses.map((weakness, index) => (
                         <span
                           key={index}
-                          className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded border border-red-500/30"
+                          className="px-2 py-1 bg-red-500/20 text-red-400 text-xs border border-red-500/30"
                         >
                           {weakness}
                         </span>
@@ -361,7 +361,7 @@ export default function FighterProfileModal({
                   </div>
 
                   {/* Training Options */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4 flex items-center gap-2">
                       <Zap className="w-4 h-4" />
                       TRAINING
@@ -371,7 +371,7 @@ export default function FighterProfileModal({
                         <motion.button
                           key={stat}
                           onClick={() => onTrainFighter?.(fighter.id, stat)}
-                          className="p-2 bg-surface2 hover:bg-accent/20 border border-border hover:border-accent transition-all rounded text-left"
+                          className="p-2 bg-surface2 hover:bg-accent/20 border border-border hover:border-accent transition-all text-left"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -387,7 +387,7 @@ export default function FighterProfileModal({
               {activeTab === 'stats' && (
                 <div className="space-y-6">
                   {/* Core Stats */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4">CORE ATTRIBUTES</h3>
                     <div className="space-y-4">
                       {Object.entries(fighter.stats).map(([stat, value]) => (
@@ -403,7 +403,7 @@ export default function FighterProfileModal({
                   </div>
 
                   {/* Evolution Progress */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4" />
                       EVOLUTION PROGRESS
@@ -425,13 +425,13 @@ export default function FighterProfileModal({
               {activeTab === 'history' && (
                 <div className="space-y-6">
                   {/* Fight History */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4">FIGHT HISTORY</h3>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
                       {fighter.fightHistory.map((fight, index) => (
-                        <div key={fight.id} className="flex justify-between items-center p-2 bg-surface2 rounded text-xs">
+                        <div key={fight.id} className="flex justify-between items-center p-2 bg-surface2 text-xs">
                           <div className="flex items-center gap-3">
-                            <div className={`w-6 h-6 rounded ${getFormColor(fight.result)} flex items-center justify-center text-white text-xs font-bold`}>
+                            <div className={`w-6 h-6 ${getFormColor(fight.result)} flex items-center justify-center text-white text-xs font-bold`}>
                               {fight.result}
                             </div>
                             <div>
@@ -449,11 +449,11 @@ export default function FighterProfileModal({
                   </div>
 
                   {/* Training History */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4">RECENT TRAINING</h3>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                       {fighter.trainingHistory.slice(0, 5).map((session, index) => (
-                        <div key={session.id} className="flex justify-between items-center p-2 bg-surface2 rounded text-xs">
+                        <div key={session.id} className="flex justify-between items-center p-2 bg-surface2 text-xs">
                           <div className="flex items-center gap-3">
                             <Zap className="w-4 h-4 text-accent" />
                             <div>
@@ -475,25 +475,25 @@ export default function FighterProfileModal({
               {activeTab === 'analytics' && (
                 <div className="space-y-6">
                   {/* Performance Predictions */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4 flex items-center gap-2">
                       <Brain className="w-4 h-4" />
                       AI PREDICTIONS
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-3 bg-surface2 rounded">
+                      <div className="text-center p-3 bg-surface2">
                         <div className="text-2xl font-pixel text-gold mb-1">
                           {fighter.analytics.predictions.nextFightWinProbability}%
                         </div>
                         <div className="text-xs text-text2">Next Fight Win Chance</div>
                       </div>
-                      <div className="text-center p-3 bg-surface2 rounded">
+                      <div className="text-center p-3 bg-surface2">
                         <div className="text-xl font-pixel text-text mb-1 capitalize">
                           {fighter.analytics.predictions.careerTrajectory}
                         </div>
                         <div className="text-xs text-text2">Career Trajectory</div>
                       </div>
-                      <div className="text-center p-3 bg-surface2 rounded">
+                      <div className="text-center p-3 bg-surface2">
                         <div className="text-2xl font-pixel text-text mb-1">
                           {fighter.analytics.predictions.retirementForecast}
                         </div>
@@ -503,7 +503,7 @@ export default function FighterProfileModal({
                   </div>
 
                   {/* Advanced Metrics */}
-                  <div className="bg-bg border border-border rounded p-4">
+                  <div className="bg-bg border border-border p-4">
                     <h3 className="font-pixel text-sm text-accent mb-4">ADVANCED METRICS</h3>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">

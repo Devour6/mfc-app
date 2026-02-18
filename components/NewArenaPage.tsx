@@ -189,7 +189,7 @@ export default function NewArenaPage({
               {!currentTournament && user.fighters.length >= 3 && (
                 <motion.button
                   onClick={handleStartTournament}
-                  className="px-3 py-1 bg-accent text-bg rounded font-pixel text-xs hover:bg-accent/90 transition-colors"
+                  className="px-3 py-1 bg-accent text-bg font-pixel text-xs hover:bg-accent/90 transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

@@ -190,7 +190,7 @@ export default function FighterEvolution({
             {evolution.careerHighlights.slice(-3).map((highlight, index) => (
               <motion.div
                 key={index}
-                className="bg-accent/10 border border-accent/20 rounded px-2 py-1"
+                className="bg-accent/10 border border-accent/20 px-2 py-1"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}

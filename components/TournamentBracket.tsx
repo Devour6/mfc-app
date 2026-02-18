@@ -108,7 +108,7 @@ export default function TournamentBracket({
       {match.status === 'pending' && onStartMatch && showControls && (
         <button
           onClick={() => onStartMatch(match)}
-          className="w-full py-1 bg-accent text-bg rounded font-pixel text-xs hover:bg-accent/90 transition-colors"
+          className="w-full py-1 bg-accent text-bg font-pixel text-xs hover:bg-accent/90 transition-colors"
         >
           Start Fight
         </button>
@@ -226,7 +226,7 @@ export default function TournamentBracket({
           {onStartMatch && showControls && (
             <button
               onClick={() => onStartMatch(upcomingMatch)}
-              className="w-full mt-3 py-2 bg-accent text-bg rounded font-pixel text-sm hover:bg-accent/90 transition-colors"
+              className="w-full mt-3 py-2 bg-accent text-bg font-pixel text-sm hover:bg-accent/90 transition-colors"
             >
               Start Championship Fight
             </button>

@@ -270,7 +270,7 @@ export default function AchievementSystem({
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value as any)}
-            className="bg-surface2 border border-border rounded px-2 py-1 text-sm text-text1"
+            className="bg-surface2 border border-border px-2 py-1 text-sm text-text1"
           >
             <option value="all">All Types</option>
             <option value="fight">Fight</option>
