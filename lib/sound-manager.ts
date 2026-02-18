@@ -1,60 +1,48 @@
 import { SoundEffect, SoundManager } from '@/types'
 
+const SOUND_PATHS: Record<SoundEffect, string> = {
+  'punch-light': '/sounds/punch-light.mp3',
+  'punch-heavy': '/sounds/punch-heavy.mp3',
+  'dodge': '/sounds/dodge.mp3',
+  'block': '/sounds/block.mp3',
+  'ko': '/sounds/ko.mp3',
+  'bell': '/sounds/bell.mp3',
+  'crowd-cheer': '/sounds/crowd-cheer.mp3',
+  'trade-success': '/sounds/trade-success.mp3',
+  'trade-fail': '/sounds/trade-fail.mp3',
+  'notification': '/sounds/notification.mp3',
+}
+
 class SoundManagerImpl implements SoundManager {
   private sounds: Map<SoundEffect, HTMLAudioElement> = new Map()
   private masterVolume: number = 0.7
   private muted: boolean = false
-  private initialized: boolean = false
 
-  constructor() {
-    if (typeof window !== 'undefined') {
-      this.initialize()
-    }
-  }
+  private getOrCreate(sound: SoundEffect): HTMLAudioElement | null {
+    if (typeof window === 'undefined') return null
 
-  private initialize(): void {
-    if (this.initialized) return
+    let audio = this.sounds.get(sound)
+    if (audio) return audio
 
-    const soundEffects: SoundEffect[] = [
-      'punch-light',
-      'punch-heavy',
-      'dodge',
-      'block',
-      'ko',
-      'bell',
-      'crowd-cheer',
-      'trade-success',
-      'trade-fail',
-      'notification'
-    ]
+    const path = SOUND_PATHS[sound]
+    if (!path) return null
 
-    soundEffects.forEach(sound => {
-      const audio = document.getElementById(sound) as HTMLAudioElement
-      if (audio) {
-        this.sounds.set(sound, audio)
-        audio.volume = this.masterVolume
-      }
-    })
-
-    this.initialized = true
+    audio = new Audio(path)
+    audio.volume = this.masterVolume
+    this.sounds.set(sound, audio)
+    return audio
   }
 
   public play(sound: SoundEffect, volume: number = 1.0): void {
-    if (!this.initialized) this.initialize()
     if (this.muted) return
 
-    const audio = this.sounds.get(sound)
-    if (!audio) {
-      console.warn(`Sound effect '${sound}' not found`)
-      return
-    }
+    const audio = this.getOrCreate(sound)
+    if (!audio) return
 
     try {
-      // Reset to start and play
       audio.currentTime = 0
       audio.volume = this.masterVolume * volume
-      
-      // Use promise-based playback for better error handling
+
       const playPromise = audio.play()
       if (playPromise !== undefined) {
         playPromise.catch(error => {
@@ -68,8 +56,7 @@ class SoundManagerImpl implements SoundManager {
 
   public setMasterVolume(volume: number): void {
     this.masterVolume = Math.max(0, Math.min(1, volume))
-    
-    // Update all loaded sounds
+
     this.sounds.forEach(audio => {
       audio.volume = this.masterVolume
     })
@@ -97,18 +84,15 @@ class SoundManagerImpl implements SoundManager {
     return this.masterVolume
   }
 
-  // Preload all sounds for better performance
   public preload(): void {
-    if (!this.initialized) this.initialize()
-    
-    this.sounds.forEach((audio, sound) => {
-      if (audio.readyState < 2) { // HAVE_CURRENT_DATA
-        audio.load()
-      }
+    if (typeof window === 'undefined') return
+
+    const effects = Object.keys(SOUND_PATHS) as SoundEffect[]
+    effects.forEach(sound => {
+      this.getOrCreate(sound)
     })
   }
 
-  // Play contextual fight sounds based on actions
   public playFightAction(actionType: string, isPowerShot: boolean = false): void {
     switch (actionType) {
       case 'jab':
@@ -120,7 +104,6 @@ class SoundManagerImpl implements SoundManager {
         this.play('punch-heavy', 0.9)
         break
       case 'combo':
-        // Play rapid light punches
         this.play('punch-light', 0.8)
         setTimeout(() => this.play('punch-light', 0.6), 150)
         setTimeout(() => this.play('punch-heavy', 1.0), 300)
@@ -144,16 +127,14 @@ class SoundManagerImpl implements SoundManager {
     }
   }
 
-  // Enhanced market sound feedback
   public playTradeSound(success: boolean, volume: number = 0.6): void {
     this.play(success ? 'trade-success' : 'trade-fail', volume)
   }
 
-  // Ambient crowd reactions based on fight intensity
   public playAmbientReaction(intensity: 'low' | 'medium' | 'high'): void {
     const volumes = { low: 0.2, medium: 0.4, high: 0.7 }
-    
-    if (Math.random() < 0.3) { // 30% chance to play ambient sound
+
+    if (Math.random() < 0.3) {
       this.play('crowd-cheer', volumes[intensity])
     }
   }
@@ -178,17 +159,5 @@ export const playTradeSound = (success: boolean, volume?: number) => {
 export const muteAll = () => soundManager.mute()
 export const unmuteAll = () => soundManager.unmute()
 export const setVolume = (volume: number) => soundManager.setMasterVolume(volume)
-
-// Initialize sound manager on first import
-if (typeof window !== 'undefined') {
-  // Wait for DOM to be ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      soundManager.preload()
-    })
-  } else {
-    soundManager.preload()
-  }
-}
 
 export default soundManager
