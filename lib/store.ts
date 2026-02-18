@@ -509,12 +509,13 @@ export const useGameStore = create<GameState>()(
       },
 
       placeBetAndDeduct: (amount: number, _description: string) => {
-        const { user } = get()
-        if (user.credits < amount) return false
-        set(state => ({
-          user: { ...state.user, credits: state.user.credits - amount }
-        }))
-        return true
+        let success = false
+        set(state => {
+          if (state.user.credits < amount) return state
+          success = true
+          return { user: { ...state.user, credits: state.user.credits - amount } }
+        })
+        return success
       },
 
       // Leaderboard

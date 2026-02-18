@@ -118,7 +118,7 @@ Zustand store (`lib/store.ts`) manages:
 - User data (id, name, credits, fighters, trades, settings)
 - Game state (tournament, achievements, login streak, credit balance, transactions)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
-- `placeBetAndDeduct()` — deducts credits with balance check, returns success/failure
+- `placeBetAndDeduct()` — atomic credit deduction (balance check inside `set()` callback prevents TOCTOU race), returns success/failure
 - `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
 - Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
 - Persists to localStorage
@@ -203,7 +203,7 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Seed script working (`npm run db:seed` / `npm run db:reset`)
 - Auth0 v4 integrated: proxy.ts active, all protected routes guarded with requireAuth(), user-sync creates DB users on first login
 - CI pipeline runs lint, typecheck, tests, and build on every PR to main
-- 91 API integration tests covering all route handlers, auth protection, user sync, agent registration (with auth mocks)
+- 98 tests: 91 API integration + 7 credit safety (atomic deduction, TOCTOU prevention, insufficient balance rejection)
 - Stripe skeleton: checkout session + webhook routes, credit packages, signature verification (lib/stripe.ts, api/stripe/*)
 - Agent integration: SKILL.md, agent-card.json, POST /api/agents/register, dual-mode auth (Auth0 + API key), Moltbook identity verification
 
