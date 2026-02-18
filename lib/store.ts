@@ -606,7 +606,10 @@ export const useGameStore = create<GameState>()(
       advanceOnboarding: (step: OnboardingStep) => {
         set(state => {
           const updates: Partial<GameState> = { onboardingStep: step }
-          if (step === 'completed') {
+          // Onboarding is complete once the user has picked a fighter,
+          // seen the contract card, and placed at least one demo trade.
+          // By the time step reaches 'demo-traded', all three hold.
+          if (step === 'demo-traded' || step === 'completed') {
             updates.hasCompletedOnboarding = true
           }
           return updates as GameState
