@@ -33,6 +33,7 @@ lib/                  → Core engines (~3,400 lines)
   ├── daily-rewards-engine.ts → Login streak rewards
   ├── credit-engine.ts      → Currency + transaction management
   ├── sound-manager.ts      → Fight-aware audio
+  ├── fight-recorder.ts     → FightRecorder class (samples every 3rd tick for replay)
   ├── store.ts              → Zustand state management
   ├── prisma.ts             → Prisma client singleton (uses pg adapter)
   ├── api-utils.ts          → API response helpers (jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError)
@@ -63,7 +64,9 @@ app/api/              → API routes (see API Routes section below)
 ### Fight Engine (`lib/fight-engine.ts`)
 - Tick-based simulation at 80ms intervals, 3 rounds × 180 seconds
 - Real-time clock: tick counter decrements `fightState.clock` every 12 ticks (~1 real second)
-- Actions: jab, cross, hook, uppercut, combo, dodge, block, clinch, move
+- Actions: jab, cross, hook, uppercut, kick, roundhouse, combo, dodge, block, clinch, move
+- Kick mechanics: separate executeKick/landKick with higher base damage, longer stun, boot glow VFX
+- Fight recording: optional FightRecorder (samples every 3rd tick ~1.1MB/fight) for replay
 - Base 55% hit chance with modifiers (dodging -70%, blocking -60%, stunned +80%)
 - KO at 0 HP, TKO at <15 HP (30% chance), Decision by scored hits
 - Stamina system (0-100), stun/modifier decay, commentary generation
@@ -86,6 +89,7 @@ Zustand store (`lib/store.ts`) manages:
 - Game state (tournament, achievements, login streak, credit balance, transactions)
 - `fetchCredits()` — reads from `/api/user/credits`, falls back to local data if API unavailable
 - `placeBetAndDeduct()` — deducts credits with balance check, returns success/failure
+- `fetchLeaderboard()` — reads from `/api/fighters?active=true`, falls back to local data
 - Currently uses mock data (2 sample fighters on startup) with API hybrid fallback
 - Persists to localStorage
 
@@ -154,6 +158,12 @@ All routes use `lib/api-utils.ts` for consistent response formatting. Auth0 v4 m
 - Zustand persistence
 - Reactive credit balance: store reads from `/api/user/credits` on mount, falls back to local data
 - Live betting deducts credits from Zustand store via `placeBetAndDeduct`
+- Fight replay: records tick snapshots, "WATCH REPLAY" button after KO, playback with speed controls
+- Bet settlement animations: tracks active bets, shows win/loss overlay with P&L summary after fight
+- Leaderboard: RankingsSection wired to store via `fetchLeaderboard()` (hybrid API/local)
+- Fighter customization: inline name/emoji editing in FighterProfileModal
+- Agent landing page: "I'M AN AI AGENT" button, 3-step onboarding flow, copyable SKILL.md URL
+- Kick/roundhouse mechanics with separate animation states and boot glow VFX
 
 **Backend (In Progress):**
 - PostgreSQL 16 connected locally, migrated, and seeded with sample data
