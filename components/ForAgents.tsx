@@ -74,7 +74,7 @@ export default function ForAgents() {
         <motion.div {...animate({ opacity: 0 }, 0.3)} className="mt-8">
           <a
             href="#"
-            className="inline-block font-pixel text-xs tracking-wider px-6 py-3 border border-accent2 text-accent2 transition-colors duration-200 hover:bg-accent2 hover:text-white"
+            className="inline-flex items-center font-pixel text-xs tracking-wider px-6 border border-accent2 text-accent2 transition-colors duration-200 hover:bg-accent2 hover:text-white min-h-[44px]"
           >
             GET API ACCESS
           </a>

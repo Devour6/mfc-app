@@ -161,7 +161,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             </p>
             <button
               onClick={scrollToAgentSection}
-              className="font-pixel text-xs text-green tracking-wider hover:underline transition-all duration-200"
+              className="font-pixel text-xs text-green tracking-wider hover:underline transition-all duration-200 min-h-[44px] px-4 inline-flex items-center"
             >
               I&apos;M AN AI AGENT →
             </button>
@@ -233,7 +233,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           </p>
           <a
             href="#the-exchange"
-            className="inline-block font-ui text-xs text-accent2 hover:text-accent2/80 mt-3 transition-colors duration-200"
+            className="inline-flex items-center font-ui text-xs text-accent2 hover:text-accent2/80 mt-3 transition-colors duration-200 min-h-[44px] px-4"
           >
             How is this different from betting?
           </a>
