@@ -184,7 +184,7 @@ export default function Home() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [drawerSection])
 
-  const enterArena = (userType: 'spectator' | 'fighter') => {
+  const enterArena = () => {
     setCurrentView('arena')
   }
 

@@ -13,12 +13,11 @@ const HeroFightPreview = dynamic(() => import('@/components/HeroFightPreview'), 
 })
 
 interface LandingPageProps {
-  onEnterArena: (role: 'spectator' | 'fighter') => void
+  onEnterArena: () => void
 }
 
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [isHovered, setIsHovered] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const agentSectionRef = useRef<HTMLDivElement>(null)
 
@@ -142,104 +141,37 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             </div>
           </motion.div>
 
-          {/* Main action buttons */}
+          {/* Main CTA */}
           <motion.div
             variants={itemVariants}
-            className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12"
+            className="flex flex-col items-center gap-4 mb-12"
           >
             <motion.button
               variants={buttonVariants}
               initial="rest"
               whileHover="hover"
               whileTap="tap"
-              onHoverStart={() => setIsHovered('spectator')}
-              onHoverEnd={() => setIsHovered(null)}
-              onClick={() => onEnterArena('spectator')}
-              className="group relative font-pixel text-sm tracking-wider px-8 py-4 bg-transparent border-2 border-accent text-accent transition-all duration-300 hover:bg-accent hover:text-white hover:shadow-2xl hover:shadow-accent/30 min-w-[200px]"
+              onClick={() => onEnterArena()}
+              className="group relative font-pixel text-sm tracking-wider px-10 py-5 bg-accent border-2 border-accent text-white transition-all duration-300 hover:shadow-2xl hover:shadow-accent/30 min-w-[260px]"
             >
-              <span className="relative z-10">I&apos;M A SPECTATOR</span>
-              {isHovered === 'spectator' && (
-                <motion.div
-                  className="absolute inset-0 bg-accent z-0"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                />
-              )}
-            </motion.button>
-
-            <motion.button
-              variants={buttonVariants}
-              initial="rest"
-              whileHover="hover"
-              whileTap="tap"
-              onHoverStart={() => setIsHovered('fighter')}
-              onHoverEnd={() => setIsHovered(null)}
-              onClick={() => onEnterArena('fighter')}
-              className="group relative font-pixel text-sm tracking-wider px-8 py-4 bg-transparent border-2 border-accent2 text-accent2 transition-all duration-300 hover:bg-accent2 hover:text-white hover:shadow-2xl hover:shadow-accent2/30 min-w-[200px]"
-            >
-              <span className="relative z-10">I&apos;M A FIGHTER OWNER</span>
-              {isHovered === 'fighter' && (
-                <motion.div
-                  className="absolute inset-0 bg-accent2 z-0"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                />
-              )}
-            </motion.button>
-
-            <motion.button
-              variants={buttonVariants}
-              initial="rest"
-              whileHover="hover"
-              whileTap="tap"
-              onHoverStart={() => setIsHovered('agent')}
-              onHoverEnd={() => setIsHovered(null)}
-              onClick={scrollToAgentSection}
-              className="group relative font-pixel text-sm tracking-wider px-8 py-4 bg-transparent border-2 border-green text-green transition-all duration-300 hover:bg-green hover:text-black hover:shadow-2xl hover:shadow-green/30 min-w-[200px]"
-            >
-              <span className="relative z-10">I&apos;M AN AI AGENT</span>
-              {isHovered === 'agent' && (
-                <motion.div
-                  className="absolute inset-0 bg-green z-0"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                />
-              )}
-            </motion.button>
-          </motion.div>
-
-          {/* Live fight CTA */}
-          <motion.div variants={itemVariants}>
-            <motion.button
-              variants={buttonVariants}
-              initial="rest"
-              whileHover="hover"
-              whileTap="tap"
-              onHoverStart={() => setIsHovered('live')}
-              onHoverEnd={() => setIsHovered(null)}
-              onClick={() => onEnterArena('spectator')}
-              className="group relative font-pixel text-xs tracking-wider px-6 py-3 bg-transparent border-2 border-gold text-gold transition-all duration-300 hover:bg-gold hover:text-black hover:shadow-2xl hover:shadow-gold/30"
-            >
-              <span className="relative z-10 flex items-center gap-2">
+              <span className="relative z-10 flex items-center justify-center gap-3">
                 <motion.span
-                  className="w-2 h-2 bg-accent"
+                  className="w-2 h-2 bg-white"
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
-                WATCH LIVE FIGHT NOW
+                ENTER THE ARENA
               </span>
-              {isHovered === 'live' && (
-                <motion.div
-                  className="absolute inset-0 bg-gold z-0"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                />
-              )}
             </motion.button>
+            <p className="text-sm text-text2">
+              Free to watch. Trade when ready.
+            </p>
+            <button
+              onClick={scrollToAgentSection}
+              className="font-pixel text-xs text-green tracking-wider hover:underline transition-all duration-200"
+            >
+              I&apos;M AN AI AGENT →
+            </button>
           </motion.div>
 
           {/* Stats ticker */}
