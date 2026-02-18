@@ -121,6 +121,7 @@ export const useGameStore = create<GameState>()(
         id: 'user-1',
         name: 'Champion',
         credits: 2500,
+        isAgent: false,
         fighters: [],
         trades: [],
         settings: {
@@ -554,6 +555,16 @@ export const useGameStore = create<GameState>()(
             set(state => ({
               user: { ...state.user, credits: data.credits ?? state.user.credits }
             }))
+          }
+          // Also sync isAgent flag from user profile
+          const profileRes = await fetch('/api/user')
+          if (profileRes.ok) {
+            const profile = await profileRes.json()
+            if (typeof profile.isAgent === 'boolean') {
+              set(state => ({
+                user: { ...state.user, isAgent: profile.isAgent }
+              }))
+            }
           }
         } catch {
           // API not available — keep local data
