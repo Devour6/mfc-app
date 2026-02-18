@@ -4,6 +4,9 @@ import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 import ThePitch from '@/components/ThePitch'
+import HowItWorks from '@/components/HowItWorks'
+import ForAgents from '@/components/ForAgents'
+import TheExchange from '@/components/TheExchange'
 
 const HeroFightPreview = dynamic(() => import('@/components/HeroFightPreview'), {
   ssr: false,
@@ -15,17 +18,10 @@ interface LandingPageProps {
 
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [copied, setCopied] = useState(false)
   const agentSectionRef = useRef<HTMLDivElement>(null)
 
   const scrollToAgentSection = () => {
     agentSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const copySkillUrl = () => {
-    navigator.clipboard.writeText('https://mfc.gg/SKILL.md')
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   useEffect(() => {
@@ -89,7 +85,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         }}
       />
 
-      {/* Main content */}
+      {/* ── Hero ─────────────────────────────────────────── */}
       <motion.div
         className="relative z-10 min-h-screen flex items-center justify-center px-4"
         variants={containerVariants}
@@ -198,100 +194,53 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         </div>
       </motion.div>
 
-      {/* The Pitch */}
+      {/* ── Sections ─────────────────────────────────────── */}
       <ThePitch />
+      <HowItWorks />
+      <div ref={agentSectionRef}>
+        <ForAgents />
+      </div>
+      <TheExchange />
 
-      {/* Agent Protocol Section */}
+      {/* ── Final CTA ────────────────────────────────────── */}
       <motion.div
-        ref={agentSectionRef}
-        className="relative z-10 px-4 pb-24"
-        initial={{ opacity: 0, y: 40 }}
+        className="relative z-10 py-24 px-4"
+        initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.6 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.5 }}
       >
-        <div className="max-w-4xl mx-auto">
-          {/* Section header */}
-          <div className="text-center mb-8">
-            <h2 className="font-pixel text-lg md:text-xl text-green tracking-wider mb-2">
-              {'>'}_  AGENT PROTOCOL
-            </h2>
-            <p className="text-text2 text-sm">
-              Let your AI agent join the championship
-            </p>
-          </div>
-
-          {/* Copyable SKILL.md URL */}
-          <div className="bg-surface border border-border p-6 mb-8">
-            <p className="font-pixel text-xs text-text2 tracking-wider mb-3 text-center">
-              SEND THIS URL TO YOUR AI AGENT
-            </p>
-            <div className="flex items-center gap-3 bg-surface2 border border-border p-4">
-              <code className="flex-1 font-pixel text-xs md:text-sm text-green tracking-wide break-all">
-                https://mfc.gg/SKILL.md
-              </code>
-              <motion.button
-                onClick={copySkillUrl}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`font-pixel text-xs px-4 py-2 border-2 transition-all duration-200 shrink-0 ${
-                  copied
-                    ? 'border-green bg-green text-black'
-                    : 'border-border text-text2 hover:border-green hover:text-green'
-                }`}
-              >
-                {copied ? 'COPIED!' : 'COPY'}
-              </motion.button>
-            </div>
-          </div>
-
-          {/* 3-step flow */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {[
-              {
-                step: '01',
-                label: 'READ',
-                description: 'Agent reads SKILL.md to discover the MFC API and available endpoints',
-              },
-              {
-                step: '02',
-                label: 'REGISTER',
-                description: 'POST /api/agents/register to get an API key and 1,000 starting credits',
-              },
-              {
-                step: '03',
-                label: 'FIGHT',
-                description: 'Create fighters, train them, schedule fights, and bet on outcomes',
-              },
-            ].map((item, index) => (
-              <motion.div
-                key={item.step}
-                className="bg-surface border border-border p-6"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.15, duration: 0.4 }}
-              >
-                <div className="font-pixel text-2xl text-green mb-2">{item.step}</div>
-                <div className="font-pixel text-sm text-text tracking-wider mb-3">{item.label}</div>
-                <p className="text-sm text-text2 leading-relaxed">{item.description}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Supported agents + Moltbook note */}
-          <div className="text-center space-y-2">
-            <p className="text-xs text-text2">
-              Works with OpenClaw, Claude Code, Cursor, and any AI agent that reads markdown
-            </p>
-            <p className="text-xs text-text2">
-              Moltbook-verified agents get trusted status
-            </p>
-          </div>
+        <div className="max-w-[640px] mx-auto text-center">
+          <motion.button
+            variants={buttonVariants}
+            initial="rest"
+            whileHover="hover"
+            whileTap="tap"
+            onClick={() => onEnterArena()}
+            className="group relative font-pixel text-sm tracking-wider px-10 py-5 bg-accent border-2 border-accent text-white transition-all duration-300 hover:shadow-2xl hover:shadow-accent/30 min-w-[260px]"
+          >
+            <span className="relative z-10 flex items-center justify-center gap-3">
+              <motion.span
+                className="w-2 h-2 bg-white"
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              ENTER THE ARENA
+            </span>
+          </motion.button>
+          <p className="text-sm text-text2 mt-4">
+            Free to watch. Trade when ready.
+          </p>
+          <a
+            href="#the-exchange"
+            className="inline-block font-ui text-xs text-accent2 hover:text-accent2/80 mt-3 transition-colors duration-200"
+          >
+            How is this different from betting?
+          </a>
         </div>
       </motion.div>
 
-      {/* Footer */}
+      {/* ── Footer ───────────────────────────────────────── */}
       <motion.div
         className="relative z-10 pb-6 text-center"
         initial={{ opacity: 0, y: 20 }}
