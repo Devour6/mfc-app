@@ -357,6 +357,33 @@ export interface WalletConnection {
   network: 'solana-mainnet' | 'solana-devnet'
 }
 
+// FTUE Onboarding Types
+export type OnboardingStep =
+  | 'watching'
+  | 'picked-side'
+  | 'saw-contract'
+  | 'market-open'
+  | 'demo-traded'
+  | 'converted'
+  | 'completed'
+
+export interface OnboardingState {
+  step: OnboardingStep
+  pickedFighter: string | null // fighter ID the user picked to win
+  demoCredits: number
+  demoTrades: DemoTrade[]
+  hasCompleted: boolean
+}
+
+export interface DemoTrade {
+  id: string
+  side: 'yes' | 'no'
+  price: number
+  quantity: number
+  pnl: number
+  settled: boolean
+}
+
 // Extended User interface with new features
 export interface ExtendedUser extends User {
   tournaments: TournamentBracket[]
