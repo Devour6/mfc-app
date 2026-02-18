@@ -315,14 +315,14 @@ Runs on every PR to `main` and on push to `main`:
 All steps must pass for a PR to be mergeable.
 
 ### AI PR Review (`.github/workflows/ai-pr-review.yml`)
-Runs automatically on every PR (opened, synced, reopened, ready for review). Uses Claude Code to perform a first-pass code review checking:
+Runs automatically on every PR (opened, synced, reopened, ready for review). Uses OpenAI (gpt-4o) to perform a first-pass code review checking:
 - Correctness, security, performance
 - MFC conventions (requireAuth, ensureUser, no border-radius, no raw fetch, zod validation, credit safety)
 - Compliance with CLAUDE.md patterns
 
 Posts review comments directly on the PR with inline suggestions. This does NOT auto-approve — a human or lead engineer still merges. The AI review catches obvious issues fast so authors get feedback in minutes rather than waiting for a manual review session.
 
-**Setup requirement:** `ANTHROPIC_API_KEY` must be stored as a repository secret in GitHub (Settings → Secrets → Actions).
+**Setup requirement:** `OPENAI_API_KEY` must be stored as a repository secret in GitHub (Settings → Secrets → Actions).
 
 ### PR Template
 `.github/pull_request_template.md` includes a checklist requiring CLAUDE.md compliance, passing checks, and no secrets.
