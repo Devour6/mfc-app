@@ -18,6 +18,7 @@ import { TournamentEngine } from './tournament-engine'
 import { AchievementEngine } from './achievement-engine'
 import { DailyRewardsEngine } from './daily-rewards-engine'
 import { CreditEngine } from './credit-engine'
+import { startTraining as apiStartTraining } from './api-client'
 
 interface GameState {
   // User data
@@ -40,7 +41,7 @@ interface GameState {
   disconnectWallet: () => void
   purchaseCredits: (option: CreditPurchaseOption) => Promise<void>
   withdrawCredits: (amount: number, walletAddress: string) => Promise<void>
-  spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number) => boolean
+  spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number, hours?: number) => boolean
   addRewardCredits: (amount: number, description: string, relatedId?: string) => void
   fetchCredits: () => Promise<void>
   placeBetAndDeduct: (amount: number, description: string) => boolean
@@ -448,9 +449,9 @@ export const useGameStore = create<GameState>()(
         }))
       },
 
-      spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number) => {
+      spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number, hours?: number) => {
         const { user } = get()
-        
+
         const result = CreditEngine.processTraining(
           user.creditBalance,
           user.transactions,
@@ -463,6 +464,9 @@ export const useGameStore = create<GameState>()(
           return false
         }
 
+        const prevBalance = user.creditBalance
+        const prevTransactions = user.transactions
+
         set(state => ({
           user: {
             ...state.user,
@@ -470,6 +474,20 @@ export const useGameStore = create<GameState>()(
             transactions: result.newTransactions
           }
         }))
+
+        if (hours) {
+          apiStartTraining({ fighterId, hours })
+            .then(() => { get().fetchCredits() })
+            .catch(() => {
+              set(state => ({
+                user: {
+                  ...state.user,
+                  creditBalance: prevBalance,
+                  transactions: prevTransactions,
+                }
+              }))
+            })
+        }
 
         return true
       },
