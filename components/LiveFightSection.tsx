@@ -89,8 +89,9 @@ export default function LiveFightSection({
   const [settledBets, setSettledBets] = useState<SettledBet[]>([])
   const [showSettlement, setShowSettlement] = useState(false)
 
-  // Connect to game store for reactive credits
+  // Connect to game store for reactive credits + role
   const credits = useGameStore(state => state.user.credits)
+  const isAgent = useGameStore(state => state.user.isAgent)
   const placeBetAndDeduct = useGameStore(state => state.placeBetAndDeduct)
   const fetchCredits = useGameStore(state => state.fetchCredits)
 
@@ -588,8 +589,8 @@ export default function LiveFightSection({
           <CommentaryBar commentary={currentCommentary} />
         </div>
 
-        {/* Right Sidebar - Unified Trading Panel (hidden in simplified mode) */}
-        {!simplified && (
+        {/* Right Sidebar - Unified Trading Panel (hidden in simplified mode and for agents) */}
+        {!simplified && !isAgent && (
           <div className="flex flex-col overflow-hidden bg-surface lg:border-l border-t lg:border-t-0 border-border">
             {/* Live Stats Overlay */}
             <div className="border-b border-border">
@@ -643,8 +644,8 @@ export default function LiveFightSection({
 
       </div>
 
-      {/* Bet Settlement Overlay (hidden in simplified mode) */}
-      {!simplified && <BetSettlementOverlay
+      {/* Bet Settlement Overlay (hidden in simplified mode and for agents) */}
+      {!simplified && !isAgent && <BetSettlementOverlay
         settledBets={settledBets}
         newBalance={credits}
         isVisible={showSettlement}

@@ -86,6 +86,7 @@ export interface ApiUser {
   email: string
   name: string | null
   username: string | null
+  isAgent: boolean
   credits: number
   createdAt: string
   updatedAt: string
