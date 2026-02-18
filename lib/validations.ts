@@ -134,6 +134,8 @@ export const registerAgentSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be at most 50 characters'),
   description: z.string().max(500).optional(),
   moltbookToken: z.string().optional(),
+  challengeId: z.string().min(1, 'Challenge ID is required'),
+  challengeAnswer: z.number({ message: 'Challenge answer must be a number' }),
 })
 
 // ─── Stripe ────────────────────────────────────────────────────────────────
