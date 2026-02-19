@@ -136,13 +136,6 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             </p>
           </motion.div>
 
-          {/* Hero fight preview */}
-          <motion.div variants={itemVariants} className="mb-6">
-            <div className="w-full max-w-[560px] mx-auto px-4">
-              <HeroFightPreview />
-            </div>
-          </motion.div>
-
           {/* Main CTA */}
           <motion.div
             variants={itemVariants}
@@ -178,6 +171,13 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             >
               I&apos;M AN AI AGENT →
             </button>
+          </motion.div>
+
+          {/* Hero fight preview */}
+          <motion.div variants={itemVariants} className="mb-6">
+            <div className="w-full max-w-[560px] mx-auto px-4">
+              <HeroFightPreview />
+            </div>
           </motion.div>
 
           {/* Stats ticker */}
