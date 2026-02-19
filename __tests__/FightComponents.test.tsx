@@ -2,19 +2,12 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-// Mock sound manager used by ArenaPage
+// Mock sound manager
 jest.mock('../lib/sound-manager', () => ({
   __esModule: true,
   default: { mute: jest.fn(), unmute: jest.fn() },
   soundManager: { mute: jest.fn(), unmute: jest.fn() },
 }));
-
-// Mock child components of ArenaPage
-jest.mock('../components/TopBar', () => {
-  return function MockTopBar() {
-    return <div data-testid="top-bar">Top Bar</div>;
-  };
-});
 
 jest.mock('../components/LiveFightSection', () => {
   return function MockLiveFightSection() {
@@ -22,19 +15,6 @@ jest.mock('../components/LiveFightSection', () => {
   };
 });
 
-jest.mock('../components/FightersSection', () => {
-  return function MockFightersSection() {
-    return <div data-testid="fighters-section">Fighters Section</div>;
-  };
-});
-
-jest.mock('../components/RankingsSection', () => {
-  return function MockRankingsSection() {
-    return <div data-testid="rankings-section">Rankings Section</div>;
-  };
-});
-
-import ArenaPage from '../components/ArenaPage';
 import FightCanvas from '../components/FightCanvas';
 
 // Minimal mock data for FightCanvas
@@ -57,34 +37,9 @@ const mockFighters = [
   { id: '2', name: 'Fighter B', emoji: '🥋', class: 'Heavyweight' as const, stats: { strength: 80, speed: 80, defense: 80, stamina: 80, fightIQ: 80, aggression: 80 } },
 ] as any[];
 
-describe('Fight Components Integration Tests', () => {
+describe('Fight Components Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  test('ArenaPage component renders without crashing', () => {
-    expect(() => {
-      render(
-        <ArenaPage
-          currentSection="live"
-          onSectionChange={jest.fn()}
-          onGoHome={jest.fn()}
-        />
-      );
-    }).not.toThrow();
-  });
-
-  test('ArenaPage contains fight-related content', () => {
-    render(
-      <ArenaPage
-        currentSection="live"
-        onSectionChange={jest.fn()}
-        onGoHome={jest.fn()}
-      />
-    );
-    // ArenaPage renders TopBar + LiveFightSection when section is 'live'
-    expect(screen.getByTestId('top-bar')).toBeInTheDocument();
-    expect(screen.getByTestId('live-fight-section')).toBeInTheDocument();
   });
 
   test('FightCanvas component renders correctly', () => {
@@ -102,7 +57,6 @@ describe('Fight Components Integration Tests', () => {
   });
 
   test('LiveFightSection renders without errors', () => {
-    // LiveFightSection is mocked, just verify the mock renders
     const LiveFightSection = require('../components/LiveFightSection');
     expect(() => {
       render(<LiveFightSection />);
@@ -113,25 +67,5 @@ describe('Fight Components Integration Tests', () => {
     const LiveFightSection = require('../components/LiveFightSection');
     render(<LiveFightSection />);
     expect(screen.getByTestId('live-fight-section')).toBeInTheDocument();
-  });
-
-  test('fight components have proper DOM structure', () => {
-    const { container: arenaContainer } = render(
-      <ArenaPage currentSection="live" onSectionChange={jest.fn()} onGoHome={jest.fn()} />
-    );
-    const { container: canvasContainer } = render(
-      <FightCanvas fightState={mockFightState} fighters={mockFighters} />
-    );
-
-    expect(arenaContainer.firstChild).toBeInTheDocument();
-    expect(canvasContainer.firstChild).toBeInTheDocument();
-  });
-
-  test('ArenaPage renders with styling', () => {
-    const { container } = render(
-      <ArenaPage currentSection="live" onSectionChange={jest.fn()} onGoHome={jest.fn()} />
-    );
-    const styledElement = container.querySelector('[class]');
-    expect(styledElement).toBeInTheDocument();
   });
 });

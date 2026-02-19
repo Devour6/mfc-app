@@ -15,28 +15,7 @@ import SolCreditBridgeModal from '@/components/SolCreditBridgeModal'
 import CreditPurchase from '@/components/CreditPurchase'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
-// import { LoginStreak, TournamentBracket, TournamentMatch, Fighter } from '@/types'
-
-// Inline type definitions to fix build
-interface LoginStreak {
-  currentStreak: number
-  longestStreak: number
-  lastLoginDate: number
-  rewards: any[]
-  nextRewardCredits: number
-}
-
-interface TournamentBracketData {
-  id: string
-  name: string
-  status: 'upcoming' | 'in-progress' | 'completed'
-  fighters: any[]
-  matches: any[]
-  winner?: any
-  prize: number
-  startDate: number
-  endDate?: number
-}
+import type { LoginStreak, TournamentBracket as TournamentBracketData } from '@/types'
 
 // Mock data for daily rewards
 const mockLoginStreak: LoginStreak = {
