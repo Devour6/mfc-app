@@ -128,6 +128,7 @@ export interface MarketState {
   noPrice: number
   volume: number
   lastTrade: number
+  houseRevenue: number
   priceHistory: Array<{
     timestamp: number
     price: number
@@ -152,6 +153,8 @@ export interface Trade {
   price: number
   quantity: number
   cost: number
+  fee: number
+  netCost: number
   timestamp: number
   status: 'pending' | 'filled' | 'cancelled'
 }

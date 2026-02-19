@@ -50,98 +50,108 @@ async function seed() {
     }
   })
 
-  // Create sample fighters with varied stats and ELOs matching their records
+  // MFC house account — owns the 5 house fighters
+  const houseUser = await prisma.user.create({
+    data: {
+      auth0Id: 'mfc-house',
+      email: 'arena@mfc.gg',
+      name: 'MFC Arena',
+      username: 'mfc-arena',
+      credits: 0,
+    }
+  })
+
+  // 5 house fighters — always available for matchmaking
   const fighters = [
     {
-      name: 'Thunder Bolt',
-      emoji: '⚡',
+      name: 'IRONCLAD-7',
+      emoji: '🛡️',
       class: FighterClass.HEAVYWEIGHT,
-      ownerId: user1.id,
+      ownerId: houseUser.id,
       elo: 1580,
-      strength: 75,
-      speed: 65,
+      strength: 80,
+      speed: 55,
+      defense: 92,
+      stamina: 88,
+      fightIQ: 65,
+      aggression: 50,
+      totalTrainingHours: 120,
+      totalTrainingSessions: 60,
+      wins: 18,
+      losses: 4,
+      winStreak: 5,
+    },
+    {
+      name: 'NEXUS-PRIME',
+      emoji: '🧠',
+      class: FighterClass.MIDDLEWEIGHT,
+      ownerId: houseUser.id,
+      elo: 1720,
+      strength: 68,
+      speed: 82,
       defense: 70,
-      stamina: 80,
-      fightIQ: 60,
-      aggression: 85,
-      totalTrainingHours: 50,
-      totalTrainingSessions: 25,
-      wins: 8,
-      losses: 2,
+      stamina: 78,
+      fightIQ: 95,
+      aggression: 60,
+      totalTrainingHours: 150,
+      totalTrainingSessions: 80,
+      wins: 22,
+      losses: 3,
+      winStreak: 9,
+    },
+    {
+      name: 'HAVOC',
+      emoji: '💥',
+      class: FighterClass.HEAVYWEIGHT,
+      ownerId: houseUser.id,
+      elo: 1400,
+      strength: 95,
+      speed: 60,
+      defense: 45,
+      stamina: 65,
+      fightIQ: 50,
+      aggression: 98,
+      totalTrainingHours: 80,
+      totalTrainingSessions: 40,
+      wins: 14,
+      losses: 8,
+      winStreak: 2,
+      lossStreak: 0,
+    },
+    {
+      name: 'PHANTOM',
+      emoji: '👻',
+      class: FighterClass.LIGHTWEIGHT,
+      ownerId: houseUser.id,
+      elo: 1650,
+      strength: 58,
+      speed: 94,
+      defense: 80,
+      stamina: 82,
+      fightIQ: 78,
+      aggression: 45,
+      totalTrainingHours: 110,
+      totalTrainingSessions: 55,
+      wins: 20,
+      losses: 5,
       winStreak: 3,
     },
     {
-      name: 'Speed Demon',
-      emoji: '👹',
-      class: FighterClass.LIGHTWEIGHT,
-      ownerId: user1.id,
-      elo: 1720,
-      strength: 55,
-      speed: 90,
-      defense: 60,
-      stamina: 75,
-      fightIQ: 80,
-      aggression: 70,
-      totalTrainingHours: 75,
-      totalTrainingSessions: 40,
-      wins: 12,
-      losses: 1,
-      winStreak: 7,
-    },
-    {
-      name: 'Iron Wall',
-      emoji: '🛡️',
+      name: 'VOLT',
+      emoji: '⚡',
       class: FighterClass.MIDDLEWEIGHT,
-      ownerId: user2.id,
-      elo: 1650,
-      strength: 70,
-      speed: 50,
-      defense: 95,
-      stamina: 85,
-      fightIQ: 75,
-      aggression: 40,
-      totalTrainingHours: 100,
-      totalTrainingSessions: 50,
-      wins: 15,
-      losses: 3,
-      winStreak: 0,
-      lossStreak: 1,
-    },
-    {
-      name: 'Glass Cannon',
-      emoji: '💥',
-      class: FighterClass.HEAVYWEIGHT,
-      ownerId: user2.id,
-      elo: 1120,
-      strength: 95,
+      ownerId: houseUser.id,
+      elo: 1300,
+      strength: 65,
       speed: 70,
-      defense: 40,
-      stamina: 60,
-      fightIQ: 55,
-      aggression: 90,
+      defense: 60,
+      stamina: 72,
+      fightIQ: 62,
+      aggression: 68,
       totalTrainingHours: 30,
       totalTrainingSessions: 15,
-      wins: 5,
+      wins: 6,
       losses: 4,
-      winStreak: 0,
-      lossStreak: 2,
-    },
-    {
-      name: 'Rookie Rising',
-      emoji: '🌟',
-      class: FighterClass.LIGHTWEIGHT,
-      ownerId: user1.id,
-      elo: 1025,
-      strength: 45,
-      speed: 55,
-      defense: 50,
-      stamina: 60,
-      fightIQ: 40,
-      aggression: 65,
-      totalTrainingHours: 5,
-      totalTrainingSessions: 3,
-      wins: 1,
-      losses: 0,
       winStreak: 1,
     },
   ]
@@ -153,31 +163,31 @@ async function seed() {
     console.log(`  Created fighter: ${fighter.name} (${fighter.class}, ELO ${fighter.elo})`)
   }
 
-  // Create sample training sessions
+  // Create training sessions for house fighters
   const trainingSessions = [
     {
       fighterId: createdFighters[0].id,
-      userId: user1.id,
-      hours: 4,
-      cost: 400,
+      userId: houseUser.id,
+      hours: 8,
+      cost: 800,
       strengthGain: 2,
-      staminaGain: 1,
+      defenseGain: 3,
     },
     {
       fighterId: createdFighters[1].id,
-      userId: user1.id,
-      hours: 6,
-      cost: 600,
+      userId: houseUser.id,
+      hours: 10,
+      cost: 1000,
       speedGain: 3,
-      fightIQGain: 2,
+      fightIQGain: 4,
     },
     {
-      fighterId: createdFighters[2].id,
-      userId: user2.id,
-      hours: 8,
-      cost: 800,
-      defenseGain: 2,
-      staminaGain: 3,
+      fighterId: createdFighters[3].id,
+      userId: houseUser.id,
+      hours: 6,
+      cost: 600,
+      speedGain: 2,
+      staminaGain: 2,
     },
   ]
 
@@ -186,20 +196,20 @@ async function seed() {
   }
   console.log(`  Created ${trainingSessions.length} training sessions`)
 
-  // Create a completed fight with result
+  // Create a completed fight: IRONCLAD-7 vs HAVOC
   const fight1 = await prisma.fight.create({
     data: {
       fighter1Id: createdFighters[0].id,
-      fighter2Id: createdFighters[3].id,
+      fighter2Id: createdFighters[2].id,
       status: 'COMPLETED',
       scheduledAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       startedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       endedAt: new Date(Date.now() - 23 * 60 * 60 * 1000),
       venue: 'MFC Arena',
-      title: 'Thunder Bolt vs Glass Cannon',
+      title: 'IRONCLAD-7 vs HAVOC',
       maxRounds: 3,
       fightData: {
-        winner: 'Thunder Bolt',
+        winner: 'IRONCLAD-7',
         method: 'TKO',
         round: 2,
         time: '1:45'
@@ -218,20 +228,20 @@ async function seed() {
       fighter2Stats: { strikes: 38, landed: 18, accuracy: 47 },
       fighter1EloChange: 25,
       fighter2EloChange: -25,
-      userId: user1.id,
+      userId: houseUser.id,
     }
   })
   console.log('  Created 1 completed fight with result')
 
-  // Create a scheduled upcoming fight
+  // Create a scheduled upcoming fight: NEXUS-PRIME vs PHANTOM
   const upcomingFight = await prisma.fight.create({
     data: {
       fighter1Id: createdFighters[1].id,
-      fighter2Id: createdFighters[2].id,
+      fighter2Id: createdFighters[3].id,
       status: 'SCHEDULED',
       scheduledAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
       venue: 'MFC Championship Arena',
-      title: 'Speed Demon vs Iron Wall - Title Fight',
+      title: 'NEXUS-PRIME vs PHANTOM — Title Fight',
       maxRounds: 5,
     }
   })
@@ -252,8 +262,8 @@ async function seed() {
   console.log('  Created 1 pending bet')
 
   console.log('\nSeed complete:')
-  console.log('  2 users')
-  console.log('  5 fighters (with ELO ratings)')
+  console.log('  3 users (2 human + MFC house)')
+  console.log('  5 house fighters (with ELO ratings)')
   console.log('  3 training sessions')
   console.log('  1 completed fight with result')
   console.log('  1 scheduled fight')

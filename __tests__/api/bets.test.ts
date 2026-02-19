@@ -51,8 +51,10 @@ describe('POST /api/bets', () => {
     expect(res.status).toBe(201)
     const data = await res.json()
     expect(data.amount).toBe(50)
+    expect(data.fee).toBe(1) // 2% of 50
+    expect(data.totalCost).toBe(51) // 50 + 1 fee
     expect(mockPrisma.user.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { credits: { decrement: 50 } } })
+      expect.objectContaining({ data: { credits: { decrement: 51 } } })
     )
   })
 

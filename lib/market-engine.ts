@@ -1,6 +1,11 @@
 import { MarketState, OrderBookEntry, Trade, FightState } from '@/types'
 
 export class MarketEngine {
+  // Exchange economics — MFC takes a cut on every trade + settlement
+  static readonly TAKER_FEE = 0.02      // 2% fee on every trade
+  static readonly VIG = 0.02             // 2% overround on displayed prices
+  static readonly SETTLEMENT_FEE = 0.02  // 2% fee on winning payouts
+
   private marketState: MarketState
   private onStateUpdate?: (state: MarketState) => void
   private simulationInterval?: NodeJS.Timeout
@@ -19,6 +24,7 @@ export class MarketEngine {
       noPrice: 1 - initialYesPrice,
       volume: 0,
       lastTrade: 0,
+      houseRevenue: 0,
       priceHistory: [{
         timestamp: Date.now(),
         price: initialYesPrice,
@@ -101,12 +107,16 @@ export class MarketEngine {
   }
 
   public placeTrade(side: 'yes' | 'no', price: number, quantity: number): Trade {
+    const cost = price * quantity
+    const fee = Math.round(cost * MarketEngine.TAKER_FEE * 100) / 100
     const trade: Trade = {
       id: `trade-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       side,
       price,
       quantity,
-      cost: price * quantity,
+      cost,
+      fee,
+      netCost: cost + fee,
       timestamp: Date.now(),
       status: 'pending'
     }
@@ -114,10 +124,12 @@ export class MarketEngine {
     // Simulate trade execution based on order book
     const orderBook = side === 'yes' ? this.marketState.orderBook.asks : this.marketState.orderBook.bids
     const canFill = this.canFillOrder(orderBook, price, quantity, side)
-    
+
     if (canFill) {
       trade.status = 'filled'
       this.executeTrade(trade)
+      // Track house revenue from taker fee
+      this.marketState.houseRevenue += fee
     }
 
     return trade
@@ -213,13 +225,11 @@ export class MarketEngine {
 
   private updateMarketPrices(): void {
     if (!this.isActive) return
-    
-    // Simulate natural price movement (random walk with slight mean reversion)
-    const randomMove = (Math.random() - 0.5) * 0.02 // ±1% random movement
-    const meanReversion = (0.5 - this.marketState.yesPrice) * 0.01 // Slight pull toward 50%
-    
-    const totalMove = randomMove + meanReversion
-    this.adjustPrice(totalMove)
+
+    // Simulate natural price movement (random walk, no mean reversion —
+    // prices should only move based on fight state, not artificially toward 50%)
+    const randomMove = (Math.random() - 0.5) * 0.015 // ±0.75% random noise
+    this.adjustPrice(randomMove)
   }
 
   private simulateOrderBookActivity(): void {
@@ -232,7 +242,7 @@ export class MarketEngine {
       // Add new bids
       if (Math.random() < 0.6) {
         const newBid: OrderBookEntry = {
-          price: currentPrice - (Math.random() * 0.03 + 0.01), // 1-4% below market
+          price: currentPrice - (Math.random() * 0.035 + 0.015), // 1.5-5% below market
           quantity: Math.floor(Math.random() * 80 + 20)
         }
         
@@ -248,7 +258,7 @@ export class MarketEngine {
       // Add new asks
       if (Math.random() < 0.6) {
         const newAsk: OrderBookEntry = {
-          price: currentPrice + (Math.random() * 0.03 + 0.01), // 1-4% above market
+          price: currentPrice + (Math.random() * 0.035 + 0.015), // 1.5-5% above market
           quantity: Math.floor(Math.random() * 80 + 20)
         }
         
@@ -268,25 +278,25 @@ export class MarketEngine {
 
   private generateInitialBids(midPrice: number): OrderBookEntry[] {
     const bids: OrderBookEntry[] = []
-    
+
     for (let i = 1; i <= 6; i++) {
-      const price = Math.max(0.01, midPrice - (i * 0.005 + Math.random() * 0.01))
+      const price = Math.max(0.01, midPrice - (i * 0.008 + Math.random() * 0.015))
       const quantity = Math.floor(Math.random() * 100 + 30)
       bids.push({ price, quantity })
     }
-    
+
     return bids.sort((a, b) => b.price - a.price) // Descending order
   }
 
   private generateInitialAsks(midPrice: number): OrderBookEntry[] {
     const asks: OrderBookEntry[] = []
-    
+
     for (let i = 1; i <= 6; i++) {
-      const price = Math.min(0.99, midPrice + (i * 0.005 + Math.random() * 0.01))
+      const price = Math.min(0.99, midPrice + (i * 0.008 + Math.random() * 0.015))
       const quantity = Math.floor(Math.random() * 100 + 30)
       asks.push({ price, quantity })
     }
-    
+
     return asks.sort((a, b) => a.price - b.price) // Ascending order
   }
 
@@ -297,7 +307,7 @@ export class MarketEngine {
         ...bid,
         price: Math.max(0.01, newMidPrice - (newMidPrice - bid.price) * 1.1) // Slightly widen spreads
       }))
-      .filter(bid => bid.price < newMidPrice - 0.005) // Remove orders too close to mid
+      .filter(bid => bid.price < newMidPrice - 0.015) // Remove orders too close to mid
       .sort((a, b) => b.price - a.price)
 
     this.marketState.orderBook.asks = this.marketState.orderBook.asks
@@ -305,7 +315,7 @@ export class MarketEngine {
         ...ask,
         price: Math.min(0.99, newMidPrice + (ask.price - newMidPrice) * 1.1) // Slightly widen spreads
       }))
-      .filter(ask => ask.price > newMidPrice + 0.005) // Remove orders too close to mid
+      .filter(ask => ask.price > newMidPrice + 0.015) // Remove orders too close to mid
       .sort((a, b) => a.price - b.price)
 
     // Ensure minimum depth
@@ -358,29 +368,40 @@ export class MarketEngine {
     return (bestBid + bestAsk) / 2
   }
 
+  /** Effective price with vig applied — used for display and cost calculation.
+   *  YES + NO effective prices sum to > 1.00 (the overround is MFC's edge). */
+  public getEffectivePrice(side: 'yes' | 'no'): number {
+    const raw = side === 'yes' ? this.marketState.yesPrice : this.marketState.noPrice
+    return Math.min(0.99, raw * (1 + MarketEngine.VIG / 2))
+  }
+
   public getState(): MarketState {
     return this.marketState
   }
 
   public settleMarket(winner: string, fighterNames: { fighter1: string; fighter2: string }): void {
     this.stop()
-    
-    // Set final prices based on winner
+
+    // Set final prices based on winner — winning contracts pay 0.98 (2% settlement fee)
+    const winnerPayout = 1.00 - MarketEngine.SETTLEMENT_FEE
     const fighter1Won = winner === fighterNames.fighter1
-    this.marketState.yesPrice = fighter1Won ? 1.00 : 0.00
-    this.marketState.noPrice = 1 - this.marketState.yesPrice
-    
+    this.marketState.yesPrice = fighter1Won ? winnerPayout : 0.00
+    this.marketState.noPrice = fighter1Won ? 0.00 : winnerPayout
+
+    // Track settlement fee as house revenue
+    this.marketState.houseRevenue += MarketEngine.SETTLEMENT_FEE * this.marketState.volume
+
     // Clear order book
     this.marketState.orderBook.bids = []
     this.marketState.orderBook.asks = []
-    
+
     // Add final price to history
     this.marketState.priceHistory.push({
       timestamp: Date.now(),
       price: this.marketState.yesPrice,
       volume: 0
     })
-    
+
     this.onStateUpdate?.(this.marketState)
   }
 }

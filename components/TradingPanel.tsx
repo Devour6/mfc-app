@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TrendingUp, TrendingDown, ChevronRight } from 'lucide-react'
 import { FightState, MarketState, Fighter, Trade } from '@/types'
+import { MarketEngine } from '@/lib/market-engine'
 import soundManager from '@/lib/sound-manager'
 
 // Re-export BettingSlip so LiveFightSection can use it
@@ -62,8 +63,9 @@ export default function TradingPanel({
   const [propAmount, setPropAmount] = useState(10)
 
   const quickAmounts = [10, 25, 50, 100]
-  const yesPrice = marketState.yesPrice
-  const noPrice = marketState.noPrice
+  // Apply vig to displayed prices (YES + NO > 1.00 — the overround is MFC's edge)
+  const yesPrice = Math.min(0.99, marketState.yesPrice * (1 + MarketEngine.VIG / 2))
+  const noPrice = Math.min(0.99, marketState.noPrice * (1 + MarketEngine.VIG / 2))
   const yesCents = Math.round(yesPrice * 100)
   const noCents = Math.round(noPrice * 100)
 
@@ -153,15 +155,16 @@ export default function TradingPanel({
   }, [])
 
   const effectiveAmount = customAmount ? parseInt(customAmount) || 0 : selectedAmount
-  const cost = selectedSide === 'yes'
-    ? (yesPrice * effectiveAmount).toFixed(2)
-    : (noPrice * effectiveAmount).toFixed(2)
-  const potentialPayout = effectiveAmount.toFixed(2)
-  const canAfford = effectiveAmount > 0 && parseFloat(cost) <= credits
+  const price = selectedSide === 'yes' ? yesPrice : noPrice
+  const rawCost = price * effectiveAmount
+  const fee = Math.round(rawCost * MarketEngine.TAKER_FEE * 100) / 100
+  const totalCost = rawCost + fee
+  const cost = rawCost.toFixed(2)
+  const potentialPayout = (effectiveAmount * (1 - MarketEngine.SETTLEMENT_FEE)).toFixed(2)
+  const canAfford = effectiveAmount > 0 && totalCost <= credits
 
   const handlePlaceOrder = () => {
     if (!canAfford) return
-    const price = selectedSide === 'yes' ? yesPrice : noPrice
     const trade = onPlaceTrade(selectedSide, price, effectiveAmount)
     if (trade) {
       setRecentTrades(prev => [trade, ...prev.slice(0, 9)])
@@ -273,9 +276,15 @@ export default function TradingPanel({
         </div>
 
         {/* Cost Summary */}
-        <div className="flex justify-between text-xs text-text2 mb-3">
-          <span>Cost: <span className="text-text font-semibold">${cost}</span></span>
-          <span>Win: <span className="text-green font-semibold">${potentialPayout}</span></span>
+        <div className="space-y-1 text-xs text-text2 mb-3">
+          <div className="flex justify-between">
+            <span>Cost: <span className="text-text font-semibold">${cost}</span></span>
+            <span>Win: <span className="text-green font-semibold">${potentialPayout}</span></span>
+          </div>
+          <div className="flex justify-between">
+            <span>Fee (2%): <span className="text-text">${fee.toFixed(2)}</span></span>
+            <span>Total: <span className="text-text font-semibold">${totalCost.toFixed(2)}</span></span>
+          </div>
         </div>
 
         {/* Place Order Button */}
