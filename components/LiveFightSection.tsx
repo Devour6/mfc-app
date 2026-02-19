@@ -13,7 +13,6 @@ import { FightEngine, FightBiasConfig } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
 import { FightRecording } from '@/lib/fight-recorder'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
-import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 import OnboardingPrompt from './OnboardingPrompt'
@@ -26,52 +25,8 @@ interface LiveFightSectionProps {
   simplified?: boolean
 }
 
-// Fallback fighters when DB is unavailable
-const FALLBACK_FIGHTERS: Fighter[] = [
-  {
-    id: 'ironclad-7',
-    name: 'IRONCLAD-7',
-    emoji: '🤖',
-    class: 'Heavyweight',
-    record: { wins: 14, losses: 2, draws: 0 },
-    elo: 1847,
-    stats: {
-      strength: 88,
-      speed: 72,
-      defense: 81,
-      stamina: 75,
-      fightIQ: 85,
-      aggression: 79
-    },
-    owner: 'DarkMatter_Labs',
-    isActive: true,
-    trainingCost: 50,
-    evolution: FighterEvolutionEngine.createNewEvolution(29)
-  },
-  {
-    id: 'nexus-prime',
-    name: 'NEXUS-PRIME',
-    emoji: '⚡',
-    class: 'Heavyweight',
-    record: { wins: 11, losses: 4, draws: 0 },
-    elo: 1723,
-    stats: {
-      strength: 85,
-      speed: 78,
-      defense: 73,
-      stamina: 82,
-      fightIQ: 91,
-      aggression: 68
-    },
-    owner: 'SynthCorp',
-    isActive: true,
-    trainingCost: 50,
-    evolution: FighterEvolutionEngine.createNewEvolution(32)
-  }
-]
-
-function pickRandomPair(pool: Fighter[]): [Fighter, Fighter] {
-  if (pool.length < 2) return [FALLBACK_FIGHTERS[0], FALLBACK_FIGHTERS[1]]
+function pickRandomPair(pool: Fighter[]): [Fighter, Fighter] | null {
+  if (pool.length < 2) return null
   const shuffled = [...pool].sort(() => Math.random() - 0.5)
   return [shuffled[0], shuffled[1]]
 }
@@ -87,9 +42,8 @@ export default function LiveFightSection({
   const [fightEngine, setFightEngine] = useState<FightEngine | null>(null)
   const marketEngineRef = useRef<MarketEngine | null>(null)
   const [showFightCard, setShowFightCard] = useState(!simplified)
-  const [autoRestartEnabled, setAutoRestartEnabled] = useState(!simplified)
   const autoRestartRef = useRef(!simplified)
-  useEffect(() => { autoRestartRef.current = autoRestartEnabled }, [autoRestartEnabled])
+  useEffect(() => { autoRestartRef.current = !simplified }, [simplified])
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [replayRecording, setReplayRecording] = useState<FightRecording | null>(null)
   const [showReplay, setShowReplay] = useState(false)
@@ -99,8 +53,8 @@ export default function LiveFightSection({
   const [settledBets, setSettledBets] = useState<SettledBet[]>([])
   const [showSettlement, setShowSettlement] = useState(false)
 
-  // Active fighter pair (DB-backed or fallback)
-  const [fighters, setFighters] = useState<Fighter[]>(FALLBACK_FIGHTERS)
+  // Active fighter pair (DB-backed, empty until loaded)
+  const [fighters, setFighters] = useState<Fighter[]>([])
   const leaderboardFighters = useGameStore(state => state.leaderboardFighters)
   const fetchLeaderboard = useGameStore(state => state.fetchLeaderboard)
   const leaderboardFightersRef = useRef(leaderboardFighters)
@@ -112,9 +66,12 @@ export default function LiveFightSection({
 
   // Pick initial pair when leaderboard loads
   useEffect(() => {
-    if (leaderboardFighters.length >= 2 && !pairInitialized.current) {
-      pairInitialized.current = true
-      setFighters(pickRandomPair(leaderboardFighters))
+    if (!pairInitialized.current) {
+      const pair = pickRandomPair(leaderboardFighters)
+      if (pair) {
+        pairInitialized.current = true
+        setFighters(pair)
+      }
     }
   }, [leaderboardFighters])
 
@@ -136,9 +93,16 @@ export default function LiveFightSection({
   const onboardingTriggered = useRef(false)
   const isFirstFight = useRef(true)
 
+  // Clear stale pickedFighter when fighters change
+  useEffect(() => {
+    if (fighters.length >= 2 && pickedFighter && pickedFighter !== fighters[0].id && pickedFighter !== fighters[1].id) {
+      useGameStore.setState({ pickedFighter: null })
+    }
+  }, [fighters, pickedFighter])
+
   // In onboarding, YES = "picked fighter wins". If user picked fighter2,
   // we need to flip the market's yesPrice (which always represents fighter1).
-  const pickedIsFighter2 = pickedFighter === fighters[1].id
+  const pickedIsFighter2 = fighters.length >= 2 && pickedFighter === fighters[1].id
 
   // Show simplified market panel when onboarding reaches market-open step
   const showSimplifiedMarket = simplified && (
@@ -187,6 +151,9 @@ export default function LiveFightSection({
 
   // Initialize fight and market engines
   useEffect(() => {
+    // Guard: need at least 2 fighters to start
+    if (fighters.length < 2) return
+
     const fighter1 = fighters[0]
     const fighter2 = fighters[1]
 
@@ -277,9 +244,9 @@ export default function LiveFightSection({
           if (autoRestartRef.current) {
             restartTimerRef.current = setTimeout(() => {
               restartTimerRef.current = null
-              const pool = leaderboardFightersRef.current
-              if (pool.length >= 2) {
-                setFighters(pickRandomPair(pool))
+              const newPair = pickRandomPair(leaderboardFightersRef.current)
+              if (newPair) {
+                setFighters(newPair)
               } else {
                 fight.restart()
                 marketEngineRef.current?.stop()
@@ -348,6 +315,7 @@ export default function LiveFightSection({
         clearTimeout(restartTimerRef.current)
         restartTimerRef.current = null
       }
+      isFirstFight.current = true
     }
   }, [simplified, fighters]) // Re-initialize when simplified mode or fighters change
 
@@ -357,8 +325,9 @@ export default function LiveFightSection({
     setCurrentCommentary(null)
 
     // Pick new fighter pair if DB fighters available, otherwise restart same fight
-    if (leaderboardFighters.length >= 2) {
-      setFighters(pickRandomPair(leaderboardFighters))
+    const newPair = pickRandomPair(leaderboardFighters)
+    if (newPair) {
+      setFighters(newPair)
     } else if (fightEngine) {
       fightEngine.restart()
       marketEngineRef.current?.stop()
@@ -377,9 +346,11 @@ export default function LiveFightSection({
 
   const handleTrade = (side: 'yes' | 'no', price: number, quantity: number) => {
     const cost = Math.round(price * quantity * 100) / 100
+    const fee = Math.round(cost * 0.02 * 100) / 100
+    const totalCost = cost + fee
 
-    // Deduct credits before placing the trade
-    const canAfford = placeBetAndDeduct(cost, `Trade: ${side.toUpperCase()} ${quantity} @ ${price.toFixed(2)}`)
+    // Deduct credits (cost + fee) before placing the trade
+    const canAfford = placeBetAndDeduct(totalCost, `Trade: ${side.toUpperCase()} ${quantity} @ ${price.toFixed(2)} (fee: ${fee.toFixed(2)})`)
     if (!canAfford) {
       soundManager.play('punch-light', 0.4)
       return null
@@ -401,7 +372,7 @@ export default function LiveFightSection({
     return null
   }
 
-  if (!fightState || !marketState) {
+  if (fighters.length < 2 || !fightState || !marketState) {
     return (
       <div className="h-full flex items-center justify-center">
         <motion.div
@@ -410,9 +381,11 @@ export default function LiveFightSection({
           animate={{ opacity: 1 }}
         >
           <div className="font-pixel text-2xl text-accent mb-4 animate-pulse">
-            INITIALIZING FIGHT
+            {fighters.length < 2 ? 'WAITING FOR FIGHTERS' : 'INITIALIZING FIGHT'}
           </div>
-          <div className="text-text2">Loading championship bout...</div>
+          <div className="text-text2">
+            {fighters.length < 2 ? 'Loading combatants from the arena...' : 'Loading championship bout...'}
+          </div>
         </motion.div>
       </div>
     )

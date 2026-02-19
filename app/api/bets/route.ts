@@ -65,18 +65,22 @@ export async function POST(request: NextRequest) {
       return errorResponse('Fighter is not in this fight')
     }
 
-    // Deduct credits via transaction
+    // Calculate 2% exchange fee
+    const fee = Math.round(amount * 0.02 * 100) / 100
+    const totalCost = amount + fee
+
+    // Deduct credits (amount + fee) via transaction
     const bet = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
         select: { id: true, credits: true },
       })
       if (!user) throw new Error('User not found')
-      if (user.credits < amount) throw new Error('Insufficient credits')
+      if (user.credits < totalCost) throw new Error('Insufficient credits')
 
       await tx.user.update({
         where: { id: userId },
-        data: { credits: { decrement: amount } },
+        data: { credits: { decrement: totalCost } },
       })
 
       return tx.bet.create({
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    return jsonResponse(bet, 201)
+    return jsonResponse({ ...bet, fee, totalCost }, 201)
   } catch (error) {
     if (error instanceof Error && error.message === 'User not found') {
       return notFound('User')
