@@ -687,8 +687,8 @@ export const useGameStore = create<GameState>()(
             evolution: FighterEvolutionEngine.createNewEvolution(),
           }))
           set({ leaderboardFighters: fighters })
-        } catch {
-          // API not available — keep existing data
+        } catch (error) {
+          console.error('[MFC] fetchLeaderboard failed:', error)
         }
       }
     }),

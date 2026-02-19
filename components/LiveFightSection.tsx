@@ -13,12 +13,53 @@ import { FightEngine, FightBiasConfig } from '@/lib/fight-engine'
 import { MarketEngine } from '@/lib/market-engine'
 import { FightRecording } from '@/lib/fight-recorder'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
+import { FighterEvolutionEngine } from '@/lib/evolution-engine'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 import OnboardingPrompt from './OnboardingPrompt'
 import ContractConceptCard from './ContractConceptCard'
 import ConvertPrompt from './ConvertPrompt'
 import SimplifiedMarketPanel from './SimplifiedMarketPanel'
+
+// Client-side fallback fighters — used when the API is unreachable.
+// These mirror the DB house fighters so the arena is never stuck.
+const HOUSE_FIGHTERS: Fighter[] = [
+  {
+    id: 'house-ironclad-7', name: 'IRONCLAD-7', emoji: '🛡️', class: 'Heavyweight',
+    record: { wins: 18, losses: 4, draws: 0 }, elo: 1580,
+    stats: { strength: 80, speed: 55, defense: 92, stamina: 88, fightIQ: 65, aggression: 50 },
+    owner: 'MFC Arena', isActive: true, trainingCost: 100,
+    evolution: FighterEvolutionEngine.createNewEvolution(30),
+  },
+  {
+    id: 'house-nexus-prime', name: 'NEXUS-PRIME', emoji: '🧠', class: 'Middleweight',
+    record: { wins: 22, losses: 3, draws: 0 }, elo: 1720,
+    stats: { strength: 68, speed: 82, defense: 70, stamina: 78, fightIQ: 95, aggression: 60 },
+    owner: 'MFC Arena', isActive: true, trainingCost: 100,
+    evolution: FighterEvolutionEngine.createNewEvolution(28),
+  },
+  {
+    id: 'house-havoc', name: 'HAVOC', emoji: '💥', class: 'Heavyweight',
+    record: { wins: 14, losses: 8, draws: 0 }, elo: 1400,
+    stats: { strength: 95, speed: 60, defense: 45, stamina: 65, fightIQ: 50, aggression: 98 },
+    owner: 'MFC Arena', isActive: true, trainingCost: 100,
+    evolution: FighterEvolutionEngine.createNewEvolution(26),
+  },
+  {
+    id: 'house-phantom', name: 'PHANTOM', emoji: '👻', class: 'Lightweight',
+    record: { wins: 20, losses: 5, draws: 0 }, elo: 1650,
+    stats: { strength: 58, speed: 94, defense: 80, stamina: 82, fightIQ: 78, aggression: 45 },
+    owner: 'MFC Arena', isActive: true, trainingCost: 100,
+    evolution: FighterEvolutionEngine.createNewEvolution(25),
+  },
+  {
+    id: 'house-volt', name: 'VOLT', emoji: '⚡', class: 'Middleweight',
+    record: { wins: 6, losses: 4, draws: 0 }, elo: 1300,
+    stats: { strength: 65, speed: 70, defense: 60, stamina: 72, fightIQ: 62, aggression: 68 },
+    owner: 'MFC Arena', isActive: true, trainingCost: 100,
+    evolution: FighterEvolutionEngine.createNewEvolution(23),
+  },
+]
 
 interface LiveFightSectionProps {
   onFightComplete?: (fighterId: string, fightData: any) => void
@@ -53,7 +94,7 @@ export default function LiveFightSection({
   const [settledBets, setSettledBets] = useState<SettledBet[]>([])
   const [showSettlement, setShowSettlement] = useState(false)
 
-  // Active fighter pair (DB-backed, empty until loaded)
+  // Active fighter pair (DB-backed with client-side fallback)
   const [fighters, setFighters] = useState<Fighter[]>([])
   const leaderboardFighters = useGameStore(state => state.leaderboardFighters)
   const fetchLeaderboard = useGameStore(state => state.fetchLeaderboard)
@@ -61,13 +102,30 @@ export default function LiveFightSection({
   useEffect(() => { leaderboardFightersRef.current = leaderboardFighters }, [leaderboardFighters])
   const pairInitialized = useRef(false)
 
-  // Fetch fighters from DB on mount
-  useEffect(() => { fetchLeaderboard() }, [fetchLeaderboard])
+  // Fetch fighters from DB on mount, with fallback timeout
+  useEffect(() => {
+    fetchLeaderboard()
 
-  // Pick initial pair when leaderboard loads
+    // If API hasn't delivered fighters within 3s, use house fighter fallback
+    const fallbackTimer = setTimeout(() => {
+      if (!pairInitialized.current) {
+        console.warn('[MFC] Fighter API timed out — using house fighter fallback')
+        const pair = pickRandomPair(HOUSE_FIGHTERS)
+        if (pair) {
+          pairInitialized.current = true
+          setFighters(pair)
+        }
+      }
+    }, 3000)
+
+    return () => clearTimeout(fallbackTimer)
+  }, [fetchLeaderboard])
+
+  // Pick initial pair when leaderboard loads (or use fallback pool)
   useEffect(() => {
     if (!pairInitialized.current) {
-      const pair = pickRandomPair(leaderboardFighters)
+      const pool = leaderboardFighters.length >= 2 ? leaderboardFighters : HOUSE_FIGHTERS
+      const pair = pickRandomPair(pool)
       if (pair) {
         pairInitialized.current = true
         setFighters(pair)
@@ -244,7 +302,9 @@ export default function LiveFightSection({
           if (autoRestartRef.current) {
             restartTimerRef.current = setTimeout(() => {
               restartTimerRef.current = null
-              const newPair = pickRandomPair(leaderboardFightersRef.current)
+              const pool = leaderboardFightersRef.current.length >= 2
+                ? leaderboardFightersRef.current : HOUSE_FIGHTERS
+              const newPair = pickRandomPair(pool)
               if (newPair) {
                 setFighters(newPair)
               } else {
@@ -324,8 +384,9 @@ export default function LiveFightSection({
     setCommentary([])
     setCurrentCommentary(null)
 
-    // Pick new fighter pair if DB fighters available, otherwise restart same fight
-    const newPair = pickRandomPair(leaderboardFighters)
+    // Pick new fighter pair (DB fighters or house fallback), otherwise restart same fight
+    const pool = leaderboardFighters.length >= 2 ? leaderboardFighters : HOUSE_FIGHTERS
+    const newPair = pickRandomPair(pool)
     if (newPair) {
       setFighters(newPair)
     } else if (fightEngine) {
