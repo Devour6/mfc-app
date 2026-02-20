@@ -680,31 +680,20 @@ export default function EnhancedFightCanvas({
     ctx.scale(FIGHTER_SCALE, FIGHTER_SCALE)
     ctx.translate(-drawX, -feetY)
 
-    drawHumanoidFighter(ctx, drawX, y, color, fighterState, fighterNumber, animProgress)
+    // SF2 white flash: when in hit-stop, flicker the fighter color to white
+    const drawColor = isHitFlash && Math.sin(Date.now() * 0.02) > 0 ? '#ffffff' : color
+    drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress)
 
-    // SF2: White flash overlay on defender during hit-stop
+    // Hit spark — drawn inside scale transform so it matches fighter size
     if (isHitFlash) {
-      ctx.globalCompositeOperation = 'source-atop'
-      const flashIntensity = Math.sin(Date.now() * 0.02) > 0 ? 0.7 : 0.3 // Flicker
-      ctx.fillStyle = `rgba(255,255,255,${flashIntensity})`
-      ctx.fillRect(drawX - 30, y - 60, 60, 80)
-      ctx.globalCompositeOperation = 'source-over'
-    }
-
-    ctx.restore() // end scale transform
-
-    // SF2-style hit spark: bright burst at contact point when in hit-stop
-    if (isHitFlash) {
-      const sparkX = x + fighterState.position.facing * -20 // spark at the point of contact (in front)
+      const sparkX = drawX + fighterState.position.facing * 30 // in front of fighter
       const sparkY = y - 20
       const sparkTime = Date.now() * 0.01
-      const sparkSize = 6 + Math.sin(sparkTime * 3) * 3
+      const sparkSize = 8 + Math.sin(sparkTime * 3) * 4
       ctx.save()
       ctx.fillStyle = '#fff'
-      // Cross-shaped spark
       ctx.fillRect(sparkX - sparkSize, sparkY - 2, sparkSize * 2, 4)
       ctx.fillRect(sparkX - 2, sparkY - sparkSize, 4, sparkSize * 2)
-      // Diagonal lines
       ctx.fillStyle = '#ffdd00'
       ctx.fillRect(sparkX - sparkSize * 0.7, sparkY - sparkSize * 0.7, 3, 3)
       ctx.fillRect(sparkX + sparkSize * 0.7, sparkY - sparkSize * 0.7, 3, 3)
@@ -713,15 +702,19 @@ export default function EnhancedFightCanvas({
       ctx.restore()
     }
 
-    // Particle effects (drawn at original scale, outside the fighter scale)
-    if (fighterState.hp < FIGHTER_MAX_HP * 0.5) {
-      drawSweatParticles(ctx, x, y - 80 * FIGHTER_SCALE)
-    }
+    // Motion trails — inside scale transform so they match fighter position
     if (fighterState.animation.state === 'punching') {
-      drawMotionTrail(ctx, x, y, fighterState.position.facing, 'punching')
+      drawMotionTrail(ctx, drawX, y, fighterState.position.facing, 'punching')
     }
     if (fighterState.animation.state === 'kicking') {
-      drawMotionTrail(ctx, x, y, fighterState.position.facing, 'kicking')
+      drawMotionTrail(ctx, drawX, y, fighterState.position.facing, 'kicking')
+    }
+
+    ctx.restore() // end scale transform
+
+    // Sweat particles at screen scale (not fighter scale)
+    if (fighterState.hp < FIGHTER_MAX_HP * 0.5) {
+      drawSweatParticles(ctx, x, y - 80 * FIGHTER_SCALE)
     }
 
     ctx.restore()
