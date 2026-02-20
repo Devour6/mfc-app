@@ -55,23 +55,24 @@ const ATTACK_PHASES: Record<string, { startup: number; active: number; hold: num
   roundhouse: { startup: 0.30, active: 0.40, hold: 0.65 },
 }
 
-// Per-attack-type parameters — SF2 rule: punch reaches 1.5x body width, kick 2.0x+
-// Body width is ~40px (10 blocks). So punch extension needs 60+ px, kick 80+ px.
+// Per-attack-type parameters
+// CRITICAL: armAngle is rotation from VERTICAL (0°=down, 90°=horizontal, 135°=upward).
+// A cross punch must be ~88° so the fist goes TOWARD the opponent, not toward the floor.
 const PUNCH_PARAMS: Record<string, { maxExtension: number; bodyLean: number; armAngle: number; headDip: number; windUpLean: number }> = {
-  jab:      { maxExtension: 40, bodyLean: 8,  armAngle: 40, headDip: 2, windUpLean: -6 },
-  cross:    { maxExtension: 60, bodyLean: 16, armAngle: 55, headDip: 5, windUpLean: -10 },
-  hook:     { maxExtension: 35, bodyLean: 20, armAngle: 85, headDip: 3, windUpLean: -12 },
-  uppercut: { maxExtension: 45, bodyLean: 14, armAngle: 100, headDip: 10, windUpLean: -8 },
+  jab:      { maxExtension: 40, bodyLean: 10,  armAngle: 82, headDip: 2, windUpLean: -6 },
+  cross:    { maxExtension: 55, bodyLean: 22, armAngle: 88, headDip: 5, windUpLean: -10 },
+  hook:     { maxExtension: 30, bodyLean: 26, armAngle: 75, headDip: 3, windUpLean: -12 },
+  uppercut: { maxExtension: 35, bodyLean: -5, armAngle: 135, headDip: -8, windUpLean: -4 },
 }
 
-// Kick extensions — SF2: roundhouse reaches 2-2.5x body width
+// legAngle: 0°=down, 80°=nearly horizontal forward, 95°=above horizontal
 const KICK_PARAMS: Record<string, { maxExtension: number; bodyLean: number; legAngle: number; armRaise: number }> = {
-  kick:       { maxExtension: 55, bodyLean: -14, legAngle: 70, armRaise: 10 },
-  roundhouse: { maxExtension: 70, bodyLean: -20, legAngle: 95, armRaise: 14 },
+  kick:       { maxExtension: 50, bodyLean: -14, legAngle: 80, armRaise: 10 },
+  roundhouse: { maxExtension: 65, bodyLean: -20, legAngle: 95, armRaise: 14 },
 }
 
 // ── Fighter visual scale + skin tones ───────────────────────────────────────
-const FIGHTER_SCALE = 1.3
+const FIGHTER_SCALE = 1.8
 const SKIN = '#e8b88a'
 const SKIN_S = '#c89870' // skin shadow
 const SKIN_H = '#fad0a8' // skin highlight
@@ -946,15 +947,16 @@ export default function EnhancedFightCanvas({
     ctx.translate(-x, -y)
 
     // Draw body parts back-to-front
-    // Arm/leg attachment must be OUTSIDE the torso (10 blocks = 40px wide, ±20 from center)
+    // Arm/leg attachment OUTSIDE the torso edge (torso is 10 blocks = 40px, ±20 from center)
 
-    // Back leg
-    const backLegX = facing === 1 ? x - 12 : x + 12
+    // Back leg — wider stance for fighting game look
+    const backLegX = facing === 1 ? x - 14 : x + 14
     drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined)
 
-    // Back arm — behind the torso
+    // Back arm — during punches, the trailing arm retracts to chin (counterbalance)
     const backArmX = facing === 1 ? x - 22 : x + 22
-    drawArm(ctx, backArmX, armY, color, facing, false, 0, false, undefined, isGuardArms)
+    const backArmIsGuard = isGuardArms || state === 'punching' // back arm guards during punches
+    drawArm(ctx, backArmX, armY, color, facing, false, 0, false, undefined, backArmIsGuard)
 
     // Torso
     drawTorso(ctx, x, torsoY, color, state)
@@ -962,12 +964,12 @@ export default function EnhancedFightCanvas({
     // Head
     drawHead(ctx, x, headY, color, facing, state, fighterState.hp)
 
-    // Front arm (punching arm) — outside the torso edge
+    // Front arm (punching arm)
     const frontArmX = facing === 1 ? x + 22 : x - 22
     drawArm(ctx, frontArmX, armY, color, facing, true, armExtension, state === 'punching', frontArmAngle, isGuardArms)
 
-    // Front leg (kicking leg)
-    const frontLegX = facing === 1 ? x + 12 : x - 12
+    // Front leg (kicking leg) — wider stance
+    const frontLegX = facing === 1 ? x + 14 : x - 14
     drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase)
 
     ctx.restore()
@@ -1118,7 +1120,8 @@ export default function EnhancedFightCanvas({
     if (isFront && isPunching && armAngle !== undefined) {
       ctx.rotate(facing * armAngle * Math.PI / 180)
     } else if (isGuard) {
-      ctx.rotate(facing * 35 * Math.PI / 180)
+      // Guard stance: fists up near chin. 65° from vertical = ~25° from horizontal.
+      ctx.rotate(facing * 65 * Math.PI / 180)
     }
 
     const armLen = Math.floor((25 + Math.max(0, extension)) / P)
