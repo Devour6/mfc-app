@@ -60,7 +60,7 @@ export class FightEngine {
       position: { x, y: 0, facing },
       animation: { state: 'idle', frameCount: 0, duration: 0 },
       stats: { strikes: 0, landed: 0, powerShots: 0, dodges: 0, blocks: 0 },
-      modifiers: { stunned: 0, blocking: 0, dodging: 0, charging: 0 },
+      modifiers: { stunned: 0, blocking: 0, dodging: 0, charging: 0, hitStopFrames: 0 },
       combo: { count: 0, lastHit: 0 }
     }
   }
@@ -85,9 +85,9 @@ export class FightEngine {
     this.fightState.round = 1
     this.fightState.clock = 180
     this.fightState.phase = 'fighting'
-    this.fightState.fighter1.hp = 300
+    this.fightState.fighter1.hp = FIGHTER_MAX_HP
     this.fightState.fighter1.stamina = 100
-    this.fightState.fighter2.hp = 300
+    this.fightState.fighter2.hp = FIGHTER_MAX_HP
     this.fightState.fighter2.stamina = 100
     this.resetFighterState(this.fightState.fighter1)
     this.resetFighterState(this.fightState.fighter2)
@@ -105,7 +105,7 @@ export class FightEngine {
   private resetFighterState(fighter: FighterState): void {
     fighter.animation = { state: 'idle', frameCount: 0, duration: 0 }
     fighter.stats = { strikes: 0, landed: 0, powerShots: 0, dodges: 0, blocks: 0 }
-    fighter.modifiers = { stunned: 0, blocking: 0, dodging: 0, charging: 0 }
+    fighter.modifiers = { stunned: 0, blocking: 0, dodging: 0, charging: 0, hitStopFrames: 0 }
     fighter.combo = { count: 0, lastHit: 0 }
   }
 
@@ -154,7 +154,8 @@ export class FightEngine {
       fighter.modifiers.blocking = Math.max(0, fighter.modifiers.blocking - 1)
       fighter.modifiers.dodging = Math.max(0, fighter.modifiers.dodging - 1)
       fighter.modifiers.charging = Math.max(0, fighter.modifiers.charging - 1)
-      
+      fighter.modifiers.hitStopFrames = Math.max(0, fighter.modifiers.hitStopFrames - 1)
+
       // Decay combo counter
       fighter.combo.lastHit++
       if (fighter.combo.lastHit > 30) { // 2.4 seconds at 80ms intervals
@@ -404,6 +405,11 @@ export class FightEngine {
       this.addCommentary(this.getHitCommentary(action.type), 'action', 'medium')
     }
 
+    // Hit-stop: freeze both fighters briefly on impact for visual weight
+    const hitStopDuration = isPowerShot ? 5 : 3
+    attacker.modifiers.hitStopFrames = hitStopDuration
+    defender.modifiers.hitStopFrames = hitStopDuration
+
     damage = this.applyBias(damage, attacker.id)
     defender.hp = Math.max(0, defender.hp - damage)
     defender.animation.state = 'hit'
@@ -436,12 +442,17 @@ export class FightEngine {
       this.addCommentary(this.getHitCommentary(action.type), 'action', 'medium')
     }
 
+    // Hit-stop: freeze both fighters briefly on impact for visual weight
+    const hitStopDuration = isPowerShot ? 5 : 3
+    attacker.modifiers.hitStopFrames = hitStopDuration
+    defender.modifiers.hitStopFrames = hitStopDuration
+
     // Apply damage
     damage = this.applyBias(damage, attacker.id)
     defender.hp = Math.max(0, defender.hp - damage)
     defender.animation.state = 'hit'
     defender.animation.duration = isPowerShot ? 12 : 6
-    
+
     // Check for knockdown/knockout
     if (defender.hp <= 0) {
       this.endFight(attacker.id, 'KO')
