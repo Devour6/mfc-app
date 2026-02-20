@@ -68,6 +68,12 @@ const KICK_PARAMS: Record<string, { maxExtension: number; bodyLean: number; legA
   roundhouse: { maxExtension: 44, bodyLean: -16, legAngle: 85, armRaise: 10 },
 }
 
+// ── Fighter visual scale + skin tones ───────────────────────────────────────
+const FIGHTER_SCALE = 1.6
+const SKIN = '#e8b88a'
+const SKIN_S = '#c89870' // skin shadow
+const SKIN_H = '#fad0a8' // skin highlight
+
 export default function EnhancedFightCanvas({
   fightState,
   fighters,
@@ -618,12 +624,12 @@ export default function EnhancedFightCanvas({
 
     ctx.globalAlpha *= Math.max(0.7, fighterState.stamina / 100)
 
-    // Shadow
+    // Shadow — scaled to match fighter size
     ctx.fillStyle = 'rgba(0,0,0,0.4)'
     ctx.save()
     ctx.scale(1, 0.2)
     ctx.beginPath()
-    ctx.arc(x, (floorY + 10) / 0.2, 25, 0, Math.PI * 2)
+    ctx.arc(x, (floorY + 10) / 0.2, 25 * FIGHTER_SCALE, 0, Math.PI * 2)
     ctx.fill()
     ctx.restore()
 
@@ -632,7 +638,6 @@ export default function EnhancedFightCanvas({
 
     // Hit-stop freeze: if in hit-stop, cache and use the frozen progress
     if (isInHitStop) {
-      // Only cache on first frame of hit-stop (when progress just changed)
       if (hitStopProgressRef.current[posKey] === 0 && animProgress > 0) {
         hitStopProgressRef.current[posKey] = animProgress
       }
@@ -642,32 +647,39 @@ export default function EnhancedFightCanvas({
     }
 
     // Forward lunge: during active/hold phase, the whole body steps toward the opponent
-    // so the strike visually connects across the gap
     let lungeOffset = 0
     const isAttacking = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking'
     if (isAttacking && animProgress > 0) {
       const atkType = fighterState.animation.attackType || 'jab'
       const phase = getAttackPhase(animProgress, atkType)
       const phaseT = getPhaseProgress(animProgress, atkType, phase)
-      const lungeDistance = fighterState.animation.state === 'kicking' ? 18 : 14
+      const lungeDistance = fighterState.animation.state === 'kicking' ? 22 : 18
       if (phase === 'startup') {
-        // Slight pull-back before lunge
-        lungeOffset = fighterState.position.facing * lerp(0, -3, easeInQuad(phaseT))
+        lungeOffset = fighterState.position.facing * lerp(0, -4, easeInQuad(phaseT))
       } else if (phase === 'active') {
-        lungeOffset = fighterState.position.facing * lerp(-3, lungeDistance, easeOutCubic(phaseT))
+        lungeOffset = fighterState.position.facing * lerp(-4, lungeDistance, easeOutCubic(phaseT))
       } else if (phase === 'hold') {
         lungeOffset = fighterState.position.facing * lungeDistance
       } else {
-        // Recovery: slide back
         lungeOffset = fighterState.position.facing * lerp(lungeDistance, 0, easeInOutQuad(phaseT))
       }
     }
 
-    drawHumanoidFighter(ctx, x + lungeOffset, y, color, fighterState, fighterNumber, animProgress)
+    // Scale the fighter up — anchor at feet so they grow upward
+    const feetY = y + 25 // approximate feet position
+    const drawX = x + lungeOffset
+    ctx.save()
+    ctx.translate(drawX, feetY)
+    ctx.scale(FIGHTER_SCALE, FIGHTER_SCALE)
+    ctx.translate(-drawX, -feetY)
 
-    // Particle effects
+    drawHumanoidFighter(ctx, drawX, y, color, fighterState, fighterNumber, animProgress)
+
+    ctx.restore() // end scale transform
+
+    // Particle effects (drawn at original scale, outside the fighter scale)
     if (fighterState.hp < FIGHTER_MAX_HP * 0.5) {
-      drawSweatParticles(ctx, x, y - 60)
+      drawSweatParticles(ctx, x, y - 80 * FIGHTER_SCALE)
     }
     if (fighterState.animation.state === 'punching') {
       drawMotionTrail(ctx, x, y, fighterState.position.facing, 'punching')
@@ -678,7 +690,7 @@ export default function EnhancedFightCanvas({
 
     ctx.restore()
 
-    drawEnhancedFighterInfo(ctx, fighterData, fighterState, x, y - 70, color, fighterNumber)
+    drawEnhancedFighterInfo(ctx, fighterData, fighterState, x, y - 80 * FIGHTER_SCALE, color, fighterNumber)
   }
 
   // ── Main humanoid fighter drawing with frame-based keyframe animation ─────
@@ -938,70 +950,82 @@ export default function EnhancedFightCanvas({
   }
 
   const drawHead = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, state: string, hp: number) => {
-    const s = shade(color)
-    const h = highlight(color)
-    const ox = x - P * 3
-    const oy = y - P * 4
     const O = '#111'
-    const C = color
-    const S = s
-    const H = h
+    const C = color       // hair/headband color
+    const Cs = shade(color)
+    const SK = SKIN       // skin tone
+    const SS = SKIN_S     // skin shadow
+    const SH = SKIN_H     // skin highlight
     const W = '#fff'
 
+    // Wider head: 8x9 grid — hair on top, skin face below
+    const ox = x - P * 4
+    const oy = y - P * 5
+
     const head: string[][] = [
-      ['',  O,  O,  O,  O, ''],
-      [ O,  H,  C,  C,  S,  O],
-      [ O,  C,  C,  C,  C,  O],
-      [ O,  C,  C,  C,  C,  O],
-      [ O,  C,  C,  C,  C,  O],
-      ['',  O,  C,  C,  O, ''],
-      ['', '',  O,  O, '', ''],
+      ['', '',  O,  O,  O,  O, '', ''],
+      ['',  O,  C,  C,  C,  C,  O, ''],
+      [ O,  C,  C,  C,  C,  C,  C,  O],   // hair
+      [ O, SH,  SK, SK, SK, SK, SS,  O],   // forehead
+      [ O,  SK, SK, SK, SK, SK, SK,  O],   // eyes line
+      [ O,  SK, SK, SK, SK, SK, SK,  O],   // nose
+      [ O,  SK, SK, SK, SK, SK, SK,  O],   // mouth
+      ['',  O,  SK, SK, SK, SK,  O, ''],   // chin
+      ['', '',  O,  O,  O,  O, '', ''],    // neck
     ]
     drawSprite(ctx, ox, oy, head)
 
+    // Eyes and mouth
     if (state === 'hit') {
-      px(ctx, ox + P * 1, oy + P * 2, '#ff0')
-      px(ctx, ox + P * 4, oy + P * 2, '#ff0')
-      px(ctx, ox + P * 2, oy + P * 4, '#c00')
-      px(ctx, ox + P * 3, oy + P * 4, '#c00')
+      // X eyes + open mouth
+      px(ctx, ox + P * 2, oy + P * 4, '#ff0')
+      px(ctx, ox + P * 5, oy + P * 4, '#ff0')
+      px(ctx, ox + P * 3, oy + P * 6, '#c00')
+      px(ctx, ox + P * 4, oy + P * 6, '#c00')
     } else if (hp < FIGHTER_MAX_HP * 0.25) {
-      px(ctx, ox + P * 1, oy + P * 2, '#800')
-      px(ctx, ox + P * 4, oy + P * 2, '#800')
-      px(ctx, ox + P * 2, oy + P * 4, '#c00')
+      // Tired squint eyes + blood
+      px(ctx, ox + P * 2, oy + P * 4, '#800')
+      px(ctx, ox + P * 5, oy + P * 4, '#800')
+      px(ctx, ox + P * 3, oy + P * 6, '#c00')
     } else {
-      px(ctx, ox + P * 1, oy + P * 2, W)
-      px(ctx, ox + P * 4, oy + P * 2, W)
-      const pupilOffset = facing > 0 ? 1 : 0
-      px(ctx, ox + P * (1 + pupilOffset), oy + P * 2, '#000')
-      px(ctx, ox + P * (4 + pupilOffset), oy + P * 2, '#000')
-      px(ctx, ox + P * 2, oy + P * 4, '#000')
-      px(ctx, ox + P * 3, oy + P * 4, '#000')
+      // Normal eyes: white with pupil
+      px(ctx, ox + P * 2, oy + P * 4, W)
+      px(ctx, ox + P * 5, oy + P * 4, W)
+      const pupilOff = facing > 0 ? 1 : 0
+      px(ctx, ox + P * (2 + pupilOff), oy + P * 4, '#000')
+      px(ctx, ox + P * (5 + pupilOff), oy + P * 4, '#000')
+      // Determined mouth
+      px(ctx, ox + P * 3, oy + P * 6, '#333')
+      px(ctx, ox + P * 4, oy + P * 6, '#333')
     }
   }
 
   const drawTorso = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, state: string) => {
-    const s = shade(color)
-    const h = highlight(color)
     const O = '#111'
-    const C = color
-    const S = s
-    const H = h
-    const T = state === 'hit' ? '#cc0000' : '#222'
+    const SK = SKIN
+    const SS = SKIN_S
+    const SH = SKIN_H
+    const C = color                           // shorts color
+    const Cs = shade(color)
+    const T = state === 'hit' ? '#cc0000' : C // shorts flash red on hit
 
-    const ox = x - P * 4
+    // Wider torso: 10x12 — skin upper body with muscle definition, colored shorts
+    const ox = x - P * 5
     const oy = y
 
     const torso: string[][] = [
-      ['',  O,  O,  C,  C,  O,  O, ''],
-      [ O,  H,  C,  C,  C,  C,  S,  O],
-      [ O,  C,  H,  C,  C,  S,  C,  O],
-      [ O,  C,  C,  C,  C,  C,  C,  O],
-      [ O,  C,  C,  S,  S,  C,  C,  O],
-      [ O,  C,  C,  C,  C,  C,  C,  O],
-      ['',  O,  T,  T,  T,  T,  O, ''],
-      ['',  O,  T,  T,  T,  T,  O, ''],
-      ['', '',  O,  T,  T,  O, '', ''],
-      ['', '',  O,  O,  O,  O, '', ''],
+      ['', '',  O,  O,  O,  O,  O,  O, '', ''],   // shoulders
+      ['',  O, SH,  SK, SK, SK, SK, SS,  O, ''],   // upper chest
+      [ O, SH,  SK, SH, SK, SK, SS, SK, SS,  O],   // chest + pecs
+      [ O,  SK, SK, SK, SK, SK, SK, SK, SK,  O],   // mid chest
+      [ O,  SK, SK, SS, SK, SK, SS, SK, SK,  O],   // abs definition
+      [ O,  SK, SK, SK, SS, SS, SK, SK, SK,  O],   // lower abs
+      ['',  O,  SK, SK, SK, SK, SK, SK,  O, ''],   // waist
+      ['',  O,  O,   T,  T,  T,  T,  O,  O, ''],   // waistband
+      ['', '',  O,   T,  T,  T,  T,  O, '', ''],    // shorts
+      ['', '',  O,   T,  T,  T,  T,  O, '', ''],    // shorts
+      ['', '',  O,  Cs,  O,  O, Cs,  O, '', ''],    // shorts hem
+      ['', '', '',   O, '',  '',  O, '', '', ''],    // gap between legs
     ]
     drawSprite(ctx, ox, oy, torso)
   }
@@ -1017,46 +1041,59 @@ export default function EnhancedFightCanvas({
     armAngle?: number,
     isGuard?: boolean
   ) => {
-    const s = shade(color)
-    const G = isPunching && isFront ? '#ffdd00' : '#eee'
-    const GS = isPunching && isFront ? '#cc9900' : '#bbb'
+    const SK = SKIN
+    const SS = SKIN_S
+    const SH = SKIN_H
+    const G = isPunching && isFront ? '#ffdd00' : color
+    const GS = isPunching && isFront ? '#cc9900' : shade(color)
+    const GH = isPunching && isFront ? '#ffe866' : highlight(color)
 
     ctx.save()
     ctx.translate(x, y)
 
     if (isFront && isPunching && armAngle !== undefined) {
-      // Use per-attack arm angle from phase system
       ctx.rotate(facing * armAngle * Math.PI / 180)
     } else if (isGuard) {
-      // Guard stance: arms up at 35 degrees
       ctx.rotate(facing * 35 * Math.PI / 180)
     }
 
     const armLen = Math.floor((25 + Math.max(0, extension)) / P)
-    const ox = -P
+    const ox = -P  // center on 3-wide: -P, 0, +P
 
-    for (let i = 0; i < Math.floor(armLen * 0.5); i++) {
-      pxo(ctx, ox, i * P, color)
-      pxo(ctx, ox + P, i * P, s)
+    // Upper arm — 3 blocks wide, skin tones
+    const upperLen = Math.floor(armLen * 0.45)
+    for (let i = 0; i < upperLen; i++) {
+      pxo(ctx, ox - P, i * P, SH)
+      pxo(ctx, ox, i * P, SK)
+      pxo(ctx, ox + P, i * P, SS)
     }
 
-    const forearmStart = Math.floor(armLen * 0.5) * P
-    for (let i = 0; i < Math.floor(armLen * 0.4); i++) {
-      pxo(ctx, ox, forearmStart + i * P, color)
-      pxo(ctx, ox + P, forearmStart + i * P, s)
+    // Forearm — 3 blocks wide, skin tones (slightly narrower feel via shading)
+    const forearmStart = upperLen * P
+    const forearmLen = Math.floor(armLen * 0.35)
+    for (let i = 0; i < forearmLen; i++) {
+      pxo(ctx, ox - P, forearmStart + i * P, SK)
+      pxo(ctx, ox, forearmStart + i * P, SK)
+      pxo(ctx, ox + P, forearmStart + i * P, SS)
     }
 
-    const gloveY = (armLen - 2) * P
-    for (let gy = 0; gy < 3; gy++) {
-      for (let gx = 0; gx < 3; gx++) {
-        const gc = (gy === 0 || gx === 0) ? G : GS
-        pxo(ctx, ox - P + gx * P, gloveY + gy * P, gc)
+    // Glove — 4x3 blocks in fighter color (or yellow for active punch)
+    const gloveY = (upperLen + forearmLen) * P
+    const gloveGrid: string[][] = [
+      [GH,  G,  G, GS],
+      [ G,  G,  G,  G],
+      [GS,  G,  G, GS],
+    ]
+    for (let gy = 0; gy < gloveGrid.length; gy++) {
+      for (let gx = 0; gx < gloveGrid[gy].length; gx++) {
+        pxo(ctx, ox - P + gx * P, gloveY + gy * P, gloveGrid[gy][gx])
       }
     }
 
+    // Punch glow
     if (isPunching && isFront) {
       ctx.fillStyle = 'rgba(255,221,0,0.3)'
-      ctx.fillRect(ox - P * 2, gloveY - P, P * 5, P * 5)
+      ctx.fillRect(ox - P * 2, gloveY - P, P * 6, P * 5)
     }
 
     ctx.restore()
@@ -1072,45 +1109,64 @@ export default function EnhancedFightCanvas({
     legAngle?: number,
     walkPhase?: number
   ) => {
-    const s = shade(color)
+    const SK = SKIN
+    const SS = SKIN_S
+    const SH = SKIN_H
+    const C = color          // shorts color
+    const Cs = shade(color)
 
     ctx.save()
     ctx.translate(x, y)
 
     if (isKicking && isFront && legAngle !== undefined) {
-      // Use per-kick leg angle from phase system
       ctx.rotate(legAngle * Math.PI / 180)
     } else if (walkPhase !== undefined) {
-      // Walking: alternating leg swing
       const swing = Math.sin(walkPhase) * 20
       ctx.rotate(swing * Math.PI / 180)
     }
 
     const legLen = Math.floor((35 + Math.max(0, extension)) / P)
-    const ox = -P
+    const ox = -P  // center on 3-wide
 
-    for (let i = 0; i < Math.floor(legLen * 0.5); i++) {
-      pxo(ctx, ox, i * P, color)
-      pxo(ctx, ox + P, i * P, s)
-      if (i < 2) pxo(ctx, ox + P * 2, i * P, s)
+    // Thigh — top 2 rows in shorts color, then skin
+    const thighLen = Math.floor(legLen * 0.45)
+    for (let i = 0; i < thighLen; i++) {
+      if (i < 2) {
+        // Shorts portion
+        pxo(ctx, ox - P, i * P, C)
+        pxo(ctx, ox, i * P, C)
+        pxo(ctx, ox + P, i * P, Cs)
+      } else {
+        // Exposed thigh — skin tones, 3 blocks wide
+        pxo(ctx, ox - P, i * P, SH)
+        pxo(ctx, ox, i * P, SK)
+        pxo(ctx, ox + P, i * P, SS)
+      }
     }
 
-    const shinStart = Math.floor(legLen * 0.5) * P
-    for (let i = 0; i < Math.floor(legLen * 0.4); i++) {
-      pxo(ctx, ox, shinStart + i * P, color)
-      pxo(ctx, ox + P, shinStart + i * P, s)
+    // Shin — skin tones, 3 blocks wide
+    const shinStart = thighLen * P
+    const shinLen = Math.floor(legLen * 0.35)
+    for (let i = 0; i < shinLen; i++) {
+      pxo(ctx, ox - P, shinStart + i * P, SK)
+      pxo(ctx, ox, shinStart + i * P, SK)
+      pxo(ctx, ox + P, shinStart + i * P, SS)
     }
 
-    const bootY = (legLen - 2) * P
-    pxo(ctx, ox - P, bootY, '#111')
-    pxo(ctx, ox, bootY, '#222')
-    pxo(ctx, ox + P, bootY, '#222')
-    pxo(ctx, ox + P * 2, bootY, '#111')
-    pxo(ctx, ox - P, bootY + P, '#111')
-    pxo(ctx, ox, bootY + P, '#111')
-    pxo(ctx, ox + P, bootY + P, '#111')
-    pxo(ctx, ox + P * 2, bootY + P, '#111')
+    // Boot — 4x2 dark blocks
+    const bootY = (thighLen + shinLen) * P
+    const B = '#222'
+    const BD = '#111'
+    pxo(ctx, ox - P, bootY, BD)
+    pxo(ctx, ox, bootY, B)
+    pxo(ctx, ox + P, bootY, B)
+    pxo(ctx, ox + P * 2, bootY, BD)
+    pxo(ctx, ox - P, bootY + P, BD)
+    pxo(ctx, ox, bootY + P, BD)
+    pxo(ctx, ox + P, bootY + P, BD)
+    pxo(ctx, ox + P * 2, bootY + P, BD)
 
+    // Kick glow
     if (isKicking && isFront) {
       ctx.fillStyle = 'rgba(255,100,0,0.3)'
       ctx.fillRect(ox - P * 2, bootY - P, P * 6, P * 4)
@@ -1120,43 +1176,64 @@ export default function EnhancedFightCanvas({
   }
 
   const drawKnockedDownHumanoid = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, _animationFrame: number) => {
-    const s = shade(color)
+    const SK = SKIN
+    const SS = SKIN_S
+    const SH = SKIN_H
+    const C = color
+    const Cs = shade(color)
+    const G = '#ffdd00' // glove
+    const GS = '#cc9900'
+
     ctx.save()
     ctx.translate(x, y + 20)
 
-    for (let i = -5; i <= 5; i++) {
-      pxo(ctx, i * P, -P, i < 0 ? shade(color) : color)
-      pxo(ctx, i * P, 0, color)
+    // Body lying flat — head on left, feet on right
+    // Head (skin + hair)
+    pxo(ctx, -6 * P, -2 * P, C)
+    pxo(ctx, -5 * P, -2 * P, C)
+    pxo(ctx, -6 * P, -P, SH)
+    pxo(ctx, -5 * P, -P, SK)
+    pxo(ctx, -6 * P, 0, SK)
+    pxo(ctx, -5 * P, 0, SS)
+
+    // Torso (skin upper body + shorts)
+    for (let i = -4; i <= 0; i++) {
+      pxo(ctx, i * P, -P, i < -2 ? SH : SK)
+      pxo(ctx, i * P, 0, i < -2 ? SK : SS)
+    }
+    // Shorts section
+    for (let i = 1; i <= 3; i++) {
+      pxo(ctx, i * P, -P, C)
+      pxo(ctx, i * P, 0, Cs)
     }
 
-    for (let gy = -2; gy <= 1; gy++) {
-      for (let gx = -8; gx <= -6; gx++) {
-        pxo(ctx, gx * P, gy * P, color)
-      }
-    }
-    px(ctx, -8 * P, -P, '#ff0')
-    px(ctx, -6 * P, -P, '#ff0')
+    // Arms (skin + gloves)
+    pxo(ctx, -7 * P, -P, SK)
+    pxo(ctx, -8 * P, -P, G)
+    pxo(ctx, -8 * P, 0, GS)
+    pxo(ctx, -7 * P, P, SK)
+    pxo(ctx, -8 * P, P, G)
 
+    // Legs (skin + boots)
+    for (let i = 4; i <= 5; i++) {
+      pxo(ctx, i * P, -P, SK)
+      pxo(ctx, i * P, 0, SS)
+    }
+    pxo(ctx, 6 * P, -P, '#222')
+    pxo(ctx, 6 * P, 0, '#111')
+    pxo(ctx, 7 * P, -P, '#222')
+    pxo(ctx, 7 * P, 0, '#111')
+
+    // Spinning stars above
     const time = Date.now() * 0.003
     for (let i = 0; i < 3; i++) {
-      const starX = -7 * P + i * P * 4
+      const starX = -5 * P + i * P * 4
       const starY = -4 * P + Math.sin(time + i * 2) * P * 2
       px(ctx, starX, starY, '#ffdd00')
       px(ctx, starX + P, starY, '#ffdd00')
       px(ctx, starX, starY + P, '#ffdd00')
       px(ctx, starX + P, starY + P, '#ffdd00')
     }
-
-    for (let i = 0; i < 4; i++) {
-      pxo(ctx, 6 * P + i * P, -P, s)
-      pxo(ctx, -9 * P - i * P, 0, s)
-    }
-    pxo(ctx, -2 * P, 2 * P, s)
-    pxo(ctx, -2 * P, 3 * P, s)
-    pxo(ctx, -2 * P, 4 * P, '#111')
-    pxo(ctx, P, 2 * P, s)
-    pxo(ctx, P, 3 * P, s)
-    pxo(ctx, P, 4 * P, '#111')
 
     ctx.restore()
   }
