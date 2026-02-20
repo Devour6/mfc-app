@@ -413,7 +413,7 @@ export class FightEngine {
     }
 
     // Hit-stop: freeze both fighters briefly on impact for visual weight
-    const hitStopDuration = isPowerShot ? 5 : 3
+    const hitStopDuration = isPowerShot ? 14 : 8
     attacker.modifiers.hitStopFrames = hitStopDuration
     defender.modifiers.hitStopFrames = hitStopDuration
 
@@ -450,7 +450,7 @@ export class FightEngine {
     }
 
     // Hit-stop: freeze both fighters briefly on impact for visual weight
-    const hitStopDuration = isPowerShot ? 5 : 3
+    const hitStopDuration = isPowerShot ? 14 : 8
     attacker.modifiers.hitStopFrames = hitStopDuration
     defender.modifiers.hitStopFrames = hitStopDuration
 

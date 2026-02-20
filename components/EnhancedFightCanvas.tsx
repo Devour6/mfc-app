@@ -42,30 +42,32 @@ const easeOutBack = (t: number) => {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 
-// ── Attack phase timing ─────────────────────────────────────────────────────
-// Each attack has 4 phases: startup (wind-up) → active (strike) → hold (impact freeze) → recovery
-// Values represent the normalized time boundary where each phase ends (0 to 1)
+// ── Attack phase timing (SF2-inspired) ──────────────────────────────────────
+// SF2 key insight: startup is VISIBLE anticipation, then SNAP to active in 1-2 frames.
+// Recovery is where the weight difference lives (light: short, heavy: long).
+// "hold" is the impact pose held during hit-stop. Active is near-instant.
 const ATTACK_PHASES: Record<string, { startup: number; active: number; hold: number }> = {
-  jab:        { startup: 0.15, active: 0.40, hold: 0.55 },
-  cross:      { startup: 0.20, active: 0.45, hold: 0.60 },
-  hook:       { startup: 0.25, active: 0.50, hold: 0.60 },
-  uppercut:   { startup: 0.30, active: 0.55, hold: 0.65 },
-  kick:       { startup: 0.20, active: 0.50, hold: 0.65 },
-  roundhouse: { startup: 0.25, active: 0.55, hold: 0.70 },
+  jab:        { startup: 0.20, active: 0.30, hold: 0.50 },
+  cross:      { startup: 0.25, active: 0.35, hold: 0.55 },
+  hook:       { startup: 0.30, active: 0.40, hold: 0.55 },
+  uppercut:   { startup: 0.35, active: 0.45, hold: 0.60 },
+  kick:       { startup: 0.25, active: 0.35, hold: 0.60 },
+  roundhouse: { startup: 0.30, active: 0.40, hold: 0.65 },
 }
 
-// Per-attack-type parameters for punches — higher extensions + angles for readable attacks
+// Per-attack-type parameters — SF2 rule: punch reaches 1.5x body width, kick 2.0x+
+// Body width is ~40px (10 blocks). So punch extension needs 60+ px, kick 80+ px.
 const PUNCH_PARAMS: Record<string, { maxExtension: number; bodyLean: number; armAngle: number; headDip: number; windUpLean: number }> = {
-  jab:      { maxExtension: 35, bodyLean: 6,  armAngle: 35, headDip: 2, windUpLean: -4 },
-  cross:    { maxExtension: 50, bodyLean: 14, armAngle: 50, headDip: 4, windUpLean: -8 },
-  hook:     { maxExtension: 28, bodyLean: 18, armAngle: 80, headDip: 3, windUpLean: -10 },
-  uppercut: { maxExtension: 38, bodyLean: 12, armAngle: 95, headDip: 8, windUpLean: -6 },
+  jab:      { maxExtension: 40, bodyLean: 8,  armAngle: 40, headDip: 2, windUpLean: -6 },
+  cross:    { maxExtension: 60, bodyLean: 16, armAngle: 55, headDip: 5, windUpLean: -10 },
+  hook:     { maxExtension: 35, bodyLean: 20, armAngle: 85, headDip: 3, windUpLean: -12 },
+  uppercut: { maxExtension: 45, bodyLean: 14, armAngle: 100, headDip: 10, windUpLean: -8 },
 }
 
-// Per-attack-type parameters for kicks — higher extensions for readable kicks
+// Kick extensions — SF2: roundhouse reaches 2-2.5x body width
 const KICK_PARAMS: Record<string, { maxExtension: number; bodyLean: number; legAngle: number; armRaise: number }> = {
-  kick:       { maxExtension: 45, bodyLean: -12, legAngle: 65, armRaise: 8 },
-  roundhouse: { maxExtension: 55, bodyLean: -18, legAngle: 90, armRaise: 12 },
+  kick:       { maxExtension: 55, bodyLean: -14, legAngle: 70, armRaise: 10 },
+  roundhouse: { maxExtension: 70, bodyLean: -20, legAngle: 95, armRaise: 14 },
 }
 
 // ── Fighter visual scale + skin tones ───────────────────────────────────────
@@ -142,10 +144,10 @@ export default function EnhancedFightCanvas({
     const f2State = fightState.fighter2.animation.state
 
     if (f1State === 'hit' && prevAnimRef.current.f1 !== 'hit') {
-      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -12
+      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -18
     }
     if (f2State === 'hit' && prevAnimRef.current.f2 !== 'hit') {
-      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -12
+      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -18
     }
 
     prevAnimRef.current.f1 = f1State
@@ -584,14 +586,15 @@ export default function EnhancedFightCanvas({
     const baseX = renderPositionsRef.current[posKey].x + knockbackOffset
     const baseY = floorY - 20
 
-    // Hit-stop: when hitStopFrames > 0, add subtle vibration but freeze pose
+    // Hit-stop: when hitStopFrames > 0, add vibration but freeze pose
+    // SF2: 1-2 pixel horizontal oscillation on both sprites during freeze
     const isInHitStop = fighterState.modifiers.hitStopFrames > 0
     let hitStopVibX = 0
     let hitStopVibY = 0
     if (isInHitStop) {
-      const vibTime = Date.now() * 0.05
-      hitStopVibX = Math.sin(vibTime) * 1.5
-      hitStopVibY = Math.cos(vibTime * 1.3) * 1.0
+      const vibTime = Date.now() * 0.06
+      hitStopVibX = Math.sin(vibTime) * 2.0  // SF2-style horizontal vibration
+      hitStopVibY = Math.cos(vibTime * 1.5) * 1.0
     }
 
     const x = baseX + hitStopVibX
@@ -605,14 +608,17 @@ export default function EnhancedFightCanvas({
       const animProgress = getAnimProgress(fighterState)
       // Exponential decay: shake hard initially, fade out
       const decay = Math.exp(-animProgress * 3)
-      const shakeIntensity = (fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 8 : 5) * decay
+      const shakeIntensity = (fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 10 : 6) * decay
       const shakePhase = time * 25
       ctx.translate(
         Math.sin(shakePhase) * shakeIntensity,
         Math.cos(shakePhase * 1.3) * shakeIntensity * 0.7
       )
-      ctx.globalAlpha = 0.8 + animProgress * 0.2 // Fade back in as hit recovers
+      ctx.globalAlpha = 0.8 + animProgress * 0.2
     }
+
+    // SF2: Defender white flash — flash the sprite white on initial hit impact
+    const isHitFlash = fighterState.animation.state === 'hit' && isInHitStop
 
     if (fighterState.animation.state === 'down') {
       const time = Date.now() * 0.001
@@ -653,7 +659,7 @@ export default function EnhancedFightCanvas({
       const atkType = fighterState.animation.attackType || 'jab'
       const phase = getAttackPhase(animProgress, atkType)
       const phaseT = getPhaseProgress(animProgress, atkType, phase)
-      const lungeDistance = fighterState.animation.state === 'kicking' ? 28 : 22
+      const lungeDistance = fighterState.animation.state === 'kicking' ? 32 : 26
       if (phase === 'startup') {
         lungeOffset = fighterState.position.facing * lerp(0, -4, easeInQuad(phaseT))
       } else if (phase === 'active') {
@@ -675,7 +681,36 @@ export default function EnhancedFightCanvas({
 
     drawHumanoidFighter(ctx, drawX, y, color, fighterState, fighterNumber, animProgress)
 
+    // SF2: White flash overlay on defender during hit-stop
+    if (isHitFlash) {
+      ctx.globalCompositeOperation = 'source-atop'
+      const flashIntensity = Math.sin(Date.now() * 0.02) > 0 ? 0.7 : 0.3 // Flicker
+      ctx.fillStyle = `rgba(255,255,255,${flashIntensity})`
+      ctx.fillRect(drawX - 30, y - 60, 60, 80)
+      ctx.globalCompositeOperation = 'source-over'
+    }
+
     ctx.restore() // end scale transform
+
+    // SF2-style hit spark: bright burst at contact point when in hit-stop
+    if (isHitFlash) {
+      const sparkX = x + fighterState.position.facing * -20 // spark at the point of contact (in front)
+      const sparkY = y - 20
+      const sparkTime = Date.now() * 0.01
+      const sparkSize = 6 + Math.sin(sparkTime * 3) * 3
+      ctx.save()
+      ctx.fillStyle = '#fff'
+      // Cross-shaped spark
+      ctx.fillRect(sparkX - sparkSize, sparkY - 2, sparkSize * 2, 4)
+      ctx.fillRect(sparkX - 2, sparkY - sparkSize, 4, sparkSize * 2)
+      // Diagonal lines
+      ctx.fillStyle = '#ffdd00'
+      ctx.fillRect(sparkX - sparkSize * 0.7, sparkY - sparkSize * 0.7, 3, 3)
+      ctx.fillRect(sparkX + sparkSize * 0.7, sparkY - sparkSize * 0.7, 3, 3)
+      ctx.fillRect(sparkX - sparkSize * 0.7, sparkY + sparkSize * 0.7, 3, 3)
+      ctx.fillRect(sparkX + sparkSize * 0.7, sparkY + sparkSize * 0.7, 3, 3)
+      ctx.restore()
+    }
 
     // Particle effects (drawn at original scale, outside the fighter scale)
     if (fighterState.hp < FIGHTER_MAX_HP * 0.5) {
@@ -724,14 +759,23 @@ export default function EnhancedFightCanvas({
 
     switch (state) {
       case 'idle': {
-        // Proper fighting stance: slight bounce, guard arms up
+        // SF2-style fighting stance: asymmetric timing (slow up, fast down)
+        // Fists move 3x more than torso. Head barely moves. Creates liveliness.
         const time = Date.now() * 0.001
-        const bounce = Math.sin(time * 3 + fighterNumber * Math.PI) * 1.5
-        headY += bounce
-        torsoY += bounce * 0.8
-        armY += bounce * 0.6
-        legY += bounce * 0.3
-        bodyLean = facing * 2 // Slight lean toward opponent
+        const cycleSpeed = 3.5
+        const phase = ((time * cycleSpeed + fighterNumber * Math.PI) % (Math.PI * 2)) / (Math.PI * 2)
+        // Asymmetric: slow rise (0→0.5), fast fall (0.5→1)
+        let bounce: number
+        if (phase < 0.55) {
+          bounce = Math.sin((phase / 0.55) * Math.PI * 0.5) * 2.5 // slow rise
+        } else {
+          bounce = Math.cos(((phase - 0.55) / 0.45) * Math.PI * 0.5) * 2.5 // fast fall
+        }
+        headY += bounce * 0.3       // head barely moves — stability anchor
+        torsoY += bounce * 0.7
+        armY += bounce * 2.0         // fists move 3x more than torso
+        legY += bounce * 0.4
+        bodyLean = facing * 3 // lean toward opponent
         isGuardArms = true
         break
       }
@@ -743,37 +787,43 @@ export default function EnhancedFightCanvas({
 
         switch (phase) {
           case 'startup': {
-            // Wind-up: arm retracts hard, lean back — exaggerated for readability
+            // SF2: clear anticipation — pull arm back, lean away. Exaggerated wind-up.
             const t = easeInQuad(phaseT)
-            armExtension = lerp(0, -14, t) // Pull arm back visibly
+            armExtension = lerp(0, -18, t) // Visible retraction (0.5x body width)
             bodyLean = facing * lerp(0, params.windUpLean, t)
             headY -= lerp(0, params.headDip * 0.3, t)
+            // Trailing arm pulls back too (counterbalance)
+            torsoY += lerp(0, 2, t)
             break
           }
           case 'active': {
-            // Strike: arm snaps forward with easeOutCubic (fast start, smooth stop)
-            const t = easeOutCubic(phaseT)
-            armExtension = lerp(-14, params.maxExtension, t)
+            // SF2 SNAP-TO-POSE: Jump to full extension near-instantly.
+            // The entire distance (wind-up to max) in first 15% of phase. No smooth tween.
+            const t = phaseT < 0.15 ? phaseT / 0.15 : 1.0
+            armExtension = lerp(-18, params.maxExtension, t)
             bodyLean = facing * lerp(params.windUpLean, params.bodyLean, t)
             headY -= lerp(params.headDip * 0.3, params.headDip, t)
             frontArmAngle = lerp(0, params.armAngle, t)
+            torsoY += lerp(2, -1, t) // torso punches forward
             break
           }
           case 'hold': {
-            // Full extension held
+            // Full extension held — this is the impact pose during hit-stop
             armExtension = params.maxExtension
             bodyLean = facing * params.bodyLean
             headY -= params.headDip
             frontArmAngle = params.armAngle
+            torsoY -= 1
             break
           }
           case 'recovery': {
-            // Return to guard with easeInOutQuad
+            // Slow recovery — where the commitment/weight lives
             const t = easeInOutQuad(phaseT)
             armExtension = lerp(params.maxExtension, 0, t)
-            bodyLean = facing * lerp(params.bodyLean, 2, t)
+            bodyLean = facing * lerp(params.bodyLean, 3, t)
             headY -= lerp(params.headDip, 0, t)
             frontArmAngle = lerp(params.armAngle, 0, t)
+            torsoY -= lerp(1, 0, t)
             break
           }
         }
@@ -788,20 +838,22 @@ export default function EnhancedFightCanvas({
 
         switch (phase) {
           case 'startup': {
-            // Chamber: leg pulls up hard — exaggerated for readability
+            // SF2: Chamber the knee high — clear telegraph
             const t = easeInQuad(phaseT)
-            legExtension = lerp(0, -10, t)  // Chamber high
+            legExtension = lerp(0, -14, t)  // Chamber high
             bodyLean = facing * lerp(0, params.bodyLean * 0.3, t)
             armY -= lerp(0, params.armRaise * 0.5, t)
+            headY += lerp(0, 2, t) // head dips as weight shifts to standing leg
             break
           }
           case 'active': {
-            // Kick extends with snap
-            const t = easeOutCubic(phaseT)
-            legExtension = lerp(-10, params.maxExtension, t)
+            // SNAP-TO-POSE: Kick snaps to full extension near-instantly
+            const t = phaseT < 0.15 ? phaseT / 0.15 : 1.0
+            legExtension = lerp(-14, params.maxExtension, t)
             bodyLean = facing * lerp(params.bodyLean * 0.3, params.bodyLean, t)
             armY -= lerp(params.armRaise * 0.5, params.armRaise, t)
             frontLegAngle = lerp(0, params.legAngle, t)
+            headY += lerp(2, 0, t)
             break
           }
           case 'hold': {
@@ -812,6 +864,7 @@ export default function EnhancedFightCanvas({
             break
           }
           case 'recovery': {
+            // Slow recovery — heavy kicks have long, committal recovery
             const t = easeInOutQuad(phaseT)
             legExtension = lerp(params.maxExtension, 0, t)
             bodyLean = facing * lerp(params.bodyLean, 0, t)
@@ -824,17 +877,25 @@ export default function EnhancedFightCanvas({
       }
 
       case 'hit': {
-        // Dramatic recoil with easeOutBack (overshoot) in first 30%, slow recovery
-        const hitPhase = animProgress < 0.3
-          ? easeOutBack(animProgress / 0.3) // Fast snap into recoil
-          : lerp(1, 0, easeInOutQuad((animProgress - 0.3) / 0.7)) // Slow recovery
+        // SF2: Snap into recoil pose fast (first 15%), hold briefly, slow recovery.
+        // "Painful damage motions are just as necessary as good attack motions."
+        const recoilT = animProgress < 0.15
+          ? easeOutBack(animProgress / 0.15) // SNAP into recoil (easeOutBack = overshoot)
+          : animProgress < 0.4
+            ? 1.0 // HOLD the recoil pose — let hit-stop do its work
+            : lerp(1, 0, easeInOutQuad((animProgress - 0.4) / 0.6)) // Slow recovery
 
-        bodyLean = -facing * 20 * hitPhase
-        headY += 10 * hitPhase // Head snaps back
-        torsoY += 3 * hitPhase
-        // Horizontal stagger oscillation
-        const stagger = Math.sin(animProgress * Math.PI * 4) * 3 * (1 - animProgress)
-        headY += stagger
+        bodyLean = -facing * 25 * recoilT        // Full body rocks back
+        headY += 14 * recoilT                      // Head snaps back hard
+        torsoY += 5 * recoilT                      // Torso buckles
+        armY += 8 * recoilT                        // Arms fly up
+        legY += 3 * recoilT                        // Knees buckle
+        // Stagger oscillation — wobble during recovery
+        if (animProgress > 0.4) {
+          const staggerPhase = (animProgress - 0.4) / 0.6
+          const stagger = Math.sin(staggerPhase * Math.PI * 3) * 4 * (1 - staggerPhase)
+          headY += stagger
+        }
         break
       }
 
