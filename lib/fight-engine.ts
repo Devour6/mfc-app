@@ -168,7 +168,7 @@ export class FightEngine {
     const f1 = this.fightState.fighter1
     const f2 = this.fightState.fighter2
     const distance = Math.abs(f1.position.x - f2.position.x)
-    
+
     // Only fight if in range and not stunned
     if (distance <= 60 && f1.modifiers.stunned === 0 && f2.modifiers.stunned === 0) {
 
@@ -183,13 +183,20 @@ export class FightEngine {
         const action = this.selectAction(f2, f1, distance)
         this.executeAction(action, f2, f1)
       }
+
+      // Press-in: fighters naturally gravitate to striking distance (~35 units)
+      // so punches/kicks visually connect on screen
+      if (distance > 35) {
+        this.moveTowardsOpponent(f1, f2)
+        this.moveTowardsOpponent(f2, f1)
+      }
     }
 
     // Movement when out of range — approach quickly
-    if (distance > 80) {
+    if (distance > 70) {
       this.moveTowardsOpponent(f1, f2)
       this.moveTowardsOpponent(f2, f1)
-    } else if (distance > 60) {
+    } else if (distance > 50) {
       // Auto-approach when idle in mid-range
       if (f1.animation.state === 'idle') this.moveTowardsOpponent(f1, f2)
       if (f2.animation.state === 'idle') this.moveTowardsOpponent(f2, f1)
