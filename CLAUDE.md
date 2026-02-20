@@ -68,8 +68,10 @@ app/api/              → API routes (see API Routes section below)
 - Actions: jab, cross, hook, uppercut, kick, roundhouse, combo, dodge, block, clinch, move
 - Kick mechanics: separate executeKick/landKick with higher base damage, longer stun, boot glow VFX
 - Fight recording: optional FightRecorder (samples every 3rd tick ~1.1MB/fight) for replay
-- Base 55% hit chance with modifiers (dodging -70%, blocking -60%, stunned +80%)
-- KO at 0 HP, TKO at <15 HP (30% chance), Decision by scored hits
+- `FIGHTER_MAX_HP = 200` — exported constant used by canvas for HP bar rendering
+- Base 55% hit chance with modifiers (dodging -75%, blocking -65%, stunned +80%)
+- Multi-dimensional fight bias: damage (±40%), action rate (±25%), hit chance (±20%), decision scoring (±50%)
+- KO at 0 HP, TKO at <35 HP (15% chance), Decision by scored hits (landed*3 + power*8 + hp*0.15)
 - Stamina system (0-100), stun/modifier decay, commentary generation
 
 ### Market Engine (`lib/market-engine.ts`)
