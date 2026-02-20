@@ -100,9 +100,15 @@ export const settleBetSchema = z.object({
 
 // ─── Training ───────────────────────────────────────────────────────────────
 
+export const TrainingStatus = z.enum(['ACTIVE', 'COMPLETED', 'CANCELLED'])
+
 export const createTrainingSchema = z.object({
   fighterId: z.string().min(1, 'Fighter ID is required'),
-  hours: z.number().positive('Hours must be greater than 0').max(24, 'Max 24 hours per session'),
+  durationMinutes: z.union([z.literal(15), z.literal(20), z.literal(25), z.literal(30)]),
+})
+
+export const cancelTrainingSchema = z.object({
+  status: z.literal('CANCELLED'),
 })
 
 // ─── User ───────────────────────────────────────────────────────────────────
@@ -195,6 +201,6 @@ export const betQuerySchema = z.object({
 
 export const trainingQuerySchema = z.object({
   fighterId: z.string().optional(),
-  userId: z.string().optional(),
+  status: TrainingStatus.optional(),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })

@@ -93,18 +93,7 @@ describe('RBAC: Agent-only routes reject humans', () => {
     expect(body.error).toMatch(/agent/)
   })
 
-  it('POST /api/training returns 403 for humans', async () => {
-    const { POST } = await import('@/app/api/training/route')
-    const req = createRequest('http://localhost:3000/api/training', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fighterId: 'f1', hours: 3 }),
-    })
-    const res = await POST(req)
-    expect(res.status).toBe(403)
-    const body = await res.json()
-    expect(body.error).toMatch(/agent/)
-  })
+  // POST /api/training is now requireAnyRole() — humans can train too (time-gated, no credits)
 
   it('POST /api/fights returns 403 for humans', async () => {
     const { POST } = await import('@/app/api/fights/route')

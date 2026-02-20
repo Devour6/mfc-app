@@ -112,14 +112,21 @@ export interface ApiBet {
 
 export interface ApiTraining {
   id: string
-  hours: number
-  cost: number
+  durationMinutes: number
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
+  startedAt: string
+  completedAt: string | null
+  hours: number | null
+  cost: number | null
   strengthGain: number
   speedGain: number
   defenseGain: number
   staminaGain: number
   fightIQGain: number
   aggressionGain: number
+  progress?: number
+  timeRemainingSeconds?: number
+  isComplete?: boolean
   createdAt: string
   fighterId: string
   userId: string
@@ -415,12 +422,12 @@ export function settleBet(id: string, data: {
 
 export function getTrainingSessions(filters?: {
   fighterId?: string
-  userId?: string
+  status?: 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
   limit?: number
 }) {
   return request<ApiTraining[]>(`/api/training${qs({
     fighterId: filters?.fighterId,
-    userId: filters?.userId,
+    status: filters?.status,
     limit: filters?.limit,
   })}`)
 }
@@ -431,11 +438,18 @@ export function getTrainingSession(id: string) {
 
 export function startTraining(data: {
   fighterId: string
-  hours: number
+  durationMinutes: 15 | 20 | 25 | 30
 }) {
   return request<ApiTraining>('/api/training', {
     method: 'POST',
     body: JSON.stringify(data),
+  })
+}
+
+export function cancelTraining(id: string) {
+  return request<ApiTraining>(`/api/training/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'CANCELLED' }),
   })
 }
 
