@@ -117,6 +117,7 @@ export interface FighterState {
     blocking: number
     dodging: number
     charging: number
+    hitStopFrames: number
   }
   combo: {
     count: number
