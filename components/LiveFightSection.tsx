@@ -14,6 +14,7 @@ import { MarketEngine } from '@/lib/market-engine'
 import { FightRecording } from '@/lib/fight-recorder'
 import { FightState, MarketState, Commentary, Fighter } from '@/types'
 import { FighterEvolutionEngine } from '@/lib/evolution-engine'
+import { determineFightOutcome } from '@/lib/fight-probability'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
 import OnboardingPrompt from './OnboardingPrompt'
@@ -30,6 +31,7 @@ const HOUSE_FIGHTERS: Fighter[] = [
     stats: { strength: 80, speed: 55, defense: 92, stamina: 88, fightIQ: 65, aggression: 50 },
     owner: 'MFC Arena', isActive: true, trainingCost: 100,
     evolution: FighterEvolutionEngine.createNewEvolution(30),
+    totalTrainingHours: 120,
   },
   {
     id: 'house-nexus-prime', name: 'NEXUS-PRIME', emoji: '🧠', class: 'Middleweight',
@@ -37,6 +39,7 @@ const HOUSE_FIGHTERS: Fighter[] = [
     stats: { strength: 68, speed: 82, defense: 70, stamina: 78, fightIQ: 95, aggression: 60 },
     owner: 'MFC Arena', isActive: true, trainingCost: 100,
     evolution: FighterEvolutionEngine.createNewEvolution(28),
+    totalTrainingHours: 150,
   },
   {
     id: 'house-havoc', name: 'HAVOC', emoji: '💥', class: 'Heavyweight',
@@ -44,6 +47,7 @@ const HOUSE_FIGHTERS: Fighter[] = [
     stats: { strength: 95, speed: 60, defense: 45, stamina: 65, fightIQ: 50, aggression: 98 },
     owner: 'MFC Arena', isActive: true, trainingCost: 100,
     evolution: FighterEvolutionEngine.createNewEvolution(26),
+    totalTrainingHours: 80,
   },
   {
     id: 'house-phantom', name: 'PHANTOM', emoji: '👻', class: 'Lightweight',
@@ -51,6 +55,7 @@ const HOUSE_FIGHTERS: Fighter[] = [
     stats: { strength: 58, speed: 94, defense: 80, stamina: 82, fightIQ: 78, aggression: 45 },
     owner: 'MFC Arena', isActive: true, trainingCost: 100,
     evolution: FighterEvolutionEngine.createNewEvolution(25),
+    totalTrainingHours: 110,
   },
   {
     id: 'house-volt', name: 'VOLT', emoji: '⚡', class: 'Middleweight',
@@ -58,6 +63,7 @@ const HOUSE_FIGHTERS: Fighter[] = [
     stats: { strength: 65, speed: 70, defense: 60, stamina: 72, fightIQ: 62, aggression: 68 },
     owner: 'MFC Arena', isActive: true, trainingCost: 100,
     evolution: FighterEvolutionEngine.createNewEvolution(23),
+    totalTrainingHours: 30,
   },
 ]
 
@@ -215,11 +221,29 @@ export default function LiveFightSection({
     const fighter1 = fighters[0]
     const fighter2 = fighters[1]
 
-    // Build bias config for first fight in simplified (onboarding) mode
-    const biasConfig: FightBiasConfig | undefined =
-      simplified && isFirstFight.current && pickedFighterRef.current
-        ? { favoredFighterId: pickedFighterRef.current, damageModifier: 0.15 }
-        : undefined
+    // Determine fight outcome — probability based on record + training + luck
+    const f1Prob = {
+      wins: fighter1.record.wins, losses: fighter1.record.losses,
+      draws: fighter1.record.draws, totalTrainingHours: fighter1.totalTrainingHours ?? 0,
+    }
+    const f2Prob = {
+      wins: fighter2.record.wins, losses: fighter2.record.losses,
+      draws: fighter2.record.draws, totalTrainingHours: fighter2.totalTrainingHours ?? 0,
+    }
+
+    let biasConfig: FightBiasConfig | undefined
+    let openingPrice: number
+
+    if (simplified && isFirstFight.current && pickedFighterRef.current) {
+      // Onboarding: favor the picked fighter for a good first experience
+      biasConfig = { favoredFighterId: pickedFighterRef.current, damageModifier: 0.15 }
+      openingPrice = 0.5 + (Math.random() - 0.5) * 0.2
+    } else {
+      // Normal mode: probability-based outcome
+      const outcome = determineFightOutcome(fighter1.id, fighter2.id, f1Prob, f2Prob)
+      biasConfig = outcome.biasConfig
+      openingPrice = outcome.probability.fighter1WinProbability
+    }
 
     // Create fight engine with recording enabled
     const fight = new FightEngine(
@@ -347,10 +371,10 @@ export default function LiveFightSection({
     // After first fight initializes, mark it as no longer first
     if (biasConfig) isFirstFight.current = false
 
-    // Create market engine
+    // Create market engine — opening price reflects fight probability
     const market = new MarketEngine(
       `Will ${fighter1.name} win?`,
-      0.5 + (Math.random() - 0.5) * 0.2, // Slight random variation in opening price
+      openingPrice,
       setMarketState
     )
 
