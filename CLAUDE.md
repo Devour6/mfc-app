@@ -12,7 +12,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 | Language | TypeScript 5 (strict mode) |
 | UI | React 18, Tailwind CSS 3.4, Framer Motion 11 |
 | State | Zustand 4.5 with localStorage persistence |
-| Rendering | HTML5 Canvas (16-bit pixel-block sprites, fillRect grid rendering) |
+| Rendering | HTML5 Canvas (16-bit pixel-block sprites, frame-based keyframe animation) |
 | Audio | Web Audio API via custom SoundManager |
 | Database | PostgreSQL 16 via Prisma 7.4 + `@prisma/adapter-pg` (connected, migrated, seeded) |
 | Auth | Auth0 v4 (@auth0/nextjs-auth0 v4.15.0) — proxy.ts + lib/auth-guard.ts |
@@ -72,6 +72,7 @@ app/api/              → API routes (see API Routes section below)
 - Base 55% hit chance with modifiers (dodging -75%, blocking -65%, stunned +80%)
 - Multi-dimensional fight bias: damage (±40%), action rate (±25%), hit chance (±20%), decision scoring (±50%)
 - KO at 0 HP, TKO at <35 HP (15% chance), Decision by scored hits (landed*3 + power*8 + hp*0.15)
+- Hit-stop: `hitStopFrames` in modifiers — both fighters freeze 3 frames (5 for power shots) on impact
 - Stamina system (0-100), stun/modifier decay, commentary generation
 
 ### Market Engine (`lib/market-engine.ts`)
