@@ -20,7 +20,7 @@ import { TournamentEngine } from './tournament-engine'
 import { AchievementEngine } from './achievement-engine'
 import { DailyRewardsEngine } from './daily-rewards-engine'
 import { CreditEngine } from './credit-engine'
-import { placeBet as apiBetPlace, createFighter as apiCreateFighter, getFighters, startTraining as apiStartTraining } from './api-client'
+import { placeBet as apiBetPlace, createFighter as apiCreateFighter, getFighters, startTraining as apiStartTraining, cancelTraining as apiCancelTraining, getTrainingSession as apiGetTrainingSession, ApiTraining } from './api-client'
 
 /** Optional backend bet details — when provided, bet is recorded via POST /api/bets */
 export interface BetDetails {
@@ -51,7 +51,10 @@ interface GameState {
   disconnectWallet: () => void
   purchaseCredits: (option: CreditPurchaseOption) => Promise<void>
   withdrawCredits: (amount: number, walletAddress: string) => Promise<void>
-  spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number, hours?: number) => boolean
+  startTrainingSession: (fighterId: string, durationMinutes: 15 | 20 | 25 | 30) => Promise<boolean>
+  cancelTrainingSession: (sessionId: string) => Promise<void>
+  completeTrainingSession: (sessionId: string) => Promise<ApiTraining | null>
+  activeTrainingSession: ApiTraining | null
   addRewardCredits: (amount: number, description: string, relatedId?: string) => void
   fetchCredits: () => Promise<void>
   syncUserProfile: () => Promise<void>
@@ -485,47 +488,39 @@ export const useGameStore = create<GameState>()(
         }))
       },
 
-      spendCreditsTraining: (fighterId: string, fighterName: string, baseCost: number, hours?: number) => {
-        const { user } = get()
-
-        const result = CreditEngine.processTraining(
-          user.creditBalance,
-          user.transactions,
-          fighterId,
-          fighterName,
-          baseCost
-        )
-
-        if (result.error) {
+      startTrainingSession: async (fighterId: string, durationMinutes: 15 | 20 | 25 | 30) => {
+        try {
+          const session = await apiStartTraining({ fighterId, durationMinutes })
+          set({ activeTrainingSession: session })
+          return true
+        } catch (error) {
+          console.error('[MFC] startTrainingSession failed:', error)
           return false
         }
+      },
 
-        const prevBalance = user.creditBalance
-        const prevTransactions = user.transactions
-
-        set(state => ({
-          user: {
-            ...state.user,
-            creditBalance: result.newBalance,
-            transactions: result.newTransactions
-          }
-        }))
-
-        if (hours) {
-          apiStartTraining({ fighterId, hours })
-            .then(() => { get().fetchCredits() })
-            .catch(() => {
-              set(state => ({
-                user: {
-                  ...state.user,
-                  creditBalance: prevBalance,
-                  transactions: prevTransactions,
-                }
-              }))
-            })
+      cancelTrainingSession: async (sessionId: string) => {
+        try {
+          await apiCancelTraining(sessionId)
+          set({ activeTrainingSession: null })
+        } catch (error) {
+          console.error('[MFC] cancelTrainingSession failed:', error)
         }
+      },
 
-        return true
+      completeTrainingSession: async (sessionId: string) => {
+        try {
+          const session = await apiGetTrainingSession(sessionId)
+          if (session.status === 'COMPLETED') {
+            set({ activeTrainingSession: null })
+          } else {
+            set({ activeTrainingSession: session })
+          }
+          return session
+        } catch (error) {
+          console.error('[MFC] completeTrainingSession failed:', error)
+          return null
+        }
       },
 
       addRewardCredits: (amount: number, description: string, relatedId?: string) => {
@@ -610,6 +605,9 @@ export const useGameStore = create<GameState>()(
 
         return true
       },
+
+      // Training
+      activeTrainingSession: null,
 
       // Leaderboard
       leaderboardFighters: [],

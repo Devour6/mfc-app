@@ -89,11 +89,17 @@ model Fighter {
 }
 
 model Training {
-  id          String @id @default(cuid())
-  hours       Float // How many hours trained
-  cost        Float // What it cost
+  id              String @id @default(cuid())
+  durationMinutes Int              // 15, 20, 25, or 30
+  status          TrainingStatus @default(ACTIVE)
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
 
-  // Stat improvements from this session
+  // Legacy fields (nullable for backward compat with old rows)
+  hours           Float?
+  cost            Float?
+
+  // Stat improvements (populated on completion only)
   strengthGain    Int @default(0)
   speedGain       Int @default(0)
   defenseGain     Int @default(0)
@@ -101,7 +107,7 @@ model Training {
   fightIQGain     Int @default(0)
   aggressionGain  Int @default(0)
 
-  createdAt   DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   // Relationships
   fighter     Fighter @relation(fields: [fighterId], references: [id], onDelete: Cascade)
@@ -112,6 +118,7 @@ model Training {
   @@index([fighterId])
   @@index([userId])
   @@index([createdAt])
+  @@index([status, fighterId])
   @@map("trainings")
 }
 
@@ -359,4 +366,10 @@ enum BetStatus {
   LOST
   CANCELLED
   REFUNDED
+}
+
+enum TrainingStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
