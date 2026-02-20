@@ -951,7 +951,7 @@ export default function EnhancedFightCanvas({
 
     // Back leg — wider stance for fighting game look
     const backLegX = facing === 1 ? x - 14 : x + 14
-    drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined)
+    drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined, facing)
 
     // Back arm — during punches, the trailing arm retracts to chin (counterbalance)
     const backArmX = facing === 1 ? x - 22 : x + 22
@@ -970,7 +970,7 @@ export default function EnhancedFightCanvas({
 
     // Front leg (kicking leg) — wider stance
     const frontLegX = facing === 1 ? x + 14 : x - 14
-    drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase)
+    drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase, facing)
 
     ctx.restore()
   }
@@ -1174,7 +1174,8 @@ export default function EnhancedFightCanvas({
     extension: number,
     isKicking: boolean,
     legAngle?: number,
-    walkPhase?: number
+    walkPhase?: number,
+    facing?: number
   ) => {
     const SK = SKIN
     const SS = SKIN_S
@@ -1185,11 +1186,12 @@ export default function EnhancedFightCanvas({
     ctx.save()
     ctx.translate(x, y)
 
+    const dir = facing ?? 1
     if (isKicking && isFront && legAngle !== undefined) {
-      ctx.rotate(legAngle * Math.PI / 180)
+      ctx.rotate(dir * legAngle * Math.PI / 180)
     } else if (walkPhase !== undefined) {
       const swing = Math.sin(walkPhase) * 20
-      ctx.rotate(swing * Math.PI / 180)
+      ctx.rotate(dir * swing * Math.PI / 180)
     }
 
     const legLen = Math.floor((35 + Math.max(0, extension)) / P)
