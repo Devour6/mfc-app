@@ -260,8 +260,8 @@ export default function LiveFightSection({
         // Handle fight end
         if (state.result && marketEngineRef.current) {
           marketEngineRef.current.settleMarket(state.result.winner, {
-            fighter1: fighter1.name,
-            fighter2: fighter2.name
+            fighter1: fighter1.id,
+            fighter2: fighter2.id
           })
 
           // Capture recording for replay

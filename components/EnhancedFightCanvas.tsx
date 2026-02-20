@@ -56,16 +56,16 @@ const ATTACK_PHASES: Record<string, { startup: number; active: number; hold: num
 
 // Per-attack-type parameters for punches
 const PUNCH_PARAMS: Record<string, { maxExtension: number; bodyLean: number; armAngle: number; headDip: number; windUpLean: number }> = {
-  jab:      { maxExtension: 22, bodyLean: 3,  armAngle: 25, headDip: 1, windUpLean: -2 },
-  cross:    { maxExtension: 35, bodyLean: 10, armAngle: 40, headDip: 3, windUpLean: -5 },
-  hook:     { maxExtension: 18, bodyLean: 14, armAngle: 75, headDip: 2, windUpLean: -8 },
-  uppercut: { maxExtension: 24, bodyLean: 8,  armAngle: 90, headDip: 6, windUpLean: -4 },
+  jab:      { maxExtension: 28, bodyLean: 4,  armAngle: 25, headDip: 1, windUpLean: -3 },
+  cross:    { maxExtension: 40, bodyLean: 12, armAngle: 40, headDip: 3, windUpLean: -6 },
+  hook:     { maxExtension: 22, bodyLean: 16, armAngle: 75, headDip: 2, windUpLean: -8 },
+  uppercut: { maxExtension: 30, bodyLean: 10, armAngle: 90, headDip: 6, windUpLean: -5 },
 }
 
 // Per-attack-type parameters for kicks
 const KICK_PARAMS: Record<string, { maxExtension: number; bodyLean: number; legAngle: number; armRaise: number }> = {
-  kick:       { maxExtension: 32, bodyLean: -8,  legAngle: 50, armRaise: 6 },
-  roundhouse: { maxExtension: 40, bodyLean: -14, legAngle: 85, armRaise: 10 },
+  kick:       { maxExtension: 36, bodyLean: -10, legAngle: 55, armRaise: 6 },
+  roundhouse: { maxExtension: 44, bodyLean: -16, legAngle: 85, armRaise: 10 },
 }
 
 export default function EnhancedFightCanvas({
@@ -641,7 +641,29 @@ export default function EnhancedFightCanvas({
       hitStopProgressRef.current[posKey] = 0
     }
 
-    drawHumanoidFighter(ctx, x, y, color, fighterState, fighterNumber, animProgress)
+    // Forward lunge: during active/hold phase, the whole body steps toward the opponent
+    // so the strike visually connects across the gap
+    let lungeOffset = 0
+    const isAttacking = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking'
+    if (isAttacking && animProgress > 0) {
+      const atkType = fighterState.animation.attackType || 'jab'
+      const phase = getAttackPhase(animProgress, atkType)
+      const phaseT = getPhaseProgress(animProgress, atkType, phase)
+      const lungeDistance = fighterState.animation.state === 'kicking' ? 18 : 14
+      if (phase === 'startup') {
+        // Slight pull-back before lunge
+        lungeOffset = fighterState.position.facing * lerp(0, -3, easeInQuad(phaseT))
+      } else if (phase === 'active') {
+        lungeOffset = fighterState.position.facing * lerp(-3, lungeDistance, easeOutCubic(phaseT))
+      } else if (phase === 'hold') {
+        lungeOffset = fighterState.position.facing * lungeDistance
+      } else {
+        // Recovery: slide back
+        lungeOffset = fighterState.position.facing * lerp(lungeDistance, 0, easeInOutQuad(phaseT))
+      }
+    }
+
+    drawHumanoidFighter(ctx, x + lungeOffset, y, color, fighterState, fighterNumber, animProgress)
 
     // Particle effects
     if (fighterState.hp < FIGHTER_MAX_HP * 0.5) {
