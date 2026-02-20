@@ -685,6 +685,8 @@ export const useGameStore = create<GameState>()(
             isActive: f.isActive ?? true,
             trainingCost: f.trainingCost ?? 100,
             evolution: FighterEvolutionEngine.createNewEvolution(),
+            totalTrainingHours: f.totalTrainingHours ?? 0,
+            totalTrainingSessions: f.totalTrainingSessions ?? 0,
           }))
           set({ leaderboardFighters: fighters })
         } catch (error) {

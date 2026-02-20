@@ -71,6 +71,8 @@ export interface Fighter {
   isActive: boolean
   trainingCost: number
   evolution: FighterEvolution
+  totalTrainingHours?: number
+  totalTrainingSessions?: number
 }
 
 export interface FightState {
