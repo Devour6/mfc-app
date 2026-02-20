@@ -52,7 +52,7 @@ export class FightEngine {
   private createFighterState(fighter: Fighter, x: number, facing: 1 | -1): FighterState {
     return {
       id: fighter.id,
-      hp: 100,
+      hp: 300,
       stamina: 100,
       position: { x, y: 0, facing },
       animation: { state: 'idle', frameCount: 0, duration: 0 },
@@ -82,9 +82,9 @@ export class FightEngine {
     this.fightState.round = 1
     this.fightState.clock = 180
     this.fightState.phase = 'fighting'
-    this.fightState.fighter1.hp = 100
+    this.fightState.fighter1.hp = 300
     this.fightState.fighter1.stamina = 100
-    this.fightState.fighter2.hp = 100
+    this.fightState.fighter2.hp = 300
     this.fightState.fighter2.stamina = 100
     this.resetFighterState(this.fightState.fighter1)
     this.resetFighterState(this.fightState.fighter2)
@@ -194,7 +194,7 @@ export class FightEngine {
 
   private shouldAttemptAction(attacker: FighterState, defender: FighterState): boolean {
     // Base action probability affected by stamina, stunning, and animation state
-    let probability = 0.12
+    let probability = 0.08
     
     if (attacker.stamina < 20) probability *= 0.3
     if (attacker.modifiers.stunned > 0) return false
@@ -303,15 +303,15 @@ export class FightEngine {
     attacker.animation.attackType = action.type
     attacker.animation.duration = action.type === 'jab' ? 8 : action.type === 'uppercut' ? 15 : 12
     
-    const staminaCost = action.power * 2
+    const staminaCost = action.power * 3
     attacker.stamina = Math.max(0, attacker.stamina - staminaCost)
-    
+
     // Hit calculation
     let hitChance = 0.55 // Base hit chance
-    
+
     // Modifiers
-    if (defender.modifiers.dodging > 0) hitChance *= 0.3
-    if (defender.modifiers.blocking > 0) hitChance *= 0.4
+    if (defender.modifiers.dodging > 0) hitChance *= 0.2
+    if (defender.modifiers.blocking > 0) hitChance *= 0.3
     if (defender.modifiers.stunned > 0) hitChance *= 1.8
     if (attacker.combo.count > 0) hitChance *= 1.2 // Combo bonus
     
@@ -328,13 +328,13 @@ export class FightEngine {
     attacker.animation.attackType = action.type
     attacker.animation.duration = action.type === 'kick' ? 12 : 16
 
-    const staminaCost = action.power * 3
+    const staminaCost = action.power * 4
     attacker.stamina = Math.max(0, attacker.stamina - staminaCost)
 
     // Hit calculation — same logic as punches
     let hitChance = 0.50 // Slightly lower base than punches
-    if (defender.modifiers.dodging > 0) hitChance *= 0.3
-    if (defender.modifiers.blocking > 0) hitChance *= 0.4
+    if (defender.modifiers.dodging > 0) hitChance *= 0.2
+    if (defender.modifiers.blocking > 0) hitChance *= 0.3
     if (defender.modifiers.stunned > 0) hitChance *= 1.8
     if (attacker.combo.count > 0) hitChance *= 1.2
 
@@ -367,9 +367,9 @@ export class FightEngine {
     const isPowerShot = Math.random() < powerChance
 
     if (isPowerShot) {
-      damage *= 2.5
+      damage *= 1.7
       attacker.stats.powerShots++
-      defender.modifiers.stunned = 18 // Kicks stun slightly longer
+      defender.modifiers.stunned = 12 // Kicks stun slightly longer
       this.addCommentary(this.getPowerShotCommentary(action.type), 'action', 'high')
     } else {
       this.addCommentary(this.getHitCommentary(action.type), 'action', 'medium')
@@ -382,7 +382,7 @@ export class FightEngine {
 
     if (defender.hp <= 0) {
       this.endFight(attacker.id, 'KO')
-    } else if (defender.hp < 15 && Math.random() < 0.3) {
+    } else if (defender.hp < 40 && Math.random() < 0.12) {
       this.endFight(attacker.id, 'TKO')
     }
   }
@@ -399,9 +399,9 @@ export class FightEngine {
     const isPowerShot = Math.random() < powerChance
 
     if (isPowerShot) {
-      damage *= 2.5
+      damage *= 1.7
       attacker.stats.powerShots++
-      defender.modifiers.stunned = 15 // 1.2 seconds
+      defender.modifiers.stunned = 10 // 0.8 seconds
       this.addCommentary(this.getPowerShotCommentary(action.type), 'action', 'high')
     } else {
       this.addCommentary(this.getHitCommentary(action.type), 'action', 'medium')
@@ -416,13 +416,13 @@ export class FightEngine {
     // Check for knockdown/knockout
     if (defender.hp <= 0) {
       this.endFight(attacker.id, 'KO')
-    } else if (defender.hp < 15 && Math.random() < 0.3) {
+    } else if (defender.hp < 40 && Math.random() < 0.12) {
       this.endFight(attacker.id, 'TKO')
     }
   }
 
   private executeCombo(action: FightAction & { type: 'combo' }, attacker: FighterState, defender: FighterState): void {
-    if (attacker.stamina < action.sequence.length * 3) return
+    if (attacker.stamina < action.sequence.length * 4) return
     
     attacker.animation.state = 'punching'
     attacker.animation.duration = action.sequence.length * 8
@@ -452,7 +452,7 @@ export class FightEngine {
       this.addCommentary(`Devastating ${hits}-hit combo!`, 'action', 'high')
     }
     
-    attacker.stamina = Math.max(0, attacker.stamina - action.sequence.length * 3)
+    attacker.stamina = Math.max(0, attacker.stamina - action.sequence.length * 4)
   }
 
   private executeDodge(action: FightAction & { type: 'dodge' }, attacker: FighterState): void {
@@ -533,7 +533,7 @@ export class FightEngine {
   private regenerateStamina(): void {
     [this.fightState.fighter1, this.fightState.fighter2].forEach(fighter => {
       if (fighter.animation.state === 'idle' || fighter.animation.state === 'walking') {
-        fighter.stamina = Math.min(100, fighter.stamina + 0.5)
+        fighter.stamina = Math.min(100, fighter.stamina + 0.3)
       }
     })
   }
@@ -560,8 +560,8 @@ export class FightEngine {
     this.tickCounter = 0
     
     // Rest between rounds
-    this.fightState.fighter1.stamina = Math.min(100, this.fightState.fighter1.stamina + 30)
-    this.fightState.fighter2.stamina = Math.min(100, this.fightState.fighter2.stamina + 30)
+    this.fightState.fighter1.stamina = Math.min(100, this.fightState.fighter1.stamina + 20)
+    this.fightState.fighter2.stamina = Math.min(100, this.fightState.fighter2.stamina + 20)
     
     // Reset positions
     this.fightState.fighter1.position.x = 180
