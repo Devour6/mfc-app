@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FightState, Fighter } from '@/types'
+import { FIGHTER_MAX_HP } from '@/lib/fight-engine'
 
 interface EnhancedFightCanvasProps {
   fightState: FightState
@@ -40,6 +41,17 @@ export default function EnhancedFightCanvas({
   const animationRef = useRef<number>()
   const [roundEvents, setRoundEvents] = useState<RoundEvent[]>([])
   const [visualEffects, setVisualEffects] = useState<VisualEffect[]>([])
+
+  // Position interpolation for smooth animation between 80ms fight ticks
+  const prevPositionsRef = useRef<{
+    f1: { x: number; y: number }
+    f2: { x: number; y: number }
+    timestamp: number
+  } | null>(null)
+  const renderPositionsRef = useRef<{
+    f1: { x: number; y: number }
+    f2: { x: number; y: number }
+  }>({ f1: { x: 180, y: 0 }, f2: { x: 300, y: 0 } })
   const [roundStats, setRoundStats] = useState<{
     [round: number]: {
       fighter1Strikes: number
@@ -49,6 +61,18 @@ export default function EnhancedFightCanvas({
   }>({})
   const [showRoundCard, setShowRoundCard] = useState(false)
   const [lastRound, setLastRound] = useState(0)
+
+  // Update interpolation targets when fight state changes
+  useEffect(() => {
+    if (!fightState.fighter1 || !fightState.fighter2) return
+    const now = Date.now()
+    // Save current render position as previous before updating target
+    prevPositionsRef.current = {
+      f1: { ...renderPositionsRef.current.f1 },
+      f2: { ...renderPositionsRef.current.f2 },
+      timestamp: now,
+    }
+  }, [fightState.fighter1?.position.x, fightState.fighter2?.position.x])
 
   // Handle round transitions
   useEffect(() => {
@@ -191,8 +215,8 @@ export default function EnhancedFightCanvas({
       onSignificantMoment?.('knockdown', 'high')
     }
 
-    // Detect hits with blood effects
-    if (fightState.fighter1.animation.state === 'hit' && fightState.fighter1.hp < 75) {
+    // Detect hits with blood effects — scaled to FIGHTER_MAX_HP
+    if (fightState.fighter1.animation.state === 'hit' && fightState.fighter1.hp < FIGHTER_MAX_HP * 0.6) {
       const hitX = (fightState.fighter1.position.x / 480) * canvas.width
       addVisualEffect({
         type: 'blood',
@@ -203,7 +227,7 @@ export default function EnhancedFightCanvas({
       })
     }
 
-    if (fightState.fighter2.animation.state === 'hit' && fightState.fighter2.hp < 75) {
+    if (fightState.fighter2.animation.state === 'hit' && fightState.fighter2.hp < FIGHTER_MAX_HP * 0.6) {
       const hitX = (fightState.fighter2.position.x / 480) * canvas.width
       addVisualEffect({
         type: 'blood',
@@ -435,8 +459,8 @@ export default function EnhancedFightCanvas({
   const drawCrowdAtmosphere = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const time = Date.now() * 0.001
     
-    // Dynamic crowd excitement based on fight intensity
-    const fightIntensity = 1 - (Math.min(fightState.fighter1?.hp || 100, fightState.fighter2?.hp || 100) / 100)
+    // Dynamic crowd excitement based on fight intensity — scaled to FIGHTER_MAX_HP
+    const fightIntensity = 1 - (Math.min(fightState.fighter1?.hp || FIGHTER_MAX_HP, fightState.fighter2?.hp || FIGHTER_MAX_HP) / FIGHTER_MAX_HP)
     const crowdExcitement = 0.3 + fightIntensity * 0.7
     
     // Animated crowd silhouettes in background — smooth gradient to avoid blocky artifacts
@@ -515,14 +539,28 @@ export default function EnhancedFightCanvas({
     fighterNumber: 1 | 2
   ) => {
     const floorY = height * 0.75
-    
-    // Convert position to canvas coordinates with movement physics
-    const baseX = (fighterState.position.x / 480) * width
+
+    // Interpolate position for smooth motion between 80ms fight ticks
+    const targetX = (fighterState.position.x / 480) * width
+    const posKey = fighterNumber === 1 ? 'f1' : 'f2'
+    const prev = prevPositionsRef.current
+    const TICK_MS = 80
+
+    if (prev) {
+      const elapsed = Date.now() - prev.timestamp
+      const t = Math.min(1, elapsed / TICK_MS) // 0→1 over one tick
+      const smooth = t * t * (3 - 2 * t) // smoothstep easing
+      renderPositionsRef.current[posKey].x += (targetX - renderPositionsRef.current[posKey].x) * smooth
+    } else {
+      renderPositionsRef.current[posKey].x = targetX
+    }
+
+    const baseX = renderPositionsRef.current[posKey].x
     const baseY = floorY - 20
 
     // Add movement animations
     const time = Date.now() * 0.001
-    const idleBob = Math.sin(time * 2 + fighterNumber * Math.PI) * 1
+    const idleBob = Math.sin(time * 2 + fighterNumber * Math.PI) * 1.5
     const isInCombat = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking' || fighterState.animation.state === 'hit' || fighterState.animation.state === 'blocking'
     const circlingOffset = isInCombat ? 0 : Math.sin(time * 0.5 + fighterNumber * Math.PI) * 5
 
@@ -531,12 +569,13 @@ export default function EnhancedFightCanvas({
 
     ctx.save()
     
-    // Enhanced screen shake for heavy hits
+    // Enhanced screen shake for heavy hits — coherent sine-based instead of random
     if (fighterState.animation.state === 'hit') {
-      const shakeIntensity = fighterState.hp < 25 ? 8 : 5
+      const shakeIntensity = fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 8 : 5
+      const shakePhase = time * 25 // fast oscillation
       ctx.translate(
-        (Math.random() - 0.5) * shakeIntensity,
-        (Math.random() - 0.5) * shakeIntensity
+        Math.sin(shakePhase) * shakeIntensity,
+        Math.cos(shakePhase * 1.3) * shakeIntensity * 0.7
       )
       ctx.globalAlpha = 0.8
     }
@@ -567,7 +606,7 @@ export default function EnhancedFightCanvas({
     drawHumanoidFighter(ctx, x, y, color, fighterState, fighterNumber, animationFrame)
 
     // Particle effects
-    if (fighterState.hp < 50) {
+    if (fighterState.hp < FIGHTER_MAX_HP * 0.5) {
       drawSweatParticles(ctx, x, y - 60)
     }
 
@@ -794,7 +833,7 @@ export default function EnhancedFightCanvas({
       px(ctx, ox + P * 4, oy + P * 2, '#ff0')
       px(ctx, ox + P * 2, oy + P * 4, '#c00') // open mouth
       px(ctx, ox + P * 3, oy + P * 4, '#c00')
-    } else if (hp < 25) {
+    } else if (hp < FIGHTER_MAX_HP * 0.25) {
       // Tired squint eyes
       px(ctx, ox + P * 1, oy + P * 2, '#800')
       px(ctx, ox + P * 4, oy + P * 2, '#800')
@@ -1085,16 +1124,18 @@ export default function EnhancedFightCanvas({
     ctx.fillStyle = '#1a1a26'
     ctx.fillRect(barX, hpY, barWidth, barHeight)
 
-    // HP segments (each segment = 20 HP)
-    for (let i = 0; i < 5; i++) {
-      const segmentWidth = barWidth / 5
+    // HP segments (5 segments, each = FIGHTER_MAX_HP / 5)
+    const segmentCount = 5
+    const hpPerSegment = FIGHTER_MAX_HP / segmentCount
+    for (let i = 0; i < segmentCount; i++) {
+      const segmentWidth = barWidth / segmentCount
       const segmentX = barX + i * segmentWidth
-      const segmentHP = Math.max(0, fighterState.hp - i * 20)
-      
+      const segmentHP = Math.max(0, fighterState.hp - i * hpPerSegment)
+
       if (segmentHP > 0) {
-        const segmentFill = Math.min(1, segmentHP / 20)
-        const segmentColor = segmentHP > 10 ? color : '#ff4444'
-        
+        const segmentFill = Math.min(1, segmentHP / hpPerSegment)
+        const segmentColor = segmentHP > hpPerSegment * 0.5 ? color : '#ff4444'
+
         ctx.fillStyle = segmentColor
         ctx.fillRect(segmentX + 1, hpY + 1, (segmentWidth - 2) * segmentFill, barHeight - 2)
       }
@@ -1341,17 +1382,21 @@ export default function EnhancedFightCanvas({
   }
 
   const drawScreenShakeEffect = (ctx: CanvasRenderingContext2D, effect: VisualEffect) => {
-    const time = Date.now() * 0.01
-    const shakeIntensity = effect.intensity * 15
-    
-    // Apply camera shake by translating the entire canvas context
-    const offsetX = Math.sin(time * 30) * shakeIntensity * (1 - (Date.now() % effect.duration) / effect.duration)
-    const offsetY = Math.cos(time * 35) * shakeIntensity * 0.6 * (1 - (Date.now() % effect.duration) / effect.duration)
-    
+    const time = Date.now() * 0.001
+    const shakeIntensity = effect.intensity * 12
+
+    // Exponential decay for natural camera shake falloff
+    const progress = Math.min(1, (Date.now() % effect.duration) / effect.duration)
+    const decay = Math.exp(-progress * 4) // Rapid initial shake, smooth falloff
+
+    // Coherent sine-based shake (not random) with two frequencies for natural feel
+    const offsetX = (Math.sin(time * 40) + Math.sin(time * 25) * 0.5) * shakeIntensity * decay
+    const offsetY = (Math.cos(time * 35) + Math.cos(time * 20) * 0.5) * shakeIntensity * 0.6 * decay
+
     ctx.translate(offsetX, offsetY)
-    
-    // Add a subtle flash overlay for heavy impacts
-    const flashAlpha = effect.intensity * 0.1 * (1 - (Date.now() % effect.duration) / effect.duration)
+
+    // Subtle flash overlay for heavy impacts
+    const flashAlpha = effect.intensity * 0.08 * decay
     ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`
     ctx.fillRect(-offsetX, -offsetY, ctx.canvas.width, ctx.canvas.height)
   }
@@ -1361,14 +1406,14 @@ export default function EnhancedFightCanvas({
     const indicatorWidth = 250
     const indicatorX = width/2 - indicatorWidth/2
     
-    // Calculate momentum based on HP difference
-    const f1HP = fightState.fighter1?.hp || 100
-    const f2HP = fightState.fighter2?.hp || 100
-    const momentum = (f1HP - f2HP) / 100 // -1 to 1 range
-    
+    // Calculate momentum based on HP difference — scaled to FIGHTER_MAX_HP
+    const f1HP = fightState.fighter1?.hp || FIGHTER_MAX_HP
+    const f2HP = fightState.fighter2?.hp || FIGHTER_MAX_HP
+    const momentum = (f1HP - f2HP) / FIGHTER_MAX_HP // -1 to 1 range
+
     // Calculate fight intensity
     const avgHP = (f1HP + f2HP) / 2
-    const fightIntensity = 1 - (avgHP / 100)
+    const fightIntensity = 1 - (avgHP / FIGHTER_MAX_HP)
     const time = Date.now() * 0.001
     
     // Enhanced background with pulse

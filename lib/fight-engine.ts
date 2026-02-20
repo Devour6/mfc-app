@@ -1,6 +1,9 @@
 import { FightState, FighterState, FightAction, Fighter, Commentary } from '@/types'
 import { FightRecorder, FightRecording } from './fight-recorder'
 
+/** Max starting HP for all fighters — used by canvas for bar rendering */
+export const FIGHTER_MAX_HP = 200
+
 export interface FightBiasConfig {
   /** Fighter ID that receives the advantage */
   favoredFighterId: string
@@ -52,7 +55,7 @@ export class FightEngine {
   private createFighterState(fighter: Fighter, x: number, facing: 1 | -1): FighterState {
     return {
       id: fighter.id,
-      hp: 300,
+      hp: FIGHTER_MAX_HP,
       stamina: 100,
       position: { x, y: 0, facing },
       animation: { state: 'idle', frameCount: 0, duration: 0 },
@@ -194,16 +197,26 @@ export class FightEngine {
 
   private shouldAttemptAction(attacker: FighterState, defender: FighterState): boolean {
     // Base action probability affected by stamina, stunning, and animation state
-    let probability = 0.08
-    
+    let probability = 0.12
+
     if (attacker.stamina < 20) probability *= 0.3
     if (attacker.modifiers.stunned > 0) return false
     if (attacker.animation.state === 'punching' || attacker.animation.state === 'kicking') return false
-    
+
     // Higher probability if opponent is vulnerable
     if (defender.modifiers.stunned > 0) probability *= 2
     if (defender.animation.state === 'punching' || defender.animation.state === 'kicking') probability *= 1.5
-    
+
+    // Bias: favored fighter gets more action attempts
+    if (this.biasConfig) {
+      const mod = this.biasConfig.damageModifier
+      if (attacker.id === this.biasConfig.favoredFighterId) {
+        probability *= (1 + mod * 0.5) // Up to +25% more attempts
+      } else {
+        probability *= (1 - mod * 0.3) // Up to -15% fewer attempts
+      }
+    }
+
     return Math.random() < probability
   }
 
@@ -302,7 +315,7 @@ export class FightEngine {
     attacker.animation.state = 'punching'
     attacker.animation.attackType = action.type
     attacker.animation.duration = action.type === 'jab' ? 8 : action.type === 'uppercut' ? 15 : 12
-    
+
     const staminaCost = action.power * 3
     attacker.stamina = Math.max(0, attacker.stamina - staminaCost)
 
@@ -310,11 +323,14 @@ export class FightEngine {
     let hitChance = 0.55 // Base hit chance
 
     // Modifiers
-    if (defender.modifiers.dodging > 0) hitChance *= 0.2
-    if (defender.modifiers.blocking > 0) hitChance *= 0.3
+    if (defender.modifiers.dodging > 0) hitChance *= 0.25
+    if (defender.modifiers.blocking > 0) hitChance *= 0.35
     if (defender.modifiers.stunned > 0) hitChance *= 1.8
     if (attacker.combo.count > 0) hitChance *= 1.2 // Combo bonus
-    
+
+    // Bias: favored fighter lands more often
+    hitChance = this.applyHitChanceBias(hitChance, attacker.id)
+
     if (Math.random() < hitChance) {
       this.landStrike(action, attacker, defender)
     } else {
@@ -333,10 +349,13 @@ export class FightEngine {
 
     // Hit calculation — same logic as punches
     let hitChance = 0.50 // Slightly lower base than punches
-    if (defender.modifiers.dodging > 0) hitChance *= 0.2
-    if (defender.modifiers.blocking > 0) hitChance *= 0.3
+    if (defender.modifiers.dodging > 0) hitChance *= 0.25
+    if (defender.modifiers.blocking > 0) hitChance *= 0.35
     if (defender.modifiers.stunned > 0) hitChance *= 1.8
     if (attacker.combo.count > 0) hitChance *= 1.2
+
+    // Bias: favored fighter lands more often
+    hitChance = this.applyHitChanceBias(hitChance, attacker.id)
 
     if (Math.random() < hitChance) {
       this.landKick(action, attacker, defender)
@@ -356,18 +375,28 @@ export class FightEngine {
     return damage * (1 - damageModifier)
   }
 
+  /** Apply bias to hit chance: favored fighter lands more, unfavored misses more */
+  private applyHitChanceBias(hitChance: number, attackerId: string): number {
+    if (!this.biasConfig) return hitChance
+    const { favoredFighterId, damageModifier } = this.biasConfig
+    if (attackerId === favoredFighterId) {
+      return hitChance * (1 + damageModifier * 0.4) // Up to +20% hit chance
+    }
+    return hitChance * (1 - damageModifier * 0.25) // Up to -12.5% hit chance
+  }
+
   private landKick(action: FightAction & { type: 'kick' | 'roundhouse' }, attacker: FighterState, defender: FighterState): void {
     attacker.stats.landed++
     attacker.combo.count++
     attacker.combo.lastHit = 0
 
-    let damage = action.power * (10 + Math.random() * 8) // 10-18 base damage (higher than punches)
+    let damage = action.power * (12 + Math.random() * 10) // 12-22 base damage (higher than punches)
 
     const powerChance = action.type === 'roundhouse' ? 0.25 : 0.18
     const isPowerShot = Math.random() < powerChance
 
     if (isPowerShot) {
-      damage *= 1.7
+      damage *= 2.0
       attacker.stats.powerShots++
       defender.modifiers.stunned = 12 // Kicks stun slightly longer
       this.addCommentary(this.getPowerShotCommentary(action.type), 'action', 'high')
@@ -382,7 +411,7 @@ export class FightEngine {
 
     if (defender.hp <= 0) {
       this.endFight(attacker.id, 'KO')
-    } else if (defender.hp < 40 && Math.random() < 0.12) {
+    } else if (defender.hp < 35 && Math.random() < 0.15) {
       this.endFight(attacker.id, 'TKO')
     }
   }
@@ -392,14 +421,14 @@ export class FightEngine {
     attacker.combo.count++
     attacker.combo.lastHit = 0
 
-    let damage = action.power * (8 + Math.random() * 7) // 8-15 base damage
+    let damage = action.power * (10 + Math.random() * 8) // 10-18 base damage
 
     // Power shot chance
     const powerChance = action.type === 'uppercut' ? 0.25 : action.type === 'hook' ? 0.20 : 0.15
     const isPowerShot = Math.random() < powerChance
 
     if (isPowerShot) {
-      damage *= 1.7
+      damage *= 2.0
       attacker.stats.powerShots++
       defender.modifiers.stunned = 10 // 0.8 seconds
       this.addCommentary(this.getPowerShotCommentary(action.type), 'action', 'high')
@@ -416,7 +445,7 @@ export class FightEngine {
     // Check for knockdown/knockout
     if (defender.hp <= 0) {
       this.endFight(attacker.id, 'KO')
-    } else if (defender.hp < 40 && Math.random() < 0.12) {
+    } else if (defender.hp < 35 && Math.random() < 0.15) {
       this.endFight(attacker.id, 'TKO')
     }
   }
@@ -434,7 +463,7 @@ export class FightEngine {
       const hitChance = 0.6 - (index * 0.1) // Each subsequent hit is harder to land
       
       if (Math.random() < hitChance) {
-        const damage = 6 + Math.random() * 4
+        const damage = 8 + Math.random() * 5
         totalDamage += damage
         hits++
         attacker.stats.landed++
@@ -533,7 +562,7 @@ export class FightEngine {
   private regenerateStamina(): void {
     [this.fightState.fighter1, this.fightState.fighter2].forEach(fighter => {
       if (fighter.animation.state === 'idle' || fighter.animation.state === 'walking') {
-        fighter.stamina = Math.min(100, fighter.stamina + 0.3)
+        fighter.stamina = Math.min(100, fighter.stamina + 0.4)
       }
     })
   }
@@ -560,8 +589,8 @@ export class FightEngine {
     this.tickCounter = 0
     
     // Rest between rounds
-    this.fightState.fighter1.stamina = Math.min(100, this.fightState.fighter1.stamina + 20)
-    this.fightState.fighter2.stamina = Math.min(100, this.fightState.fighter2.stamina + 20)
+    this.fightState.fighter1.stamina = Math.min(100, this.fightState.fighter1.stamina + 25)
+    this.fightState.fighter2.stamina = Math.min(100, this.fightState.fighter2.stamina + 25)
     
     // Reset positions
     this.fightState.fighter1.position.x = 180
@@ -592,7 +621,19 @@ export class FightEngine {
   }
 
   private calculateScore(fighter: FighterState): number {
-    return fighter.stats.landed * 2 + fighter.stats.powerShots * 5 + fighter.hp * 0.5
+    // Weight fighting stats heavily over remaining HP so the more active fighter wins decisions
+    let score = fighter.stats.landed * 3 + fighter.stats.powerShots * 8 + fighter.hp * 0.15
+
+    // Decision scoring bias: favored fighter gets a score bonus proportional to probability edge
+    if (this.biasConfig) {
+      if (fighter.id === this.biasConfig.favoredFighterId) {
+        score *= (1 + this.biasConfig.damageModifier * 0.5)
+      } else {
+        score *= (1 - this.biasConfig.damageModifier * 0.3)
+      }
+    }
+
+    return score
   }
 
   private formatTime(seconds: number): string {
