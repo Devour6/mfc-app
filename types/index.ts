@@ -104,6 +104,7 @@ export interface FighterState {
     frameCount: number
     duration: number
     attackType?: string
+    walkDirection?: 'forward' | 'back'
   }
   stats: {
     strikes: number
