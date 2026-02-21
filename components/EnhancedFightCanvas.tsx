@@ -920,10 +920,43 @@ export default function EnhancedFightCanvas({
       }
 
       case 'walking': {
-        // Leg cycling animation
+        // SF2 Ryu-style walk cycle: grounded weight, forward/backward distinction
         const total = fighterState.animation.frameCount + fighterState.animation.duration
+        const walkDir = fighterState.animation.walkDirection || 'forward'
+        const isForward = walkDir === 'forward'
+
+        // Walk cycle phase: 0→2π per full step cycle
         walkPhase = total > 0 ? (fighterState.animation.frameCount / total) * Math.PI * 2 : 0
-        bodyLean = facing * 3
+
+        // Asymmetric vertical bob: slow rise (push phase), fast drop (contact phase)
+        const normalizedPhase = (walkPhase % (Math.PI * 2)) / (Math.PI * 2)
+        let verticalBob: number
+        if (normalizedPhase < 0.4) {
+          // Rising phase (slow) — pushing off rear foot
+          verticalBob = -Math.sin((normalizedPhase / 0.4) * Math.PI * 0.5) * 3
+        } else {
+          // Falling phase (fast) — foot contact, weight drops
+          verticalBob = -Math.cos(((normalizedPhase - 0.4) / 0.6) * Math.PI * 0.5) * 3
+        }
+
+        if (isForward) {
+          // FORWARD WALK: aggressive lean, wider steps, weight committed
+          bodyLean = facing * 8
+          torsoY += verticalBob * 0.7
+          headY += verticalBob * 0.2    // head barely moves (SF2 stability anchor)
+          armY += verticalBob * 1.2     // arms bob more than torso
+          legY += verticalBob * 0.4
+        } else {
+          // BACKWARD WALK: defensive, cautious, higher guard
+          bodyLean = facing * -4
+          torsoY += verticalBob * 0.5
+          headY += verticalBob * 0.15
+          armY += verticalBob * 0.8
+          armY -= 4                     // higher guard when retreating
+          legY += verticalBob * 0.3
+        }
+
+        isGuardArms = true
         break
       }
 
@@ -944,7 +977,7 @@ export default function EnhancedFightCanvas({
 
     // Back leg — wider stance for fighting game look
     const backLegX = facing === 1 ? x - 14 : x + 14
-    drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined, facing)
+    drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined, facing, fighterState.animation.walkDirection)
 
     // Back arm — during punches, the trailing arm retracts to chin (counterbalance)
     const backArmX = facing === 1 ? x - 22 : x + 22
@@ -963,7 +996,7 @@ export default function EnhancedFightCanvas({
 
     // Front leg (kicking leg) — wider stance
     const frontLegX = facing === 1 ? x + 14 : x - 14
-    drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase, facing)
+    drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase, facing, fighterState.animation.walkDirection)
 
     ctx.restore()
   }
@@ -1168,7 +1201,8 @@ export default function EnhancedFightCanvas({
     isKicking: boolean,
     legAngle?: number,
     walkPhase?: number,
-    facing?: number
+    facing?: number,
+    walkDirection?: 'forward' | 'back'
   ) => {
     const SK = SKIN
     const SS = SKIN_S
@@ -1183,8 +1217,13 @@ export default function EnhancedFightCanvas({
     if (isKicking && isFront && legAngle !== undefined) {
       ctx.rotate(dir * legAngle * Math.PI / 180)
     } else if (walkPhase !== undefined) {
-      const swing = Math.sin(walkPhase) * 20
+      // SF2-style walk: forward = wider strides, backward = cautious steps
+      const swingAngle = walkDirection === 'back' ? 15 : 25
+      const swing = Math.sin(walkPhase) * swingAngle
+      // Knee compression at contact points (walkPhase near 0 or π)
+      const kneeBend = Math.abs(Math.cos(walkPhase)) * 5
       ctx.rotate(dir * swing * Math.PI / 180)
+      ctx.translate(0, kneeBend * 0.3)
     }
 
     const legLen = Math.floor((35 + Math.max(0, extension)) / P)

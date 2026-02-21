@@ -569,12 +569,19 @@ export class FightEngine {
     
     attacker.animation.state = 'walking'
     attacker.animation.duration = 8
+    attacker.animation.walkDirection = action.direction === 'forward' ? 'forward' : 'back'
   }
 
   private moveTowardsOpponent(attacker: FighterState, defender: FighterState): void {
     const direction = defender.position.x > attacker.position.x ? 1 : -1
     attacker.position.x += direction * 5
     attacker.position.x = Math.max(60, Math.min(420, attacker.position.x))
+    // Set walking animation if idle — prevents invisible sliding
+    if (attacker.animation.state === 'idle') {
+      attacker.animation.state = 'walking'
+      attacker.animation.duration = 4
+      attacker.animation.walkDirection = 'forward'
+    }
   }
 
   private regenerateStamina(): void {
