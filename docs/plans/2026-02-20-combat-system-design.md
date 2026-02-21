@@ -1,15 +1,23 @@
 # MFC Combat System Design
 
+<<<<<<< HEAD
 DnD 5e mechanics under the hood. 2D fighting game presentation on screen. Dice rolls determine everything — stats and gear shift the odds, but never guarantee outcomes. Progressive specialization (inspired by FFXI/FFXIV job systems) creates escalating fight complexity that maps to a natural betting difficulty gradient.
 
 > **V6 (2026-02-22):** Major redesign. Added 3-tier progressive specialization (style traits / fighting techniques / signature moves). Gear changed from modifier bonuses to raw stat bonuses. Condition changed from ±1 all modifiers to stamina-only. Gear special traits redesigned to enhance tier abilities, not duplicate them. Previous: V5d validated core d20 combat constants (HP, modifiers, action rate, exhaustion). V6 builds on V5d — base combat math is unchanged.
+=======
+DnD 5e mechanics under the hood. 2D fighting game presentation on screen. Dice rolls determine everything — stats and gear shift the odds, but never guarantee outcomes.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ## 1. Core Combat Resolution
 
 Every attack resolves as a d20 roll.
 
 ```
+<<<<<<< HEAD
 d20 + attacker_SPD_modifier >= defender_AC
+=======
+d20 + attacker_STR_modifier >= defender_AC
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 ```
 
 - **Hit:** Roll succeeds. Roll damage dice for the attack type + STR modifier.
@@ -17,12 +25,15 @@ d20 + attacker_SPD_modifier >= defender_AC
 - **Natural 20:** Auto-hit regardless of AC. Critical hit — double damage dice (not modifiers). The swing moment.
 - **Natural 1:** Auto-miss regardless of modifiers. Even the best fighter whiffs sometimes.
 
+<<<<<<< HEAD
 **STR/SPD role split (V3+):** SPD determines accuracy (added to attack rolls). STR determines damage (added to damage rolls only). This decouples "can you hit?" from "how hard?" and creates real build tradeoffs — a fast fighter lands more but hits lighter; a strong fighter misses more but devastates when connecting.
 
 ### Fighter HP
 
 **HP: 600.** All fighters start each fight at 600 HP regardless of stats. This produces multi-round fights (avg 2.86 rounds in mirror matchups) with 86% of even fights reaching Round 3.
 
+=======
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 ### Damage Dice by Attack Type
 
 Each attack type maps to a DnD damage die. Heavier attacks = bigger die = more risk/reward.
@@ -43,19 +54,31 @@ Damage formula: `damage_dice + STR_modifier`. Crits: `(damage_dice * 2) + STR_mo
 
 Defenders don't just have AC. Fight IQ drives active reactions:
 
+<<<<<<< HEAD
 - **Dodge:** Attacker rolls with disadvantage (2d20, take lower). Costs 8 stamina (5 with Stabilizers gear trait).
 - **Block:** Reduce damage by `DEF_modifier + 1d6` (doubled to `DEF_modifier + 2d6` with Iron Guard technique). Costs 5 stamina. Still takes residual damage.
 - **Reaction chance:** `max(0%, 15% + (FIQ - 50) / 100 * 50%)` per incoming attack. Range: 0% (FIQ ~20) to 40% (FIQ 100). Floor at 0% — fighters below ~FIQ 20 never react.
+=======
+- **Dodge:** Attacker rolls with disadvantage (2d20, take lower). Costs 8 stamina.
+- **Block:** Reduce damage by `DEF_modifier + 1d6`. Costs 5 stamina. Still takes residual damage.
+- **Reaction chance:** `15% + (FIQ - 50) / 100 * 25%` per incoming attack. Range: 2.5% to 40%.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 - Fighter AI chooses dodge vs block based on Fight IQ and situation (dodge vs power shots, block vs jabs).
 
 ### Expandable Crit Range
 
 - **Base:** Natural 20 only (5% chance).
+<<<<<<< HEAD
 - **Fight IQ >= 80 (tier 2):** Crit range expands to 19-20 (10%). Smart fighters find openings. This is part of the Counter Puncher technique unlock — see Section 3.
 - **Expanded Crit gear trait (Legendary):** Crit range expands by 1 more. Stacks with Fight IQ.
 - **Maximum base crit range:** 18-20 (15%). Requires both high FIQ and Legendary gear.
 - **Desperation bonus:** Crit range expands by 2 more when HP < 40%. Stacks with the above. A desperate fighter with max crit range reaches **16-20 (25%)**. This is the designed upset ceiling — a dying fighter swings wild and connects more often.
 - **Absolute maximum:** 15-20 (30%) with FIQ 80 + Expanded Crit + Desperation. Extremely rare build + situation.
+=======
+- **Fight IQ >= 80:** Crit range expands to 19-20 (10%). Smart fighters find openings.
+- **Legendary gear (Expanded Crit trait):** Crit range expands by 1 more. Stacks with Fight IQ.
+- **Maximum possible crit range:** 18-20 (15%). Requires both high FIQ and Legendary gear.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ## 2. Stat-to-Modifier Mapping
 
@@ -64,6 +87,7 @@ All 6 fighter stats range 0-100, default 50. Each maps to combat parameters via 
 ### Modifier Formula
 
 ```
+<<<<<<< HEAD
 modifier = round((effective_stat - 50) / 15)
 ```
 
@@ -72,15 +96,28 @@ Where `effective_stat = trained_stat + gear_stat_bonus`.
 Range: -3 (stat ~5) to +3 (stat ~95). A stat of 50 = +0 modifier (average). Compressed from the original /10 (±5) to /15 (±3) after Monte Carlo showed ±5 created insurmountable DPS gaps at 30-point stat differences.
 
 **Breakpoints:** Modifiers only change at effective stat values ~5, ~20, ~35, 50, 65, 80, 95. Training between breakpoints has no mechanical effect on the modifier — the last few points before a breakpoint are the most valuable. Gear can push effective stats past breakpoints (e.g., trained 73 + Legendary +10 = effective 83, modifier +2).
+=======
+modifier = (stat - 50) / 10
+```
+
+Range: -5 (stat 0) to +5 (stat 100). A stat of 50 = +0 modifier (average).
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ### Stat Roles
 
 | Stat | Modifier Range | Combat Role |
 |------|---------------|-------------|
+<<<<<<< HEAD
 | **Strength (STR)** | -3 to +3 | Added to damage rolls only. Raw hitting power. |
 | **Speed (SPD)** | -3 to +3 | Added to attack rolls (accuracy) + action rate. Fast fighters hit more often and act faster. |
 | **Defense (DEF)** | AC 7-13 | Sets Armor Class: `10 + DEF_modifier`. Higher = harder to hit. |
 | **Stamina (STA)** | Pool 20-100 | Stamina pool: `50 + (STA - 50)`, floor 20. Governs dodges, blocks, combos before exhaustion. |
+=======
+| **Strength (STR)** | -5 to +5 | Added to attack rolls AND damage rolls. Hitting power + accuracy. |
+| **Speed (SPD)** | -5 to +5 | Initiative order + action rate. Fast fighters get more turns. Added to dodge checks. |
+| **Defense (DEF)** | AC 5-15 | Sets Armor Class: `10 + (DEF - 50) / 10`. Higher = harder to hit. |
+| **Stamina (STA)** | Pool 0-100 | Stamina pool: `50 + (STA - 50)`. Governs dodges, blocks, combos before exhaustion. |
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 | **Fight IQ (FIQ)** | Multi-purpose | Reaction chance, crit range expansion, decision quality (see below). |
 | **Aggression (AGG)** | Behavioral | Action selection weights, forward pressure, risk/reward tradeoff. |
 
@@ -88,7 +125,11 @@ Range: -3 (stat ~5) to +3 (stat ~95). A stat of 50 = +0 modifier (average). Comp
 
 Fight IQ is the "intelligence" stat. It controls three things:
 
+<<<<<<< HEAD
 1. **Reaction chance:** `max(0%, 15% + (FIQ - 50) / 100 * 50%)`. Range 0%-40%. How often the fighter triggers dodge/block. Floor at 0% below ~FIQ 20. (V5d: formula fixed to actually reach 40% max — V1 formula capped at 27.5%.)
+=======
+1. **Reaction chance:** `15% + (FIQ - 50) / 100 * 25%`. Range 2.5%-40%. How often the fighter triggers dodge/block.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 2. **Crit range expansion:** FIQ >= 80 expands crit range to 19-20. Smart fighters exploit openings.
 3. **Decision quality:** Higher FIQ = smarter action selection. Prioritizes combos when opponent is stunned, blocks when low HP, dodges power shots. Modeled as a bonus to AI decision scoring.
 
@@ -102,6 +143,7 @@ Aggression controls fighting style, not raw power:
 
 ### Design Principle
 
+<<<<<<< HEAD
 No stat is a dump stat. Every point matters somewhere. Specialization creates distinct fighting styles. The 3-tier progressive specialization system (Section 3) creates qualitative differences between builds that the d20 modifier system alone cannot produce.
 
 Three archetype landmarks (vocabulary for bettors, not hardcoded types):
@@ -236,6 +278,17 @@ The fight engine runs on 80ms ticks (12.5 ticks/second). Normal combat: each tic
 ## 4. Gear System
 
 Cyberpunk fighter rigs. 4 rarity tiers. Account-bound. **Gear adds to raw stat, not to modifier directly.** Gear can push effective stats past modifier breakpoints but cannot unlock tier abilities (traits, techniques, signatures require TRAINED stat thresholds).
+=======
+No stat is a dump stat. Every point matters somewhere. Specialization creates distinct fighting styles:
+- High STR / Low SPD = brawler (hits like a truck, slow)
+- High FIQ / High SPD = counter-fighter (reads you, punishes mistakes)
+- High AGG / High STA = pressure fighter (relentless, wears you down)
+- High DEF / High FIQ = turtle (hard to hit, waits for the perfect counter)
+
+## 3. Gear System
+
+Cyberpunk fighter rigs. 4 rarity tiers. Account-bound.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ### 5 Stat Slots
 
@@ -256,6 +309,7 @@ Cyberpunk fighter rigs. 4 rarity tiers. Account-bound. **Gear adds to raw stat, 
 
 ### 4 Rarity Tiers
 
+<<<<<<< HEAD
 | Rarity | Color | Raw Stat Bonus | Special Trait | Drop Rate |
 |--------|-------|---------------|--------------|-----------|
 | **Standard** | White | +2 to one stat | No | 65% |
@@ -288,19 +342,44 @@ V6 redesign: traits ENHANCE tier abilities and playstyles, they don't duplicate 
 | **Chain Lightning** | When Devastating Blow (STR 80) triggers exploding dice, the reroll can also explode. Max 3 chain explosions per die. | STR specialist — turns Devastating Blow into a potentially massive spike. Dead weight without STR 80. |
 
 **Trait design principle:** Some traits are universal (Expanded Crit works for anyone). Some are build-specific (Chain Lightning requires STR 80 Devastating Blow). Build-specific traits create natural gear chase paths: "I'm building Pressure, so I need Chain Lightning Arm Augments." This is the Diablo loot loop — specific gear for specific builds.
+=======
+| Rarity | Color | Stat Bonus | Special Trait | Drop Rate |
+|--------|-------|-----------|--------------|-----------|
+| **Standard** | White | +1 to one stat modifier | No | 65% |
+| **Enhanced** | Blue | +1 to two stat modifiers | No | 25% |
+| **Superior** | Purple | +2 to one, +1 to another | Yes, 1 trait | 8% |
+| **Legendary** | Orange | +3 to one, +2 to another | Yes, 1 powerful trait | 2% |
+
+**Stat bonuses apply to the modifier, not the raw stat.** A +2 STR Arm Augment adds +2 on top of the `(STR-50)/10` modifier. This is equivalent to 20 raw stat points of training. Gear is powerful.
+
+### Special Traits (Superior + Legendary only)
+
+| Trait | Min Rarity | Effect |
+|-------|-----------|--------|
+| Iron Chin | Superior | Reduce KO chance by 50% when HP < 35 |
+| Glass Cannon | Superior | +1 damage modifier, -1 AC |
+| Counter Puncher | Superior | Successful dodge grants +3 to next attack roll |
+| Expanded Crit | Legendary | Crit range expands by 1 (stacks with Fight IQ) |
+| Second Wind | Legendary | Once per fight, recover 30 stamina when dropping below 15 |
+| Knockout Artist | Legendary | Crits deal triple damage dice instead of double |
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ### Gear Rules
 
 - **Account-bound.** Gear belongs to your account, not a fighter.
 - **Freely transferable** between your own fighters. Equip/unequip at will.
 - **Not tradeable** between players. Everyone earns their own gear.
+<<<<<<< HEAD
 - **Does NOT unlock tiers.** Tier abilities (traits at 65, techniques at 80, signatures at 95) require TRAINED stat, excluding gear bonuses. Gear makes you stronger within your tier.
+=======
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 - **Mythic tier (v2).** Crafted-only from salvaged Legendaries. Not a random drop. Deferred to v2 with salvage system.
 
 ### Pity Counters
 
 Per-account, not per-fighter. Training any fighter advances the counter.
 
+<<<<<<< HEAD
 - **Superior+ pity:** Guaranteed Superior or better every 20 sessions.
 - **Legendary pity:** Guaranteed Legendary every 100 sessions (~17 days at 6 sessions/day).
 
@@ -358,6 +437,21 @@ The core idle loop. Agent queues a session, it runs for 4 hours, fighter collect
 | Second stat to 80 | ~78 days | Second Technique | Build identity solidifies. Hybrid-specialist with two techniques. |
 
 Tier milestones are PUBLIC. When a fighter crosses a threshold, it's announced. Agent League fights immediately after unlock are the highest-information events — first data on how the new technique performs. Pre-unlock speculation ("Fighter X is 3 sessions from FIQ 80") creates betting alpha.
+=======
+- **Superior+ pity:** Guaranteed Superior or better every 10 sessions.
+- **Legendary pity:** Guaranteed Legendary every 50 sessions (~10 days at 5 sessions/day).
+
+## 4. Training Loop & Loot Economy
+
+### Training Sessions
+
+The core idle loop. Queue a session, it runs, collect stat XP + one loot roll.
+
+- **Model:** Baseball 9-style idle training (targeted stat training with resource costs, quick sessions, visible progress). Deep-dive on exact mechanics pending — will spec the session types, durations, and XP curves against the Baseball 9 model before implementation.
+- **Session types** target different stats (e.g., "Sparring" for STR/AGG, "Circuit Training" for SPD/STA, "Film Study" for FIQ/DEF).
+- **Two outputs per session:** Stat XP (incremental gains to raw stats) + one loot roll (gear drop chance).
+- **Sessions cost credits.** This is the primary credit sink.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ### Credit Flow by Player Stage
 
@@ -367,12 +461,17 @@ Tier milestones are PUBLIC. When a fighter crosses a threshold, it's announced. 
 | **Week 1 (Engaged)** | Winning bets, daily rewards | Training sessions, more trades | Roughly neutral. |
 | **Month 1 (Invested)** | Market trading, daily rewards, streak bonuses | Training, multi-fighter management | Slightly negative. Funds ambition. |
 
+<<<<<<< HEAD
 Slightly-negative at Month 1 is intentional. Credits retain value because there's always something worth spending on — another stat to push toward the next tier.
+=======
+Slightly-negative at Month 1 is intentional. Credits retain value because there's always something worth spending on. Exact numbers to be validated by Monte Carlo simulation.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ### Agent Economy
 
 Agents run the same loop autonomously: queue training, roll loot, equip gear, enter fights. Agent League runs 24/7 with lower stakes per fight but higher volume. Agent fight records become the public form guide for Human League bettors.
 
+<<<<<<< HEAD
 ## 7. Stamina & Comeback Mechanics
 
 ### Action Rate
@@ -399,11 +498,15 @@ This makes Round 3 fights slower and grindier — stamina-built fighters shine l
 **85 HP recovered between rounds** (100 HP with Reinforced Core gear trait). Simulates corner recovery. This is what pushes fights into Round 2 and 3 — without it, damage accumulates too fast and every fight ends in R1.
 
 **Stamina partial recovery:** Stamina regenerates normally during the round break (~3 seconds of ticks with no actions). With Endurance Rig gear trait, an additional +15 stamina is granted at round break.
+=======
+## 5. Stamina & Comeback Mechanics
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ### Stamina System
 
 Stamina is the fight's pacing engine. It prevents spam and creates tactical depth.
 
+<<<<<<< HEAD
 - **Pool size:** `50 + (STA - 50)`, floor 20. Range 20-100. (Deep Lungs trait at STA 65: +15. Condition: ±15.)
 - **Regen rate:** `0.5 + (STA - 50) / 100` per tick when not attacking. (Condition: ±0.15.)
 - **Gassed state:** Below 20 stamina. Action rate halved, -2 to attack rolls, can't combo. (Iron Chin at STA 80: +10% chance per tick to recover from Gassed.)
@@ -423,6 +526,27 @@ Stamina is the fight's pacing engine. It prevents spam and creates tactical dept
 | Block | 5 | 5 |
 
 Stabilizers gear trait only affects dodge cost. This specifically enhances Counter/evasion builds without making stamina universally cheaper.
+=======
+- **Pool size:** `50 + (STA - 50)`. Range 0-100.
+- **Regen rate:** `0.5 + (STA - 50) / 100` per tick when not attacking.
+- **Gassed state:** Below 20 stamina. Action rate halved, -2 to attack rolls, can't combo.
+
+**Stamina costs by action:**
+
+| Action | Cost |
+|--------|------|
+| Jab | 2 |
+| Cross | 4 |
+| Hook | 5 |
+| Kick | 5 |
+| Uppercut | 6 |
+| Roundhouse | 8 |
+| Combo | 10 |
+| Dodge | 8 |
+| Block | 5 |
+
+Aggressive fighters burn bright but fade. Stamina-built fighters grind you down. This creates natural fight arcs — early pressure vs late-round endurance.
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
 ### Comeback Mechanics
 
@@ -430,6 +554,7 @@ The losing fighter gets tools. This creates late-fight volatility that keeps the
 
 | Mechanic | Trigger | Effect | Reference |
 |----------|---------|--------|-----------|
+<<<<<<< HEAD
 | **Desperation** | HP below 40% (240 HP) | +5 to all attack rolls, +1d10 bonus damage, crit range expands by 2 | Street Fighter Ultra meter |
 | **Second Wind** | Round break while behind on score | Recover stamina to 50% of max | Boxing corner recovery |
 | **Crowd Energy** | 2+ unanswered hits taken | Next landed hit deals +2d6 bonus damage | Tekken Rage system |
@@ -494,3 +619,28 @@ Kakashi's training system Monte Carlo (V5d, pre-tier system) found 4 critical is
 | Mythic tier + salvage system | v2 | Crafted-only from salvaged Legendaries. Deferred. |
 | Fight-tier labeling for market | **Pending** | "Rookie Card" / "Main Card" / "Championship" fight categories. |
 | Starting credits, daily rewards, streak bonuses | **Pending** | Economy numbers needed for credit flow validation. |
+=======
+| **Desperation** | HP below 25% | +2 to all attack rolls, crit range expands by 1 | Street Fighter Ultra meter |
+| **Second Wind** | Round break while behind on score | Recover stamina to 50% of max | Boxing corner recovery |
+| **Crowd Energy** | 3+ unanswered hits taken | Next landed hit deals +1d6 bonus damage | Tekken Rage system |
+
+These are cumulative but situational. A fighter at 20% HP with Desperation active who lands a crit with Crowd Energy bonus can flip a fight. That's the moment bettors live for.
+
+### Target Upset Rate
+
+**25-30% across all matchups.** Too low and favorites are boring locks. Too high and stats don't matter. To be validated by Monte Carlo simulation (game-design-review skill, Pass 3).
+
+### Why This Matters for the Exchange
+
+Comeback mechanics create late-fight volatility. A fighter dominating rounds 1-2 is the favorite, but the market should never feel settled. Desperation + a lucky crit = upset. Confident positions can get blown up by the mechanics. This is what makes MFC a prediction market, not a slot machine.
+
+## Open Items
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Baseball 9 training deep-dive | Pending | Need to spec exact session types, durations, XP curves against the Baseball 9 model |
+| Monte Carlo validation | Pending | Run game-design-review skill after implementation plan. Validate upset rates, crit impact, fight length distribution, loot drop distributions. |
+| Mythic tier + salvage system | v2 | Crafted-only from salvaged Legendaries. Deferred. |
+| Special trait full list | Pending | 6 examples defined. Full list to be designed during implementation. |
+| Exact credit costs for training | Pending | Depends on overall economy model. Will tune after Monte Carlo. |
+>>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
