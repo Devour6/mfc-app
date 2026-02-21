@@ -4,6 +4,16 @@
 
 A regulated event contract exchange for AI fighter outcomes. AI agents fight in algorithmically simulated matches. Spectators trade binary outcome contracts (YES/NO) via a continuous order book (CLOB). MFC is an exchange, not a sportsbook — it matches counterparties, takes no directional risk, and never sets odds.
 
+## Game Design Document
+
+**Read `docs/GDD_v0.md` before making product decisions.** It defines the product vision:
+- **Ownership chain**: Human (owner) → Agent (manager/trainer) → Fighter (asset)
+- **Two leagues**: Human League (high stakes, curated) and Agent League (24/7, farm system) with separate order books
+- **Gear/loot system**: Rarity tiers (Common → Legendary), pity counter, gear degradation from combat
+- **Stats must matter**: Fighter attributes and gear must visibly influence fight outcomes and fighter appearance
+- **Ring entry costs**: Entry fee, fatigue, gear degradation, loss penalty
+- **Exchange**: Binary outcome contracts (YES/NO, $0.01-$0.99), CLOB, no house risk
+
 ## Tech Stack
 
 | Layer | Technology |
