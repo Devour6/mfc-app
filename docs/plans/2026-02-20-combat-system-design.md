@@ -8,16 +8,22 @@ DnD 5e mechanics under the hood. 2D fighting game presentation on screen. Dice r
 DnD 5e mechanics under the hood. 2D fighting game presentation on screen. Dice rolls determine everything — stats and gear shift the odds, but never guarantee outcomes.
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
+> **V5d (2026-02-22):** Updated with Monte Carlo validated constants. 7 iterations (V1→V5d), 10,000 fights per matchup. See `scripts/monte-carlo-combat.ts` for simulation code.
+
 ## 1. Core Combat Resolution
 
 Every attack resolves as a d20 roll.
 
 ```
 <<<<<<< HEAD
+<<<<<<< HEAD
 d20 + attacker_SPD_modifier >= defender_AC
 =======
 d20 + attacker_STR_modifier >= defender_AC
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+d20 + attacker_SPD_modifier >= defender_AC
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 ```
 
 - **Hit:** Roll succeeds. Roll damage dice for the attack type + STR modifier.
@@ -26,14 +32,20 @@ d20 + attacker_STR_modifier >= defender_AC
 - **Natural 1:** Auto-miss regardless of modifiers. Even the best fighter whiffs sometimes.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 **STR/SPD role split (V3+):** SPD determines accuracy (added to attack rolls). STR determines damage (added to damage rolls only). This decouples "can you hit?" from "how hard?" and creates real build tradeoffs — a fast fighter lands more but hits lighter; a strong fighter misses more but devastates when connecting.
 
 ### Fighter HP
 
 **HP: 600.** All fighters start each fight at 600 HP regardless of stats. This produces multi-round fights (avg 2.86 rounds in mirror matchups) with 86% of even fights reaching Round 3.
 
+<<<<<<< HEAD
 =======
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 ### Damage Dice by Attack Type
 
 Each attack type maps to a DnD damage die. Heavier attacks = bigger die = more risk/reward.
@@ -88,6 +100,7 @@ All 6 fighter stats range 0-100, default 50. Each maps to combat parameters via 
 
 ```
 <<<<<<< HEAD
+<<<<<<< HEAD
 modifier = round((effective_stat - 50) / 15)
 ```
 
@@ -102,22 +115,36 @@ modifier = (stat - 50) / 10
 
 Range: -5 (stat 0) to +5 (stat 100). A stat of 50 = +0 modifier (average).
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+modifier = round((stat - 50) / 15)
+```
+
+Range: -3 (stat ~5) to +3 (stat ~95). A stat of 50 = +0 modifier (average). Compressed from the original /10 (±5) to /15 (±3) after Monte Carlo showed ±5 created insurmountable DPS gaps at 30-point stat differences.
+
+**Breakpoints:** Modifiers only change at stat values 5, 20, 35, 50, 65, 80, 95. Training between breakpoints has no mechanical effect — the last few points before a breakpoint are the most valuable.
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 
 ### Stat Roles
 
 | Stat | Modifier Range | Combat Role |
 |------|---------------|-------------|
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 | **Strength (STR)** | -3 to +3 | Added to damage rolls only. Raw hitting power. |
 | **Speed (SPD)** | -3 to +3 | Added to attack rolls (accuracy) + action rate. Fast fighters hit more often and act faster. |
 | **Defense (DEF)** | AC 7-13 | Sets Armor Class: `10 + DEF_modifier`. Higher = harder to hit. |
 | **Stamina (STA)** | Pool 20-100 | Stamina pool: `50 + (STA - 50)`, floor 20. Governs dodges, blocks, combos before exhaustion. |
+<<<<<<< HEAD
 =======
 | **Strength (STR)** | -5 to +5 | Added to attack rolls AND damage rolls. Hitting power + accuracy. |
 | **Speed (SPD)** | -5 to +5 | Initiative order + action rate. Fast fighters get more turns. Added to dodge checks. |
 | **Defense (DEF)** | AC 5-15 | Sets Armor Class: `10 + (DEF - 50) / 10`. Higher = harder to hit. |
 | **Stamina (STA)** | Pool 0-100 | Stamina pool: `50 + (STA - 50)`. Governs dodges, blocks, combos before exhaustion. |
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 | **Fight IQ (FIQ)** | Multi-purpose | Reaction chance, crit range expansion, decision quality (see below). |
 | **Aggression (AGG)** | Behavioral | Action selection weights, forward pressure, risk/reward tradeoff. |
 
@@ -126,10 +153,14 @@ Range: -5 (stat 0) to +5 (stat 100). A stat of 50 = +0 modifier (average).
 Fight IQ is the "intelligence" stat. It controls three things:
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 1. **Reaction chance:** `max(0%, 15% + (FIQ - 50) / 100 * 50%)`. Range 0%-40%. How often the fighter triggers dodge/block. Floor at 0% below ~FIQ 20. (V5d: formula fixed to actually reach 40% max — V1 formula capped at 27.5%.)
 =======
 1. **Reaction chance:** `15% + (FIQ - 50) / 100 * 25%`. Range 2.5%-40%. How often the fighter triggers dodge/block.
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+1. **Reaction chance:** `15% + (FIQ - 50) / 100 * 50%`. Range 2.5%-40%. How often the fighter triggers dodge/block. (V5d: formula fixed to actually reach 40% max — V1 formula capped at 27.5%.)
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 2. **Crit range expansion:** FIQ >= 80 expands crit range to 19-20. Smart fighters exploit openings.
 3. **Decision quality:** Higher FIQ = smarter action selection. Prioritizes combos when opponent is stunned, blocks when low HP, dodges power shots. Modeled as a bonus to AI decision scoring.
 
@@ -280,10 +311,14 @@ The fight engine runs on 80ms ticks (12.5 ticks/second). Normal combat: each tic
 Cyberpunk fighter rigs. 4 rarity tiers. Account-bound. **Gear adds to raw stat, not to modifier directly.** Gear can push effective stats past modifier breakpoints but cannot unlock tier abilities (traits, techniques, signatures require TRAINED stat thresholds).
 =======
 No stat is a dump stat. Every point matters somewhere. Specialization creates distinct fighting styles:
-- High STR / Low SPD = brawler (hits like a truck, slow)
-- High FIQ / High SPD = counter-fighter (reads you, punishes mistakes)
-- High AGG / High STA = pressure fighter (relentless, wears you down)
-- High DEF / High FIQ = turtle (hard to hit, waits for the perfect counter)
+- High STR / High AGG / High STA = **pressure** (relentless power, wears you down)
+- High FIQ / High SPD / High DEF = **counter-fighter** (reads you, punishes mistakes)
+- High DEF / High STA / High FIQ = **turtle** (hard to hit, outlasts you, wins on decision)
+
+Monte Carlo validated archetype matchups (V5d):
+- Counter beats Brawler: 90/10 (hard counter — speed/accuracy dominates slow power)
+- Turtle edges Pressure: 58/42 (soft counter — endurance outlasts aggression)
+- Hybrid builds viable but with no dominant matchup edge
 
 ## 3. Gear System
 
@@ -350,13 +385,13 @@ V6 redesign: traits ENHANCE tier abilities and playstyles, they don't duplicate 
 | **Superior** | Purple | +2 to one, +1 to another | Yes, 1 trait | 8% |
 | **Legendary** | Orange | +3 to one, +2 to another | Yes, 1 powerful trait | 2% |
 
-**Stat bonuses apply to the modifier, not the raw stat.** A +2 STR Arm Augment adds +2 on top of the `(STR-50)/10` modifier. This is equivalent to 20 raw stat points of training. Gear is powerful.
+**Stat bonuses apply to the modifier, not the raw stat.** A +2 STR Arm Augment adds +2 on top of the `round((STR-50)/15)` modifier. Gear stacking with high stats needs Monte Carlo validation — see Open Items.
 
 ### Special Traits (Superior + Legendary only)
 
 | Trait | Min Rarity | Effect |
 |-------|-----------|--------|
-| Iron Chin | Superior | Reduce KO chance by 50% when HP < 35 |
+| Iron Chin | Superior | Reduce KO chance by 50% when HP < 75 |
 | Glass Cannon | Superior | +1 damage modifier, -1 AC |
 | Counter Puncher | Superior | Successful dodge grants +3 to next attack roll |
 | Expanded Crit | Legendary | Crit range expands by 1 (stacks with Fight IQ) |
@@ -379,6 +414,7 @@ V6 redesign: traits ENHANCE tier abilities and playstyles, they don't duplicate 
 
 Per-account, not per-fighter. Training any fighter advances the counter.
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 - **Superior+ pity:** Guaranteed Superior or better every 20 sessions.
 - **Legendary pity:** Guaranteed Legendary every 100 sessions (~17 days at 6 sessions/day).
@@ -440,18 +476,29 @@ Tier milestones are PUBLIC. When a fighter crosses a threshold, it's announced. 
 =======
 - **Superior+ pity:** Guaranteed Superior or better every 10 sessions.
 - **Legendary pity:** Guaranteed Legendary every 50 sessions (~10 days at 5 sessions/day).
+=======
+- **Superior+ pity:** Guaranteed Superior or better every 20 sessions.
+- **Legendary pity:** Guaranteed Legendary every 100 sessions (~17 days at 6 sessions/day).
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 
 ## 4. Training Loop & Loot Economy
 
 ### Training Sessions
 
-The core idle loop. Queue a session, it runs, collect stat XP + one loot roll.
+> **Full training system spec: `docs/plans/2026-02-22-training-system-design.md`**
 
-- **Model:** Baseball 9-style idle training (targeted stat training with resource costs, quick sessions, visible progress). Deep-dive on exact mechanics pending — will spec the session types, durations, and XP curves against the Baseball 9 model before implementation.
-- **Session types** target different stats (e.g., "Sparring" for STR/AGG, "Circuit Training" for SPD/STA, "Film Study" for FIQ/DEF).
+The core idle loop. Agent queues a session, it runs for 4 hours, fighter collects stat XP + one loot roll.
+
+- **6 session types** each targeting 2 stats (70/30 XP split): Heavy Bag (STR/AGG), Sparring (FIQ/DEF), Roadwork (STA/SPD), Film Study (FIQ/AGG), Strength & Conditioning (STR/STA), Speed Drills (SPD/DEF).
+- **Exponential XP curve:** `xp_required(level) = 100 × 1.12^(level - 50)`. +1 modifier in ~4 days, +2 in ~39 days, +3 in ~245 days.
 - **Two outputs per session:** Stat XP (incremental gains to raw stats) + one loot roll (gear drop chance).
+<<<<<<< HEAD
 - **Sessions cost credits.** This is the primary credit sink.
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+- **Sessions cost credits:** `100 × (1 + (avg_target_stats - 50) / 50)`. Range 100-190 credits/session. Primary credit sink.
+- **Style over power:** No hard stat cap. Exponential costs create natural specialization. Build diversity comes from opportunity cost, not arbitrary limits.
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 
 ### Credit Flow by Player Stage
 
@@ -502,10 +549,32 @@ This makes Round 3 fights slower and grindier — stamina-built fighters shine l
 ## 5. Stamina & Comeback Mechanics
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
 
+### Action Rate
+
+Controls fight pacing. How often a fighter attempts an action per tick.
+
+```
+action_rate = 0.025 + (SPD / 100) × 0.035
+```
+
+Range: 0.025 (SPD 0) to 0.060 (SPD 100). At 12 ticks/sec, that's ~0.3-0.7 actions/sec per fighter.
+
+**Progressive exhaustion:** Action rate degrades each round.
+- Round 1: ×1.00
+- Round 2: ×0.88
+- Round 3: ×0.76
+
+This makes Round 3 fights slower and grindier — stamina-built fighters shine late while aggressive fighters fade. Creates the natural fight arc that prediction markets need (early action, late drama).
+
+### Between-Round Recovery
+
+**85 HP recovered between rounds.** Simulates corner recovery. This is what pushes fights into Round 2 and 3 — without it, damage accumulates too fast and every fight ends in R1.
+
 ### Stamina System
 
 Stamina is the fight's pacing engine. It prevents spam and creates tactical depth.
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 - **Pool size:** `50 + (STA - 50)`, floor 20. Range 20-100. (Deep Lungs trait at STA 65: +15. Condition: ±15.)
 - **Regen rate:** `0.5 + (STA - 50) / 100` per tick when not attacking. (Condition: ±0.15.)
@@ -528,6 +597,9 @@ Stamina is the fight's pacing engine. It prevents spam and creates tactical dept
 Stabilizers gear trait only affects dodge cost. This specifically enhances Counter/evasion builds without making stamina universally cheaper.
 =======
 - **Pool size:** `50 + (STA - 50)`. Range 0-100.
+=======
+- **Pool size:** `50 + (STA - 50)`, floor 20. Range 20-100.
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 - **Regen rate:** `0.5 + (STA - 50) / 100` per tick when not attacking.
 - **Gassed state:** Below 20 stamina. Action rate halved, -2 to attack rolls, can't combo.
 
@@ -554,6 +626,7 @@ The losing fighter gets tools. This creates late-fight volatility that keeps the
 
 | Mechanic | Trigger | Effect | Reference |
 |----------|---------|--------|-----------|
+<<<<<<< HEAD
 <<<<<<< HEAD
 | **Desperation** | HP below 40% (240 HP) | +5 to all attack rolls, +1d10 bonus damage, crit range expands by 2 | Street Fighter Ultra meter |
 | **Second Wind** | Round break while behind on score | Recover stamina to 50% of max | Boxing corner recovery |
@@ -621,26 +694,67 @@ Kakashi's training system Monte Carlo (V5d, pre-tier system) found 4 critical is
 | Starting credits, daily rewards, streak bonuses | **Pending** | Economy numbers needed for credit flow validation. |
 =======
 | **Desperation** | HP below 25% | +2 to all attack rolls, crit range expands by 1 | Street Fighter Ultra meter |
+=======
+| **Desperation** | HP below 40% (240 HP) | +5 to all attack rolls, +1d10 bonus damage, crit range expands by 2 | Street Fighter Ultra meter |
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
 | **Second Wind** | Round break while behind on score | Recover stamina to 50% of max | Boxing corner recovery |
-| **Crowd Energy** | 3+ unanswered hits taken | Next landed hit deals +1d6 bonus damage | Tekken Rage system |
+| **Crowd Energy** | 2+ unanswered hits taken | Next landed hit deals +2d6 bonus damage | Tekken Rage system |
 
-These are cumulative but situational. A fighter at 20% HP with Desperation active who lands a crit with Crowd Energy bonus can flip a fight. That's the moment bettors live for.
+V5d tuning notes: Desperation trigger raised from 25%→40% HP and bonuses significantly buffed (+2→+5 atk, added +1d10 dmg, crit range -1→-2). Crowd Energy trigger reduced from 3→2 hits and damage doubled. These changes were necessary because at V5d's compressed modifier range (±3), smaller comeback bonuses had no meaningful impact on DPS ratios.
 
-### Target Upset Rate
+**TKO threshold:** 75 HP (up from 50). Below 75 HP, 15% chance per hit of referee stoppage.
 
-**25-30% across all matchups.** Too low and favorites are boring locks. Too high and stats don't matter. To be validated by Monte Carlo simulation (game-design-review skill, Pass 3).
+These are cumulative but situational. A fighter at 200 HP with Desperation active who lands a crit with Crowd Energy bonus can flip a fight. That's the moment bettors live for.
+
+### Target Upset Rates (Monte Carlo Validated)
+
+Upset rates vary by stat gap. Validated across 10,000 fights per matchup (V5d):
+
+| Matchup | Upset Rate | Market Impact |
+|---------|-----------|---------------|
+| Slight advantage (10-15 pts) | **25-30%** | Real disagreement. Enough variance for active trading. |
+| Clear advantage (30 pts) | **3-5%** | Rare upsets. Underdog contracts trade at ~$0.03 — a 33x longshot. |
+| Massive advantage (50+ pts) | **<1%** | Stats dominate. Training investment pays off decisively. |
+
+The 25-30% target applies to slight advantages only. Clear advantages were originally targeted at 25-30% but Monte Carlo proved this is unrealistic without breaking stat progression — the d20 system naturally produces ~3% upsets at 30-point gaps. Jeff approved the revised targets.
 
 ### Why This Matters for the Exchange
 
 Comeback mechanics create late-fight volatility. A fighter dominating rounds 1-2 is the favorite, but the market should never feel settled. Desperation + a lucky crit = upset. Confident positions can get blown up by the mechanics. This is what makes MFC a prediction market, not a slot machine.
 
+## Monte Carlo Summary (V5d)
+
+10,000 fights per matchup. 7 iterations from V1→V5d.
+
+| Metric | V1 | V5d | Target | Status |
+|--------|----|----|--------|--------|
+| Mirror avg rounds | 1.0 | **2.86** | 2-3 | HIT |
+| Mirror R3 rate | 0% | **86%** | Regular | HIT |
+| Mirror decisions | 0% | **14.2%** | 10-15% | HIT |
+| Slight upset (60v50) | 20.6% | **26.4%** | 25-30% | HIT |
+| Clear upset (80v50) | 0% | **2.9%** | 3-5% | HIT (revised) |
+| Counter vs Brawler | — | **90/10** | Asymmetric | HIT |
+| Turtle vs Pressure | — | **58/42** | Asymmetric | HIT |
+| Loot rates | Inflated | **Within 1%** | Match spec | HIT |
+
+Script: `scripts/monte-carlo-combat.ts` — run with `npx tsx scripts/monte-carlo-combat.ts`
+
 ## Open Items
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Baseball 9 training deep-dive | Pending | Need to spec exact session types, durations, XP curves against the Baseball 9 model |
-| Monte Carlo validation | Pending | Run game-design-review skill after implementation plan. Validate upset rates, crit impact, fight length distribution, loot drop distributions. |
+| Training system design | **Done** | See `docs/plans/2026-02-22-training-system-design.md` |
+| Monte Carlo: core combat | **Done** | V5d validated. All targets hit or revised with approval. |
+| Monte Carlo: condition system | Pending | Fresh (+1 all) vs Tired (-1 all) impact on win rates. Is the 2-modifier swing too powerful? |
+| Monte Carlo: gear stacking | Pending | +3 stat modifier + Legendary gear modifier. Does this break ±3 compression? |
+| Monte Carlo: realistic archetype builds | Pending | Test actual stat distributions (STR 80/AGG 78/STA 65/others 50) instead of uniform gaps |
+| Monte Carlo: hybrid viability | Pending | Does balanced +1-across-the-board compete against specialists? |
+| Full archetype triangle | Pending | Only Counter>Brawler and Turtle>Pressure validated. Need third edge. |
+| Implementation plan update | Pending | Add exhaustion, between-round recovery, compressed modifiers to 12 TDD tasks |
 | Mythic tier + salvage system | v2 | Crafted-only from salvaged Legendaries. Deferred. |
 | Special trait full list | Pending | 6 examples defined. Full list to be designed during implementation. |
+<<<<<<< HEAD
 | Exact credit costs for training | Pending | Depends on overall economy model. Will tune after Monte Carlo. |
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+>>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
