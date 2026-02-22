@@ -73,8 +73,12 @@ Defenders don't just have AC. Fight IQ drives active reactions:
 =======
 - **Dodge:** Attacker rolls with disadvantage (2d20, take lower). Costs 8 stamina.
 - **Block:** Reduce damage by `DEF_modifier + 1d6`. Costs 5 stamina. Still takes residual damage.
+<<<<<<< HEAD
 - **Reaction chance:** `15% + (FIQ - 50) / 100 * 25%` per incoming attack. Range: 2.5% to 40%.
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+- **Reaction chance:** `max(0%, 15% + (FIQ - 50) / 100 * 50%)` per incoming attack. Range: 0% (FIQ ~20) to 40% (FIQ 100). Floor at 0% — fighters below ~FIQ 20 never react.
+>>>>>>> 3714100 (Fix 3 combat design doc issues from game-design-review)
 - Fighter AI chooses dodge vs block based on Fight IQ and situation (dodge vs power shots, block vs jabs).
 
 ### Expandable Crit Range
@@ -89,8 +93,13 @@ Defenders don't just have AC. Fight IQ drives active reactions:
 =======
 - **Fight IQ >= 80:** Crit range expands to 19-20 (10%). Smart fighters find openings.
 - **Legendary gear (Expanded Crit trait):** Crit range expands by 1 more. Stacks with Fight IQ.
+<<<<<<< HEAD
 - **Maximum possible crit range:** 18-20 (15%). Requires both high FIQ and Legendary gear.
 >>>>>>> 96a39fd (Add combat system design doc — DnD d20 mechanics for MFC fight engine)
+=======
+- **Maximum base crit range:** 18-20 (15%). Requires both high FIQ and Legendary gear.
+- **Desperation bonus:** Crit range expands by 2 more when HP < 40%. Stacks with the above. A desperate fighter with max crit range reaches **16-20 (25%)**. This is the designed upset ceiling — a dying fighter swings wild and connects more often. Combined with Knockout Artist (triple dice on crit), this is the Hail Mary moment that makes longshot bets pay.
+>>>>>>> 3714100 (Fix 3 combat design doc issues from game-design-review)
 
 ## 2. Stat-to-Modifier Mapping
 
@@ -154,6 +163,7 @@ Fight IQ is the "intelligence" stat. It controls three things:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 1. **Reaction chance:** `max(0%, 15% + (FIQ - 50) / 100 * 50%)`. Range 0%-40%. How often the fighter triggers dodge/block. Floor at 0% below ~FIQ 20. (V5d: formula fixed to actually reach 40% max — V1 formula capped at 27.5%.)
 =======
 1. **Reaction chance:** `15% + (FIQ - 50) / 100 * 25%`. Range 2.5%-40%. How often the fighter triggers dodge/block.
@@ -161,6 +171,9 @@ Fight IQ is the "intelligence" stat. It controls three things:
 =======
 1. **Reaction chance:** `15% + (FIQ - 50) / 100 * 50%`. Range 2.5%-40%. How often the fighter triggers dodge/block. (V5d: formula fixed to actually reach 40% max — V1 formula capped at 27.5%.)
 >>>>>>> 0f716d2 (Update combat system design doc with V5d Monte Carlo constants)
+=======
+1. **Reaction chance:** `max(0%, 15% + (FIQ - 50) / 100 * 50%)`. Range 0%-40%. How often the fighter triggers dodge/block. Floor at 0% below ~FIQ 20. (V5d: formula fixed to actually reach 40% max — V1 formula capped at 27.5%.)
+>>>>>>> 3714100 (Fix 3 combat design doc issues from game-design-review)
 2. **Crit range expansion:** FIQ >= 80 expands crit range to 19-20. Smart fighters exploit openings.
 3. **Decision quality:** Higher FIQ = smarter action selection. Prioritizes combos when opponent is stunned, blocks when low HP, dodges power shots. Modeled as a bonus to AI decision scoring.
 
