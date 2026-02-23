@@ -2,7 +2,7 @@
 
 **Author:** Itachi (Head of Product)
 **Date:** 2026-02-23
-**Status:** DESIGN — pending Monte Carlo validation
+**Status:** DESIGN — Monte Carlo Run 9 complete, design decisions applied, awaiting re-sim
 **Builds on:** Kakashi's repricing-first proposal + V6-V12 iteration history + betting experience framework
 
 ---
@@ -52,14 +52,19 @@ Three stats. Clean 1:1 mapping to archetypes.
 | **END (Endurance)** | Max stamina. Damage mitigation. Between-round recovery rate. | Turtle |
 | **TEC (Technique)** | Accuracy. Crit range expansion. Ability proc effectiveness. | Counter |
 
-**Modifier formula:** `round((stat - 50) / 15)`, range ±3.
+**Modifier formula:** `round((effective_stat - 50) / 15)`, range ±3.
 
-| Stat Value | Modifier | Tier Unlocked |
-|-----------|----------|---------------|
-| 50 | +0 | Base |
-| 65 | +1 | Tier 1 (style trait) |
-| 80 | +2 | Tier 2 (fighting technique) |
-| 95 | +3 | Tier 3 (signature move) |
+**Diminishing returns above stat 80:** For combat calculations only (damage, mitigation, stamina, accuracy), each stat point above 80 counts as 0.5 points. Stat 95 → effective 87.5. This compresses the raw stat advantage of signature-tier fighters while keeping their tier 3 ability as the exciting differentiator. Ability tier thresholds use NATURAL stat values (not effective).
+
+| Stat Value | Effective Value | Modifier | Tier Unlocked |
+|-----------|----------------|----------|---------------|
+| 50 | 50 | +0 | Base |
+| 65 | 65 | +1 | Tier 1 (style trait) |
+| 80 | 80 | +2 | Tier 2 (fighting technique) |
+| 90 | 85 | +2 | Tier 3 (signature move) |
+| 95 | 87.5 | +3 | Tier 3 (signature move) |
+
+**Target:** Stat 95 vs stat 80 (same archetype) = 60-65%. If diminishing returns alone don't achieve this, next step is adding costs to tier 3 abilities (telegraphing, resource drain).
 
 **Archetype stat profiles:**
 
@@ -87,16 +92,26 @@ Current Tempo = base_tempo × (current_stamina / max_stamina)
 
 **Why this isn't END-as-new-SPD:** SPD was static — Counter had 38% more actions from tick 1 forever. END-driven Tempo is dynamic — starts equal, diverges based on stamina spend. The divergence is visible (stamina bars), predictable (burn rate calculable from R1 data), and creates a round-over-round arc instead of a tick-1 advantage.
 
-**Expected Tempo by round (P vs T matchup):**
+**Tempo warm-up (floor per round):**
+
+| Round | Tempo Floor | Max Divergence | Purpose |
+|-------|-----------|---------------|---------|
+| R1 | 90% | 10% | Feeling-out round. Bettors gather information. |
+| R2 | 75% | 25% | Story takes shape. Tempo begins to separate. |
+| R3 | None | Uncapped | Resolution. Full chaos. |
+
+Implementation: clamp Tempo to the floor after each tick's stamina calculation. Simple, no new mechanics. Mirrors real boxing where R1 is cautious and pace picks up in later rounds.
+
+**Expected Tempo by round (P vs T matchup, with warm-up):**
 
 | Round | Pressure Tempo | Turtle Tempo | Gap |
 |-------|---------------|-------------|-----|
 | R1 start | ~100% | ~100% | ~0% |
-| R1 end | ~80% | ~92% | ~12% |
-| R2 end | ~62% | ~82% | ~20% |
+| R1 end | ~90% (clamped) | ~92% | ~2% |
+| R2 end | ~75% (clamped) | ~82% | ~7% |
 | R3 end | ~48% | ~72% | ~24% |
 
-These are targets for Monte Carlo validation. The gap should be visible by R2 and significant by R3.
+These are targets for Monte Carlo validation. The gap should be minimal in R1, emerging in R2, and significant by R3.
 
 ---
 
@@ -109,6 +124,7 @@ Triangle comes from **ability interactions**, not stat advantages. Each techniqu
 **Relentless (Pressure, POW 80)**
 - A percentage of Pressure's damage bypasses END damage mitigation.
 - R1: 20% bypass. R2: 26% (×1.3). R3: 36% (×1.8).
+- **+1 flat damage on ALL hits.** Against Turtle, bypass is the star. Against Hybrid/Counter (low END), the flat bonus is the value. Ensures Pressure beats Hybrid consistently.
 - **Beats Turtle:** Iron Guard blocks, but damage leaks through. Accumulated bypass damage kills Turtle.
 - **Loses to Counter:** Counter dodges, not blocks. Bypass is irrelevant against someone who isn't there.
 
@@ -124,8 +140,9 @@ Triangle comes from **ability interactions**, not stat advantages. Each techniqu
 - Proc on successful dodge. Auto-hit (bypasses accuracy). TEC-scaled damage.
 - R1: 20% proc rate, base damage. R2: 26% proc, ×1.3 damage. R3: 36% proc, ×1.8 damage.
 - Miss drain: 4 stamina per failed proc (dodge happened but CP didn't fire).
-- **Beats Pressure:** Pressure attacks frequently = many dodge opportunities = many CP procs. Pressure's aggression fuels Counter's offense.
-- **Loses to Turtle:** Turtle attacks less (conservative Iron Guard strategy = fewer incoming attacks = fewer dodge opportunities). Iron Guard catches 50-65% of CP procs that do trigger.
+- **Base CP catch rate: 15-20% for ALL fighters.** Every fighter has a baseline chance to block a counter-punch. Iron Guard overrides this to 55-65%. Prevents Counter from dominating non-specialist matchups (73% vs Hybrid without this).
+- **Beats Pressure:** Pressure attacks frequently = many dodge opportunities = many CP procs. Pressure's aggression fuels Counter's offense. (Pressure has base 15-20% catch, but throws enough attacks that CP still fires plenty.)
+- **Loses to Turtle:** Turtle attacks less (conservative Iron Guard strategy = fewer incoming attacks = fewer dodge opportunities). Iron Guard catches 55-65% of CP procs that do trigger.
 
 ### Why the triangle is structural
 
@@ -152,12 +169,25 @@ Punishment. Every Pressure power attack is a CP opportunity. Counter dodges and 
 
 ### Target win rates by round
 
+**P vs T and C vs P (standard escalation):**
+
 | Round | Favored Side Win % | Purpose |
 |-------|-------------------|---------|
 | R1 (1.0x) | 53-56% | Information gathering. Triangle barely visible. |
 | R2 (1.3x) | 58-63% | Story takes shape. Triangle emerging. |
 | R3 (1.8x) | 65-72% | Resolution. Triangle decisive. |
-| **Overall** | **62-68%** | Target range for all three matchups. |
+| **Overall** | **62-68%** | Target range. |
+
+**T vs C (inverted pattern — accepted):**
+
+| Round | Turtle Win % | Purpose |
+|-------|-------------|---------|
+| R1 (1.0x) | 60-65% | Turtle dominates early. Iron Guard + Grinding Guard control while CP is at 1.0x. |
+| R2 (1.3x) | 55-60% | Counter's CP ramp starts catching up. Story shifts. |
+| R3 (1.8x) | 48-53% | CP at 1.8x makes R3 competitive. Counter surges. |
+| **Overall** | **62-68%** | Turtle wins on accumulated R1-R2 advantage via weighted decision scoring. |
+
+The inverted pattern creates a comeback narrative for T vs C. Turtle bettors sweat R3, Counter bettors have hope. Repricing 2 becomes "can Counter's R3 ramp overcome the deficit?" — a compelling Expert-level trade. Different matchups having different round dynamics is a feature.
 
 ---
 
@@ -234,10 +264,14 @@ Rare mastery. Alters fight dynamics. Design unchanged from V12:
 
 | Tier | Stat Bonus | Effects | Target Win % vs Ungeared |
 |------|-----------|---------|-------------------------|
-| **Standard** | +2 primary | None | 51-53% |
-| **Enhanced** | +3 primary, +1 secondary | 1 minor triggered passive (1×/round cap) | 54-56% |
-| **Superior** | +5 primary, +2 secondary | 1 medium triggered passive (1×/fight or always-on with small value) | 57-59% |
-| **Legendary** | +7 primary, +3 secondary | 1 major triggered passive (1×/fight, dramatic moment) | 60-63% |
+| **Standard** | +1 primary | None | 51-52% |
+| **Enhanced** | +1 primary | 1 minor triggered passive (1×/round cap) | 53-55% |
+| **Superior** | +2 primary | 1 medium triggered passive (1×/fight or always-on with small value) | 55-58% |
+| **Legendary** | +3 primary | 1 major triggered passive (1×/fight, dramatic moment) | 58-63% |
+
+**Effect quality drives tier progression, not stat budget.** Standard → Enhanced is exciting because you get your first effect. Superior → Legendary is exciting because the effect is dramatic (Overcharge, Phoenix, Flash Step). The stat bonuses are small enough to never override training.
+
+**Key rule: gear stat bonuses do NOT qualify for ability tier thresholds.** You need natural stat 80 for tier 2. Gear +3 on stat-77 doesn't unlock Relentless. This prevents gear from changing a fighter's archetype identity.
 
 ### Effect pools
 
@@ -287,11 +321,11 @@ No effect is universally best. Overcharge is S-tier against Turtle, Devastator i
 
 | Test | Target | Notes |
 |------|--------|-------|
-| Each tier vs ungeared (mirror) | Standard 51-53%, Enhanced 54-56%, Superior 57-59%, Legendary 60-63% | |
+| Each tier vs ungeared (mirror) | Standard 51-52%, Enhanced 53-55%, Superior 55-58%, Legendary 58-63% | Effects drive progression, not stats |
 | Effects within same tier (mirror) | All within ±1% of each other on average across matchups | |
 | Effects per matchup variance | +1% to +5% range per individual matchup | The variance IS the product |
 | Legendary vs Superior at stat 80 | 52-56% | Gear doesn't override training |
-| Trained (stat 80, no gear) vs Geared (stat 65, Legendary) | 65%+ for trained | Training > gear |
+| Trained (stat 80, no gear) vs Geared (stat 65, Legendary) | 60%+ for trained | Training > gear. +3 stat bonus (was +10) means tier 2 ability overcomes small stat gap. |
 | Two-effect synergy check | No two equipped effects combine for >+7% in any matchup | Prevents degenerate stacking |
 
 ---
@@ -413,17 +447,17 @@ XP curve, session costs, 4-hour duration, condition system, and agent/owner role
 | Sim | What | Fights | Success Criteria |
 |-----|------|--------|-----------------|
 | **1. Triangle (critical)** | P vs T, T vs C, C vs P | 10,000 each | Each matchup 62-68% for favored side. All three within ±3% of each other. |
-| **2. Round-by-round** | Same matchups, track per-round | 10,000 each | R1: 53-56%. R2: 58-63%. R3: 65-72%. |
+| **2. Round-by-round** | Same matchups, track per-round | 10,000 each | P vs T, C vs P: R1 53-56%, R2 58-63%, R3 65-72%. T vs C inverted: R1 Turtle 60-65%, R2 55-60%, R3 48-53%. |
 | **3. Specialist vs Hybrid** | Specialist 80 vs Hybrid 65, all matchups | 10,000 each | Specialist 58-65% in every matchup. |
-| **4. Gear tiers** | Each tier vs ungeared, mirror | 10,000 each | Standard 51-53%, Enhanced 54-56%, Superior 57-59%, Legendary 60-63%. |
+| **4. Gear tiers** | Each tier vs ungeared, mirror | 10,000 each | Standard 51-52%, Enhanced 53-55%, Superior 55-58%, Legendary 58-63%. Effects drive progression. |
 | **5. Gear within-tier balance** | Each effect at same tier vs each other, per matchup | 5,000 each | Average across matchups within ±1%. Per-matchup range +1% to +5%. |
 | **6. Gear cross-tier** | Legendary vs Superior at stat 80 | 10,000 | 52-56%. |
-| **7. Training > Gear** | Stat 80 no gear vs Stat 65 Legendary | 10,000 | Trained wins 65%+. |
+| **7. Training > Gear** | Stat 80 no gear vs Stat 65 Legendary | 10,000 | Trained wins 60%+. Gear stat bonus now +3 (was +10). |
 | **8. Condition** | Fresh vs Tired mirror + asymmetric | 10,000 each | Mirror: 53-57%. Condition shifts outcome by 3-5%. |
-| **9. Tempo divergence** | Track Tempo % by round across all matchups | Included in Sim 1 | R1: all within 5% Tempo. R3: 15-25% gap between high-END and low-END. |
+| **9. Tempo divergence** | Track Tempo % by round across all matchups | Included in Sim 1 | R1: all within 10% (Tempo floor 90%). R2: within 25% (floor 75%). R3: 15-25% gap, uncapped. |
 | **10. Desperation** | Fights where Desperation triggers vs doesn't | Included in Sim 1 | Desperation KO rate: 15-25%. |
 | **11. Ability ramp comparison** | 1.0/1.3/1.8 vs 1.0/1.5/2.0 | 10,000 each | Which produces tighter per-round targets. |
-| **12. Signatures** | Devastator, Iron Man, Mind Reader | 10,000 each | Devastator trigger ~42%. Iron Man 55-62%. Mind Reader <68%. |
+| **12. Signatures** | Devastator, Iron Man, Mind Reader (with diminishing returns above 80) | 10,000 each | Stat 95 vs stat 80 same archetype: 60-65%. Devastator trigger ~42%. Iron Man 55-62%. Mind Reader <68%. |
 | **13. Two-effect synergy** | Best-case effect pairs across all matchups | 5,000 each | No pair exceeds +7% in any single matchup. |
 
 ### Priority order
@@ -457,6 +491,30 @@ Sim 1 first. If the triangle doesn't hit 62-68%, nothing else matters. Then Sim 
 | Fixed effect per gear slot | Effect pools (3 per slot per tier) | Loot chase. Build diversity. Situational power. |
 | Stat-only gear balance | Situational power (±1% avg, +1-5% per matchup) | Per-matchup variance IS the betting signal. |
 | No decision scoring spec | Weighted 25/35/40 by round | R3 stakes. Comeback narrative. Calculable thresholds. |
+
+---
+
+## Monte Carlo Run 9 Results & Design Decisions (2026-02-23)
+
+### What passed
+- **Triangle: PASS.** P:64.4% / T:66.3% / C:67.0%. First time in 8 versions (V6-V13).
+- **Cross-tier gear (Sim 6): PASS.** Legendary vs Superior at 80: 52.6%.
+- **Condition (Sim 8): NEAR PASS.** Fresh/Tired: 57.1% (target ≤57%). Tunable.
+
+### Structural issues identified + decisions applied
+
+| Issue | Decision | Change |
+|-------|----------|--------|
+| T vs C round pattern inverts (R1: 63.9% Turtle, R3: 49.8%) | **Accept.** Comeback narrative is better for betting. | Updated round-by-round targets for T vs C. |
+| Counter 73% vs Hybrid, Pressure 45.5% vs Hybrid | **Fix.** All specialists must beat hybrid (learnable signal). | Relentless +1 flat on all hits. Base CP catch 15-20% for all fighters. |
+| Gear > Training (trained 80 loses to geared 65 at 40.2%) | **Fix.** Gear stat bonuses too generous. | Reduced to +1/+1/+2/+3 (was +2/+4/+7/+10). Gear stats don't qualify for ability tiers. |
+| R1 Tempo gap 23% (target <5%) | **Fix.** R1 should be feeling-out round. | Tempo warm-up: R1 floor 90%, R2 floor 75%, R3 uncapped. |
+| Stat 95 vs 80 = 86-87% | **Fix.** 86% kills betting markets. | Diminishing returns above 80: each point counts as 0.5 for combat calc. Target 60-65%. |
+
+### Tuning issues (address after structural re-sim)
+- Sim 4: Gear tier progression targets updated for effects-driven model.
+- Sim 8a: Fresh vs Tired 57.1%, reduce condition multiplier from 1.04/0.96 to 1.03/0.97.
+- Sim 10: KO rate 3.3% at HP 225. May need HP reduction, but cascade-check first.
 
 ---
 
