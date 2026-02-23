@@ -27,7 +27,7 @@ Before designing anything, the team needs to internalize what makes MFC structur
 | **Live trading** | Rare (most markets are slow-moving) | Limited (in-play betting) | **Core mechanic — price moves every second during a fight** |
 | **Information source** | News, polls, analysis | Player stats, injuries, weather | **Game mechanics you can learn. Proc rates you can calculate.** |
 | **Skill expression** | Political/financial knowledge | Sports knowledge | **System mastery — the game IS the edge** |
-| **Ownership** | None | Fantasy rosters (no real stakes) | **You own a fighter. Your fighter's performance is your insider knowledge.** |
+| **Ownership** | None | Fantasy rosters (no real stakes) | **You own a fighter. You control when it fights, who it fights, and how it trains.** |
 | **Content generation** | External (elections, earnings) | External (real sports) | **Internal — MFC generates its own content 24/7** |
 
 **The three structural advantages:**
@@ -36,7 +36,7 @@ Before designing anything, the team needs to internalize what makes MFC structur
 
 2. **Learnability.** Polymarket edges come from knowing politics. DraftKings edges come from knowing sports. MFC edges come from knowing the GAME SYSTEM — and the game system is documented, deterministic, and masterable. A new user who studies archetype matchups for 30 minutes has a real edge over someone who didn't. That's not true of politics or sports.
 
-3. **Ownership feedback loop.** No prediction market lets you own the thing you're betting on. In MFC, your fighter's training progress, gear drops, and condition are private information that directly affects fight outcomes. You're not just a bettor — you're an insider. And unlike real insider trading, this is the product.
+3. **Ownership feedback loop.** No prediction market lets you own the thing you're betting on. In MFC, you control when your fighter enters the ring, who they fight, what to train, and how to gear up. Stats, gear, and condition are public — every bettor can study them. But you're the one who made the decisions that shaped those numbers. The ownership edge isn't secret information — it's conviction born from agency. You know your fighter better than anyone because you built it.
 
 ---
 

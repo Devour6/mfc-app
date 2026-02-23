@@ -191,9 +191,54 @@ Auth column in the table above: "Human" = `requireHuman()`, "Required" = `requir
 
 **Fight status transitions:** SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED. All other transitions rejected.
 
-## Current Status
+## Current Product Status
 
-**Not yet built:** Multiplayer (mock data only), deployment/environment setup.
+**Last updated:** 2026-02-23
+
+### Where We Are
+- **Combat system:** V13 design complete (`docs/plans/2026-02-23-v13-combat-design.md`). Waiting on Monte Carlo validation (13 sims, triangle 62-68% is the critical path). V6-V12 are superseded.
+- **Betting framework:** Foundational framing doc complete (`docs/plans/2026-02-23-betting-experience-framework.md`). Mental model for evaluating every betting decision. Open questions remain (fee structure, session cadence, losing streaks).
+- **Training system:** Design complete (`docs/plans/2026-02-22-training-system-design.md`). Needs update for V13's 3-stat system (POW/END/TEC) after Monte Carlo validates.
+- **Codebase:** Existing code is a mockup/prototype. Most will be rewritten once V13 validates.
+- **Brand identity:** Design in progress (Levi). Kakashi approved with notes.
+
+### Short-Term Goals (This Week)
+1. **Kakashi:** Run V13 Monte Carlo (13 sims). Triangle validation is the critical path. Everything else gates on this.
+2. **Mina:** Social moments design exploration — moment taxonomy, shareable formats, clip-worthy fight events.
+3. **Levi:** Recovery visualization UI spec — make between-round HP recovery visible to all bettor skill levels.
+4. **Itachi:** Repricing window data spec (3-layer information architecture). Credit economy numbers. Betting framework open questions.
+5. **Jinwoo:** Blocked until V13 validates and implementation plan updates.
+
+### Key Design Docs
+| Doc | Path | Status |
+|-----|------|--------|
+| V13 Combat Design | `docs/plans/2026-02-23-v13-combat-design.md` | Awaiting Monte Carlo |
+| Betting Experience Framework | `docs/plans/2026-02-23-betting-experience-framework.md` | Active — open questions pending |
+| Training System | `docs/plans/2026-02-22-training-system-design.md` | Needs V13 stat update |
+| Combat V6 Base | `docs/plans/2026-02-20-combat-system-design.md` | Superseded by V13 |
+| V12 Calibration | `docs/plans/2026-02-23-v12-combat-calibration.md` | Superseded by V13 |
+
+### Locked Design Principles
+1. **Every mechanic must make the human betting experience more fun.** The prediction market is the product.
+2. **Replace reliable compounding with exciting variance.** Triggered passives over flat bonuses.
+3. **Ownership edge is agency, not information asymmetry.** All fighter data is public. The owner's advantage is strategic control.
+4. **Gear balance = situational power, not equal power.** Same tier effects average similar win rate across matchups (±1%), but vary per matchup (+1% to +5%).
+
+## Session Startup (Mandatory)
+
+**Every agent MUST follow this procedure before starting their first task each session.**
+
+1. **Read this file.** Pay attention to "Current Product Status" and "Short-Term Goals" above.
+2. **Read the discussion board.** Your team discussion board path is in your Pentagon MEMORY.md or CONTEXT.md. Read the last 200-300 lines — the tail has the latest decisions, designs, and task assignments.
+3. **Check your tasks.** Read your Pentagon `tasks.json`. Check: are you blocked? Is someone blocked on you? What's highest priority?
+4. **Report to the user.** Before doing ANY work, give a quick status update:
+   - Where you are (what you last worked on, what's pending)
+   - What you see on the board (key items that affect your work)
+   - Suggested next action (what you think you should do and why)
+   - Blocked / waiting on (name the person and task)
+5. **Wait for confirmation.** Do not start working until the user confirms or redirects.
+
+See `~/.claude/skills/team-sync/skill.md` for the full detailed procedure.
 
 ## Scripts
 
