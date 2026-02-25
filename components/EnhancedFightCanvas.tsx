@@ -439,7 +439,7 @@ export default function EnhancedFightCanvas({
     }
 
     drawVisualEffects(ctx)
-    drawMomentumIndicator(ctx, width, height)
+    drawSF2HUD(ctx, width, height)
   }
 
   const drawEnhancedRing = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -1432,48 +1432,16 @@ export default function EnhancedFightCanvas({
     color: string,
     fighterNumber: 1 | 2
   ) => {
-    const nameWidth = ctx.measureText(fighter.name).width + 20
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'
-    ctx.fillRect(x - nameWidth / 2, y - 25, nameWidth, 20)
-
+    // Minimal name tag only — HP/stamina bars are in the SF2-style top HUD
+    ctx.save()
+    ctx.font = '10px "Press Start 2P"'
+    const nameWidth = ctx.measureText(fighter.name).width + 12
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    ctx.fillRect(x - nameWidth / 2, y - 18, nameWidth, 16)
     ctx.fillStyle = color
-    ctx.font = '12px "Press Start 2P"'
     ctx.textAlign = 'center'
-    ctx.fillText(fighter.name, x, y - 10)
-
-    const barWidth = 100
-    const barHeight = 8
-    const barX = x - barWidth / 2
-    const hpY = y - 5
-
-    ctx.fillStyle = '#1a1a26'
-    ctx.fillRect(barX, hpY, barWidth, barHeight)
-
-    const segmentCount = 5
-    const hpPerSegment = FIGHTER_MAX_HP / segmentCount
-    for (let i = 0; i < segmentCount; i++) {
-      const segmentWidth = barWidth / segmentCount
-      const segmentX = barX + i * segmentWidth
-      const segmentHP = Math.max(0, fighterState.hp - i * hpPerSegment)
-
-      if (segmentHP > 0) {
-        const segmentFill = Math.min(1, segmentHP / hpPerSegment)
-        const segmentColor = segmentHP > hpPerSegment * 0.5 ? color : '#ff4444'
-        ctx.fillStyle = segmentColor
-        ctx.fillRect(segmentX + 1, hpY + 1, (segmentWidth - 2) * segmentFill, barHeight - 2)
-      }
-    }
-
-    ctx.strokeStyle = color
-    ctx.lineWidth = 1
-    ctx.strokeRect(barX, hpY, barWidth, barHeight)
-
-    const stamY = hpY + barHeight + 3
-    ctx.fillStyle = '#333'
-    ctx.fillRect(barX, stamY, barWidth, 4)
-    const stamWidth = (fighterState.stamina / 100) * barWidth
-    ctx.fillStyle = '#44aaff'
-    ctx.fillRect(barX, stamY, stamWidth, 4)
+    ctx.fillText(fighter.name, x, y - 6)
+    ctx.restore()
   }
 
   const drawVisualEffects = (ctx: CanvasRenderingContext2D) => {
@@ -1669,87 +1637,251 @@ export default function EnhancedFightCanvas({
     ctx.fillRect(-offsetX, -offsetY, ctx.canvas.width, ctx.canvas.height)
   }
 
-  const drawMomentumIndicator = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    const indicatorY = height - 80
-    const indicatorWidth = 250
-    const indicatorX = width / 2 - indicatorWidth / 2
+  // ── SF2-style HUD: wide HP bars across top, centered timer, round dots ────
+  const drawSF2HUD = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const f1 = fightState.fighter1
+    const f2 = fightState.fighter2
+    if (!f1 || !f2) return
 
-    const f1HP = fightState.fighter1?.hp || FIGHTER_MAX_HP
-    const f2HP = fightState.fighter2?.hp || FIGHTER_MAX_HP
-    const momentum = (f1HP - f2HP) / FIGHTER_MAX_HP
+    const hudY = 12          // top edge padding
+    const barHeight = 18     // HP bar height
+    const timerWidth = 56    // space reserved for timer in center
+    const hudPadding = 16    // left/right edge padding
+    const barGap = 8         // gap between bar and timer
 
-    const avgHP = (f1HP + f2HP) / 2
-    const fightIntensity = 1 - (avgHP / FIGHTER_MAX_HP)
-    const time = Date.now() * 0.001
+    // Total bar width for each fighter = (available width - timer - gaps - padding) / 2
+    const barWidth = (width - timerWidth - barGap * 2 - hudPadding * 2) / 2
 
-    const bgAlpha = 0.7 + Math.sin(time * 2) * fightIntensity * 0.2
-    ctx.fillStyle = `rgba(0,0,0,${bgAlpha})`
-    ctx.fillRect(indicatorX - 10, indicatorY - 25, indicatorWidth + 20, 50)
+    // ── Background panel ────────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'
+    ctx.fillRect(0, 0, width, hudY + barHeight + 42)
 
-    ctx.fillStyle = '#ffd700'
-    ctx.font = 'bold 10px "Inter"'
-    ctx.textAlign = 'center'
-    ctx.fillText('FIGHT INTENSITY', width / 2, indicatorY - 15)
+    // ── Fighter names ───────────────────────────────────────────────────
+    ctx.font = '10px "Press Start 2P"'
+    ctx.fillStyle = '#ff4444'
+    ctx.textAlign = 'left'
+    ctx.fillText(fighters[0]?.name?.toUpperCase() || 'P1', hudPadding, hudY + 10)
+    ctx.fillStyle = '#4488ff'
+    ctx.textAlign = 'right'
+    ctx.fillText(fighters[1]?.name?.toUpperCase() || 'P2', width - hudPadding, hudY + 10)
 
-    const intensityBarWidth = indicatorWidth * 0.8
-    const intensityX = width / 2 - intensityBarWidth / 2
-    ctx.fillStyle = 'rgba(30,30,40,0.8)'
-    ctx.fillRect(intensityX, indicatorY - 8, intensityBarWidth, 6)
+    // ── HP bars ─────────────────────────────────────────────────────────
+    // P1 bar: fills RIGHT to LEFT (depletes from left edge)
+    // P2 bar: fills LEFT to RIGHT (depletes from right edge)
+    const barY = hudY + 16
+    const p1BarX = hudPadding
+    const p2BarX = width - hudPadding - barWidth
 
-    const intensityFill = intensityBarWidth * fightIntensity
-    const pulseIntensity = 1 + Math.sin(time * 8) * fightIntensity * 0.3
+    // Background track
+    ctx.fillStyle = '#1a1a2e'
+    ctx.fillRect(p1BarX, barY, barWidth, barHeight)
+    ctx.fillRect(p2BarX, barY, barWidth, barHeight)
 
-    if (fightIntensity < 0.3) {
-      ctx.fillStyle = `rgba(100,200,100,${pulseIntensity})`
-    } else if (fightIntensity < 0.7) {
-      ctx.fillStyle = `rgba(255,200,0,${pulseIntensity})`
-    } else {
-      ctx.fillStyle = `rgba(255,50,50,${pulseIntensity})`
-      ctx.shadowBlur = 10
-      ctx.shadowColor = '#ff3333'
-    }
-    ctx.fillRect(intensityX, indicatorY - 8, intensityFill, 6)
-    ctx.shadowBlur = 0
-
-    const centerX = indicatorX + indicatorWidth / 2
-    const momentumWidth = Math.abs(momentum) * (indicatorWidth / 2)
-
-    if (momentum > 0) {
-      ctx.fillStyle = '#44ff44'
-      ctx.fillRect(centerX, indicatorY + 5, momentumWidth, 10)
-    } else {
-      ctx.fillStyle = '#ff4444'
-      ctx.fillRect(centerX - momentumWidth, indicatorY + 5, momentumWidth, 10)
+    // HP fill — color transitions: green → yellow → orange → red
+    const hpColor = (ratio: number): string => {
+      if (ratio > 0.5) return '#22cc44'
+      if (ratio > 0.25) return '#ddaa00'
+      if (ratio > 0.1) return '#ff6600'
+      return '#cc2222'
     }
 
-    ctx.strokeStyle = `rgba(255,255,255,${0.8 + Math.sin(time * 4) * 0.2})`
+    // P1: bar fills from right edge toward left (depletes from left)
+    const f1Ratio = Math.max(0, f1.hp / FIGHTER_MAX_HP)
+    const f1FillWidth = barWidth * f1Ratio
+    const f1Color = hpColor(f1Ratio)
+    ctx.fillStyle = f1Color
+    ctx.fillRect(p1BarX + barWidth - f1FillWidth, barY + 1, f1FillWidth, barHeight - 2)
+    // Inner highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'
+    ctx.fillRect(p1BarX + barWidth - f1FillWidth, barY + 1, f1FillWidth, Math.floor(barHeight / 3))
+
+    // P2: bar fills from left edge toward right (depletes from right)
+    const f2Ratio = Math.max(0, f2.hp / FIGHTER_MAX_HP)
+    const f2FillWidth = barWidth * f2Ratio
+    const f2Color = hpColor(f2Ratio)
+    ctx.fillStyle = f2Color
+    ctx.fillRect(p2BarX, barY + 1, f2FillWidth, barHeight - 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'
+    ctx.fillRect(p2BarX, barY + 1, f2FillWidth, Math.floor(barHeight / 3))
+
+    // HP segment lines (5 segments per bar like SF2)
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'
+    ctx.lineWidth = 1
+    for (let i = 1; i < 5; i++) {
+      const segX1 = p1BarX + (barWidth / 5) * i
+      ctx.beginPath(); ctx.moveTo(segX1, barY); ctx.lineTo(segX1, barY + barHeight); ctx.stroke()
+      const segX2 = p2BarX + (barWidth / 5) * i
+      ctx.beginPath(); ctx.moveTo(segX2, barY); ctx.lineTo(segX2, barY + barHeight); ctx.stroke()
+    }
+
+    // Bar borders
+    ctx.strokeStyle = '#888'
+    ctx.lineWidth = 2
+    ctx.strokeRect(p1BarX, barY, barWidth, barHeight)
+    ctx.strokeRect(p2BarX, barY, barWidth, barHeight)
+
+    // ── Timer ───────────────────────────────────────────────────────────
+    const timerX = width / 2
+    const timerY = barY + barHeight / 2
+
+    // Timer background circle
+    ctx.fillStyle = '#111'
+    ctx.strokeStyle = '#666'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.moveTo(centerX, indicatorY)
-    ctx.lineTo(centerX, indicatorY + 15)
+    ctx.arc(timerX, timerY, 22, 0, Math.PI * 2)
+    ctx.fill()
     ctx.stroke()
 
-    const labelScale = Math.round((1 + fightIntensity * 0.1) * 2) / 2
-    ctx.save()
-    ctx.scale(labelScale, labelScale)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 10px "Inter"'
-    ctx.textAlign = 'left'
-    ctx.fillText(fighters[0]?.name || 'Fighter 1', (indicatorX - 5) / labelScale, (indicatorY + 35) / labelScale)
-    ctx.textAlign = 'right'
-    ctx.fillText(fighters[1]?.name || 'Fighter 2', (indicatorX + indicatorWidth + 5) / labelScale, (indicatorY + 35) / labelScale)
-    ctx.restore()
+    // Timer text — bold countdown
+    const clockVal = Math.max(0, fightState.clock ?? 0)
+    ctx.font = 'bold 16px "Press Start 2P"'
+    ctx.fillStyle = clockVal <= 10 ? '#ff4444' : '#ffffff'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(String(clockVal), timerX, timerY)
+    ctx.textBaseline = 'alphabetic'
 
-    if (fightIntensity > 0.8) {
-      ctx.fillStyle = `rgba(255,255,0,${Math.sin(time * 6) * 0.5 + 0.5})`
-      ctx.font = 'bold 12px "Press Start 2P"'
+    // ── Round indicator + dots ──────────────────────────────────────────
+    const roundY = barY + barHeight + 10
+    ctx.font = '8px "Press Start 2P"'
+    ctx.fillStyle = '#aaa'
+    ctx.textAlign = 'center'
+
+    // Round label
+    ctx.fillText(`ROUND ${fightState.round}`, timerX, roundY + 8)
+
+    // Round win dots — P1 left of timer, P2 right of timer
+    // Track rounds won from roundScores
+    const maxRounds = fightState.maxRounds || 3
+    const roundsToWin = Math.ceil(maxRounds / 2) // best of 3 → need 2
+    const scores = fightState.roundScores || []
+
+    let p1Wins = 0
+    let p2Wins = 0
+    for (const s of scores) {
+      if (s.winner === 1) p1Wins++
+      else if (s.winner === 2) p2Wins++
+    }
+
+    const dotRadius = 4
+    const dotSpacing = 14
+    const dotY = roundY + 20
+
+    // P1 dots (left side of center)
+    for (let i = 0; i < roundsToWin; i++) {
+      const dx = timerX - 30 - i * dotSpacing
+      ctx.beginPath()
+      ctx.arc(dx, dotY, dotRadius, 0, Math.PI * 2)
+      if (i < p1Wins) {
+        ctx.fillStyle = '#ff4444'
+        ctx.fill()
+      } else {
+        ctx.strokeStyle = '#555'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+      }
+    }
+
+    // P2 dots (right side of center)
+    for (let i = 0; i < roundsToWin; i++) {
+      const dx = timerX + 30 + i * dotSpacing
+      ctx.beginPath()
+      ctx.arc(dx, dotY, dotRadius, 0, Math.PI * 2)
+      if (i < p2Wins) {
+        ctx.fillStyle = '#4488ff'
+        ctx.fill()
+      } else {
+        ctx.strokeStyle = '#555'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+      }
+    }
+
+    // ── Stamina bars (thin, below HP) ───────────────────────────────────
+    const stamY = barY + barHeight + 3
+    const stamHeight = 4
+
+    // P1 stamina (right-aligned like P1 HP)
+    ctx.fillStyle = '#1a1a2e'
+    ctx.fillRect(p1BarX, stamY, barWidth, stamHeight)
+    const f1StamFill = (f1.stamina / 100) * barWidth
+    ctx.fillStyle = '#3388cc'
+    ctx.fillRect(p1BarX + barWidth - f1StamFill, stamY, f1StamFill, stamHeight)
+
+    // P2 stamina (left-aligned like P2 HP)
+    ctx.fillStyle = '#1a1a2e'
+    ctx.fillRect(p2BarX, stamY, barWidth, stamHeight)
+    const f2StamFill = (f2.stamina / 100) * barWidth
+    ctx.fillStyle = '#3388cc'
+    ctx.fillRect(p2BarX, stamY, f2StamFill, stamHeight)
+
+    // ── Phase overlays (center screen) ──────────────────────────────────
+    const phase = fightState.phase
+    const centerY = height * 0.45
+
+    if (phase === 'ko') {
+      // SF2-style "K.O." — big red text with drop shadow
+      ctx.save()
+      ctx.font = 'bold 48px "Press Start 2P"'
       ctx.textAlign = 'center'
-      ctx.fillText('CROWD ON THEIR FEET!', width / 2, indicatorY + 55)
-    } else if (fightIntensity > 0.5) {
-      ctx.fillStyle = `rgba(255,200,0,${Math.sin(time * 4) * 0.3 + 0.7})`
-      ctx.font = '10px "Inter"'
+      ctx.fillStyle = '#000'
+      ctx.fillText('K.O.', width / 2 + 3, centerY + 3)
+      ctx.fillStyle = '#ff2222'
+      ctx.shadowBlur = 20
+      ctx.shadowColor = '#ff0000'
+      ctx.fillText('K.O.', width / 2, centerY)
+      ctx.shadowBlur = 0
+      ctx.restore()
+    } else if (phase === 'decision') {
+      ctx.save()
+      ctx.font = 'bold 28px "Press Start 2P"'
       ctx.textAlign = 'center'
-      ctx.fillText('The tension is building...', width / 2, indicatorY + 50)
+      ctx.fillStyle = '#000'
+      ctx.fillText('DECISION', width / 2 + 2, centerY + 2)
+      ctx.fillStyle = '#ffd700'
+      ctx.shadowBlur = 15
+      ctx.shadowColor = '#ffaa00'
+      ctx.fillText('DECISION', width / 2, centerY)
+      ctx.shadowBlur = 0
+      ctx.restore()
+    } else if (phase === 'repricing') {
+      // Between-round repricing window — show countdown and recovery info
+      const repTime = fightState.repricingTimeLeft ?? 0
+      ctx.save()
+
+      // Darken the arena slightly during repricing
+      ctx.fillStyle = 'rgba(0,0,20,0.3)'
+      ctx.fillRect(0, hudY + barHeight + 42, width, height)
+
+      // "REPRICING" banner
+      ctx.font = 'bold 20px "Press Start 2P"'
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#000'
+      ctx.fillText('REPRICING', width / 2 + 2, centerY - 18)
+      ctx.fillStyle = '#00ddff'
+      ctx.shadowBlur = 12
+      ctx.shadowColor = '#00aaff'
+      ctx.fillText('REPRICING', width / 2, centerY - 20)
+      ctx.shadowBlur = 0
+
+      // Countdown
+      ctx.font = 'bold 32px "Press Start 2P"'
+      ctx.fillStyle = repTime <= 3 ? '#ff4444' : '#ffffff'
+      ctx.fillText(String(repTime), width / 2, centerY + 20)
+
+      // Recovery info if available
+      const rec = fightState.lastRecovery
+      if (rec) {
+        ctx.font = '10px "Press Start 2P"'
+        ctx.fillStyle = '#22cc44'
+        ctx.textAlign = 'left'
+        ctx.fillText(`+${rec.fighter1.total} HP`, hudPadding + 10, centerY + 50)
+        ctx.textAlign = 'right'
+        ctx.fillText(`+${rec.fighter2.total} HP`, width - hudPadding - 10, centerY + 50)
+      }
+
+      ctx.restore()
     }
   }
 
