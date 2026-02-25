@@ -75,11 +75,43 @@ const KICK_PARAMS: Record<string, { maxExtension: number; bodyLean: number; legA
   roundhouse: { maxExtension: 75, bodyLean: -24, legAngle: 95, armRaise: 16 },
 }
 
-// ── Fighter visual scale + skin tones ───────────────────────────────────────
+// ── Fighter visual scale + skin tone palettes ──────────────────────────────
 const FIGHTER_SCALE = 1.8
-const SKIN = '#e8b88a'
-const SKIN_S = '#c89870' // skin shadow
-const SKIN_H = '#fad0a8' // skin highlight
+
+// Per-fighter skin tones — 8 distinct palettes for visual differentiation
+// Each: [base, shadow, highlight]
+interface SkinPalette { base: string; shadow: string; highlight: string }
+
+const SKIN_PALETTES: SkinPalette[] = [
+  { base: '#e8b88a', shadow: '#c89870', highlight: '#fad0a8' }, // light warm
+  { base: '#c68642', shadow: '#a06830', highlight: '#dca060' }, // medium warm
+  { base: '#8d5524', shadow: '#6d3c16', highlight: '#a87040' }, // brown
+  { base: '#6b4226', shadow: '#4e2e16', highlight: '#8a5c3a' }, // dark brown
+  { base: '#e0ac69', shadow: '#bf8a4a', highlight: '#f0c888' }, // golden
+  { base: '#f1c27d', shadow: '#d4a65c', highlight: '#ffe0a0' }, // pale warm
+  { base: '#d4956a', shadow: '#b07a52', highlight: '#e8b490' }, // bronze
+  { base: '#503020', shadow: '#382010', highlight: '#6a4838' }, // deep
+]
+
+// Hair style variants — different head grid patterns
+const HAIR_STYLES = ['full', 'mohawk', 'short', 'bald', 'shaggy'] as const
+type HairStyle = typeof HAIR_STYLES[number]
+
+// Derive a fighter's visual identity from their ID (deterministic hash)
+const hashString = (str: string): number => {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+const getFighterPalette = (fighterId: string): SkinPalette =>
+  SKIN_PALETTES[hashString(fighterId) % SKIN_PALETTES.length]
+
+const getFighterHairStyle = (fighterId: string): HairStyle =>
+  HAIR_STYLES[(hashString(fighterId + '_hair')) % HAIR_STYLES.length]
 
 export default function EnhancedFightCanvas({
   fightState,
@@ -686,7 +718,9 @@ export default function EnhancedFightCanvas({
 
     // SF2 white flash: when in hit-stop, flicker the fighter color to white
     const drawColor = isHitFlash && Math.sin(Date.now() * 0.02) > 0 ? '#ffffff' : color
-    drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats)
+    const palette = getFighterPalette(fighterData.id)
+    const hairStyle = getFighterHairStyle(fighterData.id)
+    drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats, palette, hairStyle)
 
     // Hit spark — drawn inside scale transform so it matches fighter size
     if (isHitFlash) {
@@ -737,8 +771,12 @@ export default function EnhancedFightCanvas({
     fighterState: typeof fightState.fighter1,
     fighterNumber: 1 | 2,
     animProgress: number,
-    fighterStats?: Fighter['stats']
+    fighterStats?: Fighter['stats'],
+    palette?: SkinPalette,
+    hairStyle?: HairStyle
   ) => {
+    const skin = palette || SKIN_PALETTES[0]
+    const hair = hairStyle || 'full'
     const facing = fighterState.position.facing
     const state = fighterState.animation.state
     const attackType = fighterState.animation.attackType || 'jab'
@@ -971,7 +1009,7 @@ export default function EnhancedFightCanvas({
       }
 
       case 'down': {
-        drawKnockedDownHumanoid(ctx, x, y, color, 0)
+        drawKnockedDownHumanoid(ctx, x, y, color, 0, skin)
         ctx.restore()
         return
       }
@@ -997,26 +1035,26 @@ export default function EnhancedFightCanvas({
 
     // Back leg — wider fighting stance
     const backLegX = facing === 1 ? x - 18 : x + 18
-    drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined, facing, fighterState.animation.walkDirection, strideScale)
+    drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined, facing, fighterState.animation.walkDirection, strideScale, skin)
 
     // Back arm — during punches, the trailing arm retracts to chin (counterbalance)
     const backArmX = facing === 1 ? x - 26 : x + 26
     const backArmIsGuard = isGuardArms || state === 'punching' // back arm guards during punches
-    drawArm(ctx, backArmX, armY, color, facing, false, 0, false, undefined, backArmIsGuard)
+    drawArm(ctx, backArmX, armY, color, facing, false, 0, false, undefined, backArmIsGuard, skin)
 
     // Torso
-    drawTorso(ctx, x, torsoY, color, state)
+    drawTorso(ctx, x, torsoY, color, state, skin)
 
     // Head
-    drawHead(ctx, x, headY, color, facing, state, fighterState.hp)
+    drawHead(ctx, x, headY, color, facing, state, fighterState.hp, skin, hair)
 
     // Front arm (punching arm)
     const frontArmX = facing === 1 ? x + 26 : x - 26
-    drawArm(ctx, frontArmX, armY, color, facing, true, armExtension, state === 'punching', frontArmAngle, isGuardArms)
+    drawArm(ctx, frontArmX, armY, color, facing, true, armExtension, state === 'punching', frontArmAngle, isGuardArms, skin)
 
     // Front leg (kicking leg) — wider fighting stance
     const frontLegX = facing === 1 ? x + 18 : x - 18
-    drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase, facing, fighterState.animation.walkDirection, strideScale)
+    drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase, facing, fighterState.animation.walkDirection, strideScale, skin)
 
     ctx.restore()
   }
@@ -1059,25 +1097,64 @@ export default function EnhancedFightCanvas({
     return `rgb(${r},${g},${b})`
   }
 
-  const drawHead = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, state: string, hp: number) => {
+  const drawHead = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, facing: number, state: string, hp: number, palette?: SkinPalette, hairStyle?: HairStyle) => {
     const O = '#111'
     const C = color       // hair/headband color
     const Cs = shade(color)
     const Ch = highlight(color)
-    const SK = SKIN       // skin tone
-    const SS = SKIN_S     // skin shadow
-    const SH = SKIN_H     // skin highlight
+    const p = palette || SKIN_PALETTES[0]
+    const SK = p.base
+    const SS = p.shadow
+    const SH = p.highlight
     const W = '#fff'
+    const hs = hairStyle || 'full'
 
     // Head: 7x10 grid — hair, headband, face, chin, neck
     // Slightly narrower than old 8-wide for better head:shoulder ratio (7:12 = 1.71x)
     const ox = x - P * 3 - P / 2
     const oy = y - P * 5
 
+    // Hair style variants — different top 3 rows
+    let hairRows: string[][]
+    switch (hs) {
+      case 'mohawk':
+        hairRows = [
+          ['', '', '',  C, '', '', ''],        // mohawk spike
+          ['', '', '',  C, '', '', ''],        // mohawk
+          ['',  O, SK,  C, SK, SK,  O],        // sides shaved
+        ]
+        break
+      case 'short':
+        hairRows = [
+          ['', '',  O,  O,  O, '', ''],        // close-cropped top
+          ['',  O,  C,  C,  C,  O, ''],        // thin layer
+          [ O,  C,  C,  C,  C,  C,  O],        // close-cropped
+        ]
+        break
+      case 'bald':
+        hairRows = [
+          ['', '',  O,  O,  O, '', ''],        // skull curve
+          ['',  O, SH, SH, SH,  O, ''],       // scalp
+          [ O, SH, SH, SH, SH, SH,  O],      // scalp
+        ]
+        break
+      case 'shaggy':
+        hairRows = [
+          ['',  C,  C,  C,  C,  C, ''],        // wider messy top
+          [ C,  C,  C,  C,  C,  C,  C],        // overhanging
+          [ C,  C,  C,  C,  C,  C,  C],        // full coverage
+        ]
+        break
+      default: // 'full'
+        hairRows = [
+          ['', '',  O,  O,  O, '', ''],        // hair top
+          ['',  O,  C,  C,  C,  O, ''],        // hair
+          [ O,  C,  C,  C,  C,  C,  O],        // hair full width
+        ]
+    }
+
     const head: string[][] = [
-      ['', '',  O,  O,  O, '', ''],        // hair top
-      ['',  O,  C,  C,  C,  O, ''],        // hair
-      [ O,  C,  C,  C,  C,  C,  O],        // hair full width
+      ...hairRows,
       [ O, Ch,  C,  C,  C, Cs,  O],        // headband (fighter color)
       [ O, SH, SK, SK, SK, SS,  O],        // forehead
       [ O, SK, SK, SK, SK, SK,  O],        // eyes line
@@ -1115,11 +1192,12 @@ export default function EnhancedFightCanvas({
     }
   }
 
-  const drawTorso = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, state: string) => {
+  const drawTorso = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, state: string, palette?: SkinPalette) => {
     const O = '#111'
-    const SK = SKIN
-    const SS = SKIN_S
-    const SH = SKIN_H
+    const p = palette || SKIN_PALETTES[0]
+    const SK = p.base
+    const SS = p.shadow
+    const SH = p.highlight
     const C = color                           // shorts color
     const Cs = shade(color)
     const Ch = highlight(color)
@@ -1158,11 +1236,13 @@ export default function EnhancedFightCanvas({
     extension: number,
     isPunching: boolean,
     armAngle?: number,
-    isGuard?: boolean
+    isGuard?: boolean,
+    palette?: SkinPalette
   ) => {
-    const SK = SKIN
-    const SS = SKIN_S
-    const SH = SKIN_H
+    const p = palette || SKIN_PALETTES[0]
+    const SK = p.base
+    const SS = p.shadow
+    const SH = p.highlight
     const C = color            // fighter color for wraps
     const Cs = shade(color)
     const G = isPunching && isFront ? '#ffdd00' : color
@@ -1235,11 +1315,13 @@ export default function EnhancedFightCanvas({
     walkPhase?: number,
     facing?: number,
     walkDirection?: 'forward' | 'back',
-    strideScale?: number
+    strideScale?: number,
+    palette?: SkinPalette
   ) => {
-    const SK = SKIN
-    const SS = SKIN_S
-    const SH = SKIN_H
+    const p = palette || SKIN_PALETTES[0]
+    const SK = p.base
+    const SS = p.shadow
+    const SH = p.highlight
     const C = color          // shorts/shin guard color
     const Cs = shade(color)
 
@@ -1324,10 +1406,11 @@ export default function EnhancedFightCanvas({
     ctx.restore()
   }
 
-  const drawKnockedDownHumanoid = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, _animationFrame: number) => {
-    const SK = SKIN
-    const SS = SKIN_S
-    const SH = SKIN_H
+  const drawKnockedDownHumanoid = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, _animationFrame: number, palette?: SkinPalette) => {
+    const p = palette || SKIN_PALETTES[0]
+    const SK = p.base
+    const SS = p.shadow
+    const SH = p.highlight
     const C = color
     const Cs = shade(color)
     const G = '#ffdd00' // glove
