@@ -240,14 +240,19 @@ A Specialist at 80/57/58 gets ONE Tier 2 technique that defines the archetype's 
 
 The Tier 2 technique should be worth ~15% win rate alone. A Specialist without gear should beat an identically geared Hybrid 58-65% of the time.
 
-**Monte Carlo target:** Specialist 80 beats Hybrid 65 at 58-65% in every matchup.
+**Monte Carlo target:** Specialist 80 beats Hybrid 65 at 55-65% in every matchup.
+
+**Known asymmetry (accepted):** Turtle vs Hybrid lands at ~56% because Iron Guard's CP-catch mechanic has no target against Hybrid (no CPs to catch). This creates a readable betting signal: "Turtle is the weakest specialist against Hybrid." The variance across specialists (P:58%, T:56%, C:64%) IS the signal — Expert bettors learn and trade on it.
 
 ### Tier 3 — Signature Moves (stat 95)
 
-Rare mastery. Alters fight dynamics. Design unchanged from V12:
-- **Devastator (POW 95):** Exploding dice on power attacks (reroll max, add). ~42% trigger rate target.
-- **Iron Man (END 95):** Diminishing damage reduction [1.0, 0.91, 0.82] per round. 55-62% target. 7 straight passes.
-- **Mind Reader (TEC 95):** Enhanced CP proc rate (+15% base) + enhanced reaction rate. <68% target.
+Rare mastery. Alters fight dynamics. **Each tier 3 ability has a power AND a cost.** The trade-off creates betting signals: opponents can exploit the cost, and Expert bettors calculate whether the power outweighs the cost per matchup.
+
+- **Devastator (POW 95):** Exploding dice on power attacks (reroll max, add). ~42% trigger rate target. **Cost:** Power attacks that miss drain -2 extra stamina (overcommitting to power).
+- **Iron Man (END 95):** Diminishing damage reduction [1.0, 0.91, 0.82] per round. **Cost:** -5% dodge/block reaction rate (too tough to be agile — relies on absorbing hits, not avoiding them).
+- **Mind Reader (TEC 95):** Enhanced CP proc rate (+15% base) + enhanced reaction rate. **Cost:** -1 base damage (reads over power — precision fighter, not a brawler).
+
+**Monte Carlo target:** Stat 95 vs stat 80 same archetype = 58-65%. Costs ensure tier 3 is powerful but not dominant.
 
 ---
 
@@ -400,18 +405,20 @@ Why weighted:
 
 ## Desperation
 
-Triggers when HP drops below 30%. Visible state change (fighter glows, stance shifts, commentary calls it).
+Triggers when HP drops below **35%** (raised from 30% to trigger more often). Visible state change (fighter glows, stance shifts, commentary calls it).
 
 | Effect | Value |
 |--------|-------|
-| Damage | +15% |
+| Damage | **+20%** (raised from +15%) |
 | Accuracy | -10% |
 | Crit chance | +5% |
 | Tempo floor | Can't drop below 70% of base (adrenaline) |
 
-**Betting impact:** Increases variance. Desperate fighter might land a massive crit KO or whiff everything. Market should widen.
+**HP: 200** (lowered from 225). More fights reach Desperation territory. R3 becomes more decisive. Re-verify triangle, decision scoring, and round-by-round patterns hold at 200 — HP change cascades.
 
-**Monte Carlo target:** Desperation KO rate 15-25% (dramatic but not reliable).
+**Betting impact:** Increases variance. Desperate fighter might land a massive crit KO or whiff everything. Market should widen. The 35% threshold + 200 HP means Desperation triggers in more fights, creating more "anything can happen" moments for bettors.
+
+**Monte Carlo target:** Desperation KO rate 15-25% (dramatic but not reliable). Re-verify triangle holds at HP 200.
 
 ---
 
@@ -514,7 +521,28 @@ Sim 1 first. If the triangle doesn't hit 62-68%, nothing else matters. Then Sim 
 ### Tuning issues (address after structural re-sim)
 - Sim 4: Gear tier progression targets updated for effects-driven model.
 - Sim 8a: Fresh vs Tired 57.1%, reduce condition multiplier from 1.04/0.96 to 1.03/0.97.
-- Sim 10: KO rate 3.3% at HP 225. May need HP reduction, but cascade-check first.
+- Sim 10: KO rate 5.4% at HP 225. Addressed in Runs 10-20 decisions (see below).
+
+---
+
+## Monte Carlo Runs 10-20 Results & Design Decisions (2026-02-23)
+
+### What improved
+- **Triangle: STABLE.** P:64.0% / T:61.7% / C:63.3% (Run 20). T vs C true mean ~62%, right at floor.
+- **P vs Hybrid: PASS.** 58.4% (borderline).
+- **C vs Hybrid:** Improved from 74.2% → 65.6% via base catch (27%). Close to target.
+- **Relentless implementation:** Must be FLOOR not additive. Additive +1 caused P vs T = 83% (Run 10). Floor means +1 only activates when bypass < 1 (vs low-endMod opponents).
+- **CP rate sweet spot:** 21.5%. Window is narrow — ±1.5% breaks something.
+- **Base CP catch:** Perfectly clean lever. Zero triangle impact (Pressure gets 0%, Iron Guard overrides for Turtle).
+
+### Remaining issues + decisions applied
+
+| Issue | Decision | Change |
+|-------|----------|--------|
+| T vs Hybrid at 56% (target 58-65%) | **Accept.** Turtle's CP-catch is dead weight vs Hybrid. 56% creates readable asymmetry (P:58%, T:56%, C:64%). | Lowered Sim 3 target floor to 55% for T vs Hybrid. |
+| C vs Hybrid at 65.6% (target 58-65%) | **Fix.** Bump base catch from 27% to 30%. | Clean lever, zero triangle impact. |
+| Signatures at 74-85% (target 58-65%) | **Fix.** Add costs to tier 3 abilities. | Devastator: -2 stam on miss. Iron Man: -5% reaction. Mind Reader: -1 base dmg. |
+| Desperation KO rate 5.4% (target 15-25%) | **Fix.** Expand + strengthen + lower HP. | Threshold 35% (was 30%), damage +20% (was +15%), HP 200 (was 225). Cascade-check required. |
 
 ---
 
