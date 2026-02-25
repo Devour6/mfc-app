@@ -63,16 +63,16 @@ const ATTACK_PHASES: Record<string, { startup: number; active: number; hold: num
 // CRITICAL: armAngle is rotation from VERTICAL (0°=down, 90°=horizontal, 135°=upward).
 // A cross punch must be ~88° so the fist goes TOWARD the opponent, not toward the floor.
 const PUNCH_PARAMS: Record<string, { maxExtension: number; bodyLean: number; armAngle: number; headDip: number; windUpLean: number }> = {
-  jab:      { maxExtension: 40, bodyLean: 10,  armAngle: 82, headDip: 2, windUpLean: -6 },
-  cross:    { maxExtension: 55, bodyLean: 22, armAngle: 88, headDip: 5, windUpLean: -10 },
-  hook:     { maxExtension: 30, bodyLean: 26, armAngle: 75, headDip: 3, windUpLean: -12 },
-  uppercut: { maxExtension: 35, bodyLean: -5, armAngle: 135, headDip: -8, windUpLean: -4 },
+  jab:      { maxExtension: 48, bodyLean: 12,  armAngle: 82, headDip: 3, windUpLean: -8 },
+  cross:    { maxExtension: 65, bodyLean: 26, armAngle: 88, headDip: 6, windUpLean: -14 },
+  hook:     { maxExtension: 38, bodyLean: 30, armAngle: 75, headDip: 4, windUpLean: -16 },
+  uppercut: { maxExtension: 42, bodyLean: -6, armAngle: 135, headDip: -10, windUpLean: -5 },
 }
 
 // legAngle: 0°=down, 80°=nearly horizontal forward, 95°=above horizontal
 const KICK_PARAMS: Record<string, { maxExtension: number; bodyLean: number; legAngle: number; armRaise: number }> = {
-  kick:       { maxExtension: 50, bodyLean: -14, legAngle: 80, armRaise: 10 },
-  roundhouse: { maxExtension: 65, bodyLean: -20, legAngle: 95, armRaise: 14 },
+  kick:       { maxExtension: 58, bodyLean: -16, legAngle: 80, armRaise: 12 },
+  roundhouse: { maxExtension: 75, bodyLean: -24, legAngle: 95, armRaise: 16 },
 }
 
 // ── Fighter visual scale + skin tones ───────────────────────────────────────
@@ -635,12 +635,12 @@ export default function EnhancedFightCanvas({
 
     ctx.globalAlpha *= Math.max(0.7, fighterState.stamina / 100)
 
-    // Shadow — scaled to match fighter size
+    // Shadow — wider to match beefier fighter silhouette
     ctx.fillStyle = 'rgba(0,0,0,0.4)'
     ctx.save()
     ctx.scale(1, 0.2)
     ctx.beginPath()
-    ctx.arc(x, (floorY + 10) / 0.2, 25 * FIGHTER_SCALE, 0, Math.PI * 2)
+    ctx.arc(x, (floorY + 10) / 0.2, 30 * FIGHTER_SCALE, 0, Math.PI * 2)
     ctx.fill()
     ctx.restore()
 
@@ -664,7 +664,7 @@ export default function EnhancedFightCanvas({
       const atkType = fighterState.animation.attackType || 'jab'
       const phase = getAttackPhase(animProgress, atkType)
       const phaseT = getPhaseProgress(animProgress, atkType, phase)
-      const lungeDistance = fighterState.animation.state === 'kicking' ? 32 : 26
+      const lungeDistance = fighterState.animation.state === 'kicking' ? 38 : 30
       if (phase === 'startup') {
         lungeOffset = fighterState.position.facing * lerp(0, -4, easeInQuad(phaseT))
       } else if (phase === 'active') {
@@ -766,24 +766,27 @@ export default function EnhancedFightCanvas({
 
     switch (state) {
       case 'idle': {
-        // SF2-style fighting stance: asymmetric timing (slow up, fast down)
-        // Fists move 3x more than torso. Head barely moves. Creates liveliness.
-        // Stats: speed→cycle rate, aggression→bounce intensity+lean
+        // SF2-style fighting crouch: lower center of gravity, wider base
+        // Asymmetric timing (slow rise, fast fall = gravity feel)
+        // Fists move 3x more than torso. Head barely moves (stability anchor).
+        // Stats: speed→cycle rate, aggression→bounce intensity+lean+crouch depth
         const time = Date.now() * 0.001
         const cycleSpeed = 3.5 * spdMod   // fast fighters have quicker idle rhythm
         const phase = ((time * cycleSpeed + fighterNumber * Math.PI) % (Math.PI * 2)) / (Math.PI * 2)
-        const bounceAmp = 2.5 * agrMod    // aggressive fighters bounce more
+        const bounceAmp = 3.0 * agrMod    // aggressive fighters bounce more
         let bounce: number
         if (phase < 0.55) {
           bounce = Math.sin((phase / 0.55) * Math.PI * 0.5) * bounceAmp
         } else {
           bounce = Math.cos(((phase - 0.55) / 0.45) * Math.PI * 0.5) * bounceAmp
         }
-        headY += bounce * 0.3       // head barely moves — stability anchor
-        torsoY += bounce * 0.7
-        armY += bounce * 2.0         // fists move 3x more than torso
-        legY += bounce * 0.4
-        bodyLean = facing * 3 * agrMod // aggressive fighters lean in more
+        // Fighting crouch: lower the whole stance + add knee bend feel
+        const crouchDepth = 4 * agrMod    // aggressive fighters crouch deeper
+        headY += bounce * 0.3 + crouchDepth * 0.3   // head barely moves
+        torsoY += bounce * 0.7 + crouchDepth * 0.5  // torso drops into crouch
+        armY += bounce * 2.2 + crouchDepth * 0.3    // fists bounce most
+        legY += bounce * 0.5 - crouchDepth * 0.2    // legs absorb the crouch (knees bend)
+        bodyLean = facing * 5 * agrMod   // stronger forward lean — fighting stance
         isGuardArms = true
         break
       }
@@ -988,14 +991,16 @@ export default function EnhancedFightCanvas({
     const strideScale = strMod
 
     // Draw body parts back-to-front
-    // Arm/leg attachment OUTSIDE the torso edge (torso is 10 blocks = 40px, ±20 from center)
+    // Torso is now 12 blocks = 48px wide, ±24 from center
+    // Arm attachment points outside torso edge for clear silhouette separation
+    // Wider leg stance for SF2 fighting game look (±18px from center)
 
-    // Back leg — wider stance for fighting game look
-    const backLegX = facing === 1 ? x - 14 : x + 14
+    // Back leg — wider fighting stance
+    const backLegX = facing === 1 ? x - 18 : x + 18
     drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined, facing, fighterState.animation.walkDirection, strideScale)
 
     // Back arm — during punches, the trailing arm retracts to chin (counterbalance)
-    const backArmX = facing === 1 ? x - 22 : x + 22
+    const backArmX = facing === 1 ? x - 26 : x + 26
     const backArmIsGuard = isGuardArms || state === 'punching' // back arm guards during punches
     drawArm(ctx, backArmX, armY, color, facing, false, 0, false, undefined, backArmIsGuard)
 
@@ -1006,11 +1011,11 @@ export default function EnhancedFightCanvas({
     drawHead(ctx, x, headY, color, facing, state, fighterState.hp)
 
     // Front arm (punching arm)
-    const frontArmX = facing === 1 ? x + 22 : x - 22
+    const frontArmX = facing === 1 ? x + 26 : x - 26
     drawArm(ctx, frontArmX, armY, color, facing, true, armExtension, state === 'punching', frontArmAngle, isGuardArms)
 
-    // Front leg (kicking leg) — wider stance
-    const frontLegX = facing === 1 ? x + 14 : x - 14
+    // Front leg (kicking leg) — wider fighting stance
+    const frontLegX = facing === 1 ? x + 18 : x - 18
     drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase, facing, fighterState.animation.walkDirection, strideScale)
 
     ctx.restore()
@@ -1058,50 +1063,55 @@ export default function EnhancedFightCanvas({
     const O = '#111'
     const C = color       // hair/headband color
     const Cs = shade(color)
+    const Ch = highlight(color)
     const SK = SKIN       // skin tone
     const SS = SKIN_S     // skin shadow
     const SH = SKIN_H     // skin highlight
     const W = '#fff'
 
-    // Wider head: 8x9 grid — hair on top, skin face below
-    const ox = x - P * 4
+    // Head: 7x10 grid — hair, headband, face, chin, neck
+    // Slightly narrower than old 8-wide for better head:shoulder ratio (7:12 = 1.71x)
+    const ox = x - P * 3 - P / 2
     const oy = y - P * 5
 
     const head: string[][] = [
-      ['', '',  O,  O,  O,  O, '', ''],
-      ['',  O,  C,  C,  C,  C,  O, ''],
-      [ O,  C,  C,  C,  C,  C,  C,  O],   // hair
-      [ O, SH,  SK, SK, SK, SK, SS,  O],   // forehead
-      [ O,  SK, SK, SK, SK, SK, SK,  O],   // eyes line
-      [ O,  SK, SK, SK, SK, SK, SK,  O],   // nose
-      [ O,  SK, SK, SK, SK, SK, SK,  O],   // mouth
-      ['',  O,  SK, SK, SK, SK,  O, ''],   // chin
-      ['', '',  O,  O,  O,  O, '', ''],    // neck
+      ['', '',  O,  O,  O, '', ''],        // hair top
+      ['',  O,  C,  C,  C,  O, ''],        // hair
+      [ O,  C,  C,  C,  C,  C,  O],        // hair full width
+      [ O, Ch,  C,  C,  C, Cs,  O],        // headband (fighter color)
+      [ O, SH, SK, SK, SK, SS,  O],        // forehead
+      [ O, SK, SK, SK, SK, SK,  O],        // eyes line
+      [ O, SK, SK, SK, SK, SK,  O],        // nose
+      [ O, SK, SK, SK, SK, SK,  O],        // mouth
+      ['',  O, SK, SK, SK,  O, ''],        // chin
+      ['', '',  O,  O,  O, '', ''],        // neck
     ]
     drawSprite(ctx, ox, oy, head)
 
-    // Eyes and mouth
+    // Eyes and mouth — positioned within the 7-wide grid (inner cols 1-5)
     if (state === 'hit') {
       // X eyes + open mouth
-      px(ctx, ox + P * 2, oy + P * 4, '#ff0')
-      px(ctx, ox + P * 5, oy + P * 4, '#ff0')
-      px(ctx, ox + P * 3, oy + P * 6, '#c00')
-      px(ctx, ox + P * 4, oy + P * 6, '#c00')
+      px(ctx, ox + P * 1, oy + P * 5, '#ff0')
+      px(ctx, ox + P * 5, oy + P * 5, '#ff0')
+      px(ctx, ox + P * 2, oy + P * 7, '#c00')
+      px(ctx, ox + P * 3, oy + P * 7, '#c00')
+      px(ctx, ox + P * 4, oy + P * 7, '#c00')
     } else if (hp < FIGHTER_MAX_HP * 0.25) {
-      // Tired squint eyes + blood
-      px(ctx, ox + P * 2, oy + P * 4, '#800')
-      px(ctx, ox + P * 5, oy + P * 4, '#800')
-      px(ctx, ox + P * 3, oy + P * 6, '#c00')
+      // Tired squint eyes + blood drip
+      px(ctx, ox + P * 1, oy + P * 5, '#800')
+      px(ctx, ox + P * 5, oy + P * 5, '#800')
+      px(ctx, ox + P * 3, oy + P * 7, '#c00')
     } else {
-      // Normal eyes: white with pupil
-      px(ctx, ox + P * 2, oy + P * 4, W)
-      px(ctx, ox + P * 5, oy + P * 4, W)
+      // Normal eyes: white with dark pupil
+      px(ctx, ox + P * 1, oy + P * 5, W)
+      px(ctx, ox + P * 5, oy + P * 5, W)
       const pupilOff = facing > 0 ? 1 : 0
-      px(ctx, ox + P * (2 + pupilOff), oy + P * 4, '#000')
-      px(ctx, ox + P * (5 + pupilOff), oy + P * 4, '#000')
-      // Determined mouth
-      px(ctx, ox + P * 3, oy + P * 6, '#333')
-      px(ctx, ox + P * 4, oy + P * 6, '#333')
+      px(ctx, ox + P * (1 + pupilOff), oy + P * 5, '#111')
+      px(ctx, ox + P * (5 - (1 - pupilOff)), oy + P * 5, '#111')
+      // Determined mouth — tight line
+      px(ctx, ox + P * 2, oy + P * 7, '#444')
+      px(ctx, ox + P * 3, oy + P * 7, '#333')
+      px(ctx, ox + P * 4, oy + P * 7, '#444')
     }
   }
 
@@ -1112,25 +1122,29 @@ export default function EnhancedFightCanvas({
     const SH = SKIN_H
     const C = color                           // shorts color
     const Cs = shade(color)
+    const Ch = highlight(color)
     const T = state === 'hit' ? '#cc0000' : C // shorts flash red on hit
+    const Ts = state === 'hit' ? '#990000' : Cs
 
-    // Wider torso: 10x12 — skin upper body with muscle definition, colored shorts
-    const ox = x - P * 5
+    // Muscular torso: 12x13 — wide shoulders (deltoid caps), V-taper to waist
+    // SF2 reference: shoulder width should be 1.5-1.8x head width
+    // Head is 7 wide → torso 12 wide = 1.71x ratio (perfect SF2 range)
+    const ox = x - P * 6
     const oy = y
 
     const torso: string[][] = [
-      ['', '',  O,  O,  O,  O,  O,  O, '', ''],   // shoulders
-      ['',  O, SH,  SK, SK, SK, SK, SS,  O, ''],   // upper chest
-      [ O, SH,  SK, SH, SK, SK, SS, SK, SS,  O],   // chest + pecs
-      [ O,  SK, SK, SK, SK, SK, SK, SK, SK,  O],   // mid chest
-      [ O,  SK, SK, SS, SK, SK, SS, SK, SK,  O],   // abs definition
-      [ O,  SK, SK, SK, SS, SS, SK, SK, SK,  O],   // lower abs
-      ['',  O,  SK, SK, SK, SK, SK, SK,  O, ''],   // waist
-      ['',  O,  O,   T,  T,  T,  T,  O,  O, ''],   // waistband
-      ['', '',  O,   T,  T,  T,  T,  O, '', ''],    // shorts
-      ['', '',  O,   T,  T,  T,  T,  O, '', ''],    // shorts
-      ['', '',  O,  Cs,  O,  O, Cs,  O, '', ''],    // shorts hem
-      ['', '', '',   O, '',  '',  O, '', '', ''],    // gap between legs
+      ['',  O,  O,  O,  O,  O,  O,  O,  O,  O,  O, ''],      // shoulder line (12 wide)
+      [ O, SH, SH, SK, SK, SK, SK, SK, SK, SS, SS,  O],       // deltoids + upper chest
+      [ O, SH, SK, SH, SK, SK, SK, SK, SS, SK, SS,  O],       // chest with pec highlight
+      [ O, SK, SK, SK, SH, SK, SK, SH, SK, SK, SK,  O],       // mid chest + pec shadow
+      ['',  O, SK, SK, SS, SK, SK, SS, SK, SK,  O, ''],       // abs (V-taper starts: 10 wide)
+      ['',  O, SK, SK, SK, SS, SS, SK, SK, SK,  O, ''],       // lower abs
+      ['', '',  O, SK, SK, SK, SK, SK, SK,  O, '', ''],       // waist (8 wide — V-taper)
+      ['', '',  O,  O,  T,  T,  T,  T,  O,  O, '', ''],       // waistband
+      ['', '', '',  O,  T,  T,  T,  T,  O, '', '', ''],        // shorts
+      ['', '', '',  O,  T,  T,  T,  T,  O, '', '', ''],        // shorts
+      ['', '', '',  O, Ts,  O,  O, Ts,  O, '', '', ''],        // shorts hem
+      ['', '', '', '',  O, '', '',  O, '', '', '', ''],         // gap between legs
     ]
     drawSprite(ctx, ox, oy, torso)
   }
@@ -1165,43 +1179,46 @@ export default function EnhancedFightCanvas({
       ctx.rotate(facing * 65 * Math.PI / 180)
     }
 
-    const armLen = Math.floor((25 + Math.max(0, extension)) / P)
-    const ox = -P  // center on 3-wide
+    const armLen = Math.floor((28 + Math.max(0, extension)) / P)
+    const ox = -P * 2  // center on 4-wide
 
-    // Upper arm — skin tones, 3 blocks wide
+    // Upper arm — skin tones, 4 blocks wide (was 3 — beefier for SF2 look)
     const upperLen = Math.max(2, Math.floor(armLen * 0.4))
     for (let i = 0; i < upperLen; i++) {
-      pxo(ctx, ox - P, i * P, SH)
-      pxo(ctx, ox, i * P, SK)
-      pxo(ctx, ox + P, i * P, SS)
+      pxo(ctx, ox, i * P, SH)
+      pxo(ctx, ox + P, i * P, SK)
+      pxo(ctx, ox + P * 2, i * P, SK)
+      pxo(ctx, ox + P * 3, i * P, SS)
     }
 
-    // Forearm — fighter-colored wraps/tape for visual contrast against torso
+    // Forearm — fighter-colored wraps/tape, 4 blocks wide
     const forearmStart = upperLen * P
     const forearmLen = Math.max(2, Math.floor(armLen * 0.4))
     for (let i = 0; i < forearmLen; i++) {
-      pxo(ctx, ox - P, forearmStart + i * P, C)
       pxo(ctx, ox, forearmStart + i * P, C)
-      pxo(ctx, ox + P, forearmStart + i * P, Cs)
+      pxo(ctx, ox + P, forearmStart + i * P, C)
+      pxo(ctx, ox + P * 2, forearmStart + i * P, C)
+      pxo(ctx, ox + P * 3, forearmStart + i * P, Cs)
     }
 
-    // Glove — 4x3 blocks (yellow for active punch, fighter color otherwise)
+    // Glove — 5x4 blocks (bigger fists = SF2 exaggeration: 30-50% larger)
     const gloveY = (upperLen + forearmLen) * P
     const gloveGrid: string[][] = [
-      [GH,  G,  G, GS],
-      [ G,  G,  G,  G],
-      [GS,  G,  G, GS],
+      [GH,  G,  G,  G, GS],
+      [ G,  G,  G,  G,  G],
+      [ G,  G,  G,  G,  G],
+      [GS,  G,  G,  G, GS],
     ]
     for (let gy = 0; gy < gloveGrid.length; gy++) {
       for (let gx = 0; gx < gloveGrid[gy].length; gx++) {
-        pxo(ctx, ox - P + gx * P, gloveY + gy * P, gloveGrid[gy][gx])
+        pxo(ctx, ox - P / 2 + gx * P, gloveY + gy * P, gloveGrid[gy][gx])
       }
     }
 
     // Punch glow — bigger and brighter
     if (isPunching && isFront) {
       ctx.fillStyle = 'rgba(255,221,0,0.4)'
-      ctx.fillRect(ox - P * 2, gloveY - P, P * 6, P * 5)
+      ctx.fillRect(ox - P * 2, gloveY - P, P * 8, P * 6)
     }
 
     ctx.restore()
@@ -1243,51 +1260,65 @@ export default function EnhancedFightCanvas({
       ctx.translate(0, kneeBend * 0.3)
     }
 
-    const legLen = Math.floor((35 + Math.max(0, extension)) / P)
-    const ox = -P  // center on 3-wide
+    const legLen = Math.floor((38 + Math.max(0, extension)) / P)
+    const ox = -P * 2  // center on 4-wide (was 3 — beefier for SF2 look)
 
-    // Thigh — shorts top, then skin
+    // Thigh — shorts top, then exposed skin (4 blocks wide)
     const thighLen = Math.max(2, Math.floor(legLen * 0.4))
     for (let i = 0; i < thighLen; i++) {
       if (i < 2) {
         // Shorts portion — fighter color
-        pxo(ctx, ox - P, i * P, C)
         pxo(ctx, ox, i * P, C)
-        pxo(ctx, ox + P, i * P, Cs)
+        pxo(ctx, ox + P, i * P, C)
+        pxo(ctx, ox + P * 2, i * P, C)
+        pxo(ctx, ox + P * 3, i * P, Cs)
       } else {
-        // Exposed thigh — skin tones
-        pxo(ctx, ox - P, i * P, SH)
-        pxo(ctx, ox, i * P, SK)
-        pxo(ctx, ox + P, i * P, SS)
+        // Exposed thigh — skin tones with muscle shading
+        pxo(ctx, ox, i * P, SH)
+        pxo(ctx, ox + P, i * P, SK)
+        pxo(ctx, ox + P * 2, i * P, SK)
+        pxo(ctx, ox + P * 3, i * P, SS)
       }
     }
 
-    // Shin — fighter-colored shin guards for visual contrast
+    // Shin — fighter-colored shin guards, 4 blocks wide
     const shinStart = thighLen * P
     const shinLen = Math.max(2, Math.floor(legLen * 0.4))
     for (let i = 0; i < shinLen; i++) {
-      pxo(ctx, ox - P, shinStart + i * P, C)
       pxo(ctx, ox, shinStart + i * P, C)
-      pxo(ctx, ox + P, shinStart + i * P, Cs)
+      pxo(ctx, ox + P, shinStart + i * P, C)
+      pxo(ctx, ox + P * 2, shinStart + i * P, C)
+      pxo(ctx, ox + P * 3, shinStart + i * P, Cs)
     }
 
-    // Boot — 4x2 dark blocks
+    // Boot — 5x3 dark blocks (SF2: feet 20-40% larger for grounded feel)
     const bootY = (thighLen + shinLen) * P
     const B = '#222'
     const BD = '#111'
-    pxo(ctx, ox - P, bootY, BD)
-    pxo(ctx, ox, bootY, B)
-    pxo(ctx, ox + P, bootY, B)
-    pxo(ctx, ox + P * 2, bootY, BD)
-    pxo(ctx, ox - P, bootY + P, BD)
-    pxo(ctx, ox, bootY + P, BD)
-    pxo(ctx, ox + P, bootY + P, BD)
-    pxo(ctx, ox + P * 2, bootY + P, BD)
+    const BH = '#333'
+    // Row 0
+    pxo(ctx, ox - P / 2, bootY, BD)
+    pxo(ctx, ox + P / 2, bootY, BH)
+    pxo(ctx, ox + P * 3 / 2, bootY, B)
+    pxo(ctx, ox + P * 5 / 2, bootY, B)
+    pxo(ctx, ox + P * 7 / 2, bootY, BD)
+    // Row 1
+    pxo(ctx, ox - P / 2, bootY + P, BD)
+    pxo(ctx, ox + P / 2, bootY + P, B)
+    pxo(ctx, ox + P * 3 / 2, bootY + P, B)
+    pxo(ctx, ox + P * 5 / 2, bootY + P, BD)
+    pxo(ctx, ox + P * 7 / 2, bootY + P, BD)
+    // Row 2 — sole
+    pxo(ctx, ox - P / 2, bootY + P * 2, BD)
+    pxo(ctx, ox + P / 2, bootY + P * 2, BD)
+    pxo(ctx, ox + P * 3 / 2, bootY + P * 2, BD)
+    pxo(ctx, ox + P * 5 / 2, bootY + P * 2, BD)
+    pxo(ctx, ox + P * 7 / 2, bootY + P * 2, BD)
 
     // Kick glow — bigger
     if (isKicking && isFront) {
       ctx.fillStyle = 'rgba(255,100,0,0.4)'
-      ctx.fillRect(ox - P * 2, bootY - P, P * 6, P * 4)
+      ctx.fillRect(ox - P * 2, bootY - P, P * 8, P * 5)
     }
 
     ctx.restore()
@@ -1305,42 +1336,45 @@ export default function EnhancedFightCanvas({
     ctx.save()
     ctx.translate(x, y + 20)
 
-    // Body lying flat — head on left, feet on right
-    // Head (skin + hair)
+    // Body lying flat — head on left, feet on right (wider proportions)
+    // Head (hair + skin + headband)
+    pxo(ctx, -7 * P, -2 * P, C)
     pxo(ctx, -6 * P, -2 * P, C)
-    pxo(ctx, -5 * P, -2 * P, C)
-    pxo(ctx, -6 * P, -P, SH)
-    pxo(ctx, -5 * P, -P, SK)
-    pxo(ctx, -6 * P, 0, SK)
-    pxo(ctx, -5 * P, 0, SS)
+    pxo(ctx, -7 * P, -P, SH)
+    pxo(ctx, -6 * P, -P, SK)
+    pxo(ctx, -7 * P, 0, SK)
+    pxo(ctx, -6 * P, 0, SS)
 
-    // Torso (skin upper body + shorts)
-    for (let i = -4; i <= 0; i++) {
-      pxo(ctx, i * P, -P, i < -2 ? SH : SK)
-      pxo(ctx, i * P, 0, i < -2 ? SK : SS)
+    // Torso (wider — skin upper body + shorts, 2 rows thick)
+    for (let i = -5; i <= 0; i++) {
+      pxo(ctx, i * P, -2 * P, i < -3 ? SH : SK)
+      pxo(ctx, i * P, -P, i < -3 ? SK : SK)
+      pxo(ctx, i * P, 0, i < -3 ? SK : SS)
     }
     // Shorts section
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
       pxo(ctx, i * P, -P, C)
       pxo(ctx, i * P, 0, Cs)
     }
 
-    // Arms (skin + gloves)
-    pxo(ctx, -7 * P, -P, SK)
-    pxo(ctx, -8 * P, -P, G)
-    pxo(ctx, -8 * P, 0, GS)
-    pxo(ctx, -7 * P, P, SK)
-    pxo(ctx, -8 * P, P, G)
+    // Arms (wider — skin + bigger gloves)
+    pxo(ctx, -8 * P, -2 * P, SK)
+    pxo(ctx, -8 * P, -P, SK)
+    pxo(ctx, -9 * P, -2 * P, G)
+    pxo(ctx, -9 * P, -P, G)
+    pxo(ctx, -10 * P, -P, GS)
+    pxo(ctx, -8 * P, P, SK)
+    pxo(ctx, -9 * P, P, G)
 
-    // Legs (skin + boots)
-    for (let i = 4; i <= 5; i++) {
+    // Legs (wider — skin + boots)
+    for (let i = 5; i <= 7; i++) {
       pxo(ctx, i * P, -P, SK)
       pxo(ctx, i * P, 0, SS)
     }
-    pxo(ctx, 6 * P, -P, '#222')
-    pxo(ctx, 6 * P, 0, '#111')
-    pxo(ctx, 7 * P, -P, '#222')
-    pxo(ctx, 7 * P, 0, '#111')
+    pxo(ctx, 8 * P, -P, '#222')
+    pxo(ctx, 8 * P, 0, '#111')
+    pxo(ctx, 9 * P, -P, '#222')
+    pxo(ctx, 9 * P, 0, '#111')
 
     // Spinning stars above
     const time = Date.now() * 0.003
