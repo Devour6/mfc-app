@@ -1,8 +1,11 @@
-import { FightState, FighterState, FightAction, Fighter, Commentary } from '@/types'
+import { FightState, FighterState, FightAction, Fighter, Commentary, RecoveryData, RoundScore } from '@/types'
 import { FightRecorder, FightRecording } from './fight-recorder'
 
-/** Max starting HP for all fighters — used by canvas for bar rendering */
-export const FIGHTER_MAX_HP = 200
+/** Max HP for all fighters (V13) — used by canvas for bar rendering */
+export const FIGHTER_MAX_HP = 225
+
+/** Duration of the repricing window between rounds in seconds (Human League) */
+const REPRICING_DURATION = 10
 
 export interface FightBiasConfig {
   /** Fighter ID that receives the advantage */
@@ -24,6 +27,14 @@ export class FightEngine {
   private fighter1Meta?: { id: string; name: string; emoji: string }
   private fighter2Meta?: { id: string; name: string; emoji: string }
   private biasConfig?: FightBiasConfig
+  private repricingTickCounter: number = 0
+  private roundStartStatsF1: FighterState['stats'] | null = null
+  private roundStartStatsF2: FighterState['stats'] | null = null
+  private roundStartHpF1: number = 0
+  private roundStartHpF2: number = 0
+  /** Fighter base endurance stat (used for END mod in recovery) */
+  private fighter1End: number = 50
+  private fighter2End: number = 50
 
   constructor(
     fighter1: Fighter,
@@ -36,12 +47,14 @@ export class FightEngine {
     this.onStateUpdate = onStateUpdate
     this.onCommentary = onCommentary
     this.biasConfig = biasConfig
+    this.fighter1End = fighter1.stats.stamina
+    this.fighter2End = fighter2.stats.stamina
     if (enableRecording) {
       this.recorder = new FightRecorder(3)
       this.fighter1Meta = { id: fighter1.id, name: fighter1.name, emoji: fighter1.emoji }
       this.fighter2Meta = { id: fighter2.id, name: fighter2.name, emoji: fighter2.emoji }
     }
-    
+
     this.fightState = {
       round: 1,
       maxRounds: 3,
@@ -49,7 +62,11 @@ export class FightEngine {
       phase: 'intro',
       fighter1: this.createFighterState(fighter1, 180, 1),
       fighter2: this.createFighterState(fighter2, 300, -1),
+      roundScores: [],
     }
+
+    // Snapshot stats at R1 start
+    this.snapshotRoundStart()
   }
 
   private createFighterState(fighter: Fighter, x: number, facing: 1 | -1): FighterState {
@@ -92,8 +109,13 @@ export class FightEngine {
     this.resetFighterState(this.fightState.fighter1)
     this.resetFighterState(this.fightState.fighter2)
     this.tickCounter = 0
+    this.repricingTickCounter = 0
+    this.fightState.roundScores = []
+    this.fightState.lastRecovery = undefined
+    this.fightState.repricingTimeLeft = undefined
     this.commentary = []
     this.recorder?.reset()
+    this.snapshotRoundStart()
     this.start()
   }
 
@@ -110,23 +132,28 @@ export class FightEngine {
   }
 
   private tick(): void {
+    if (this.fightState.phase === 'repricing') {
+      this.tickRepricing()
+      return
+    }
+
     if (this.fightState.phase !== 'fighting') return
 
     // Update animations
     this.updateAnimations()
-    
+
     // Handle modifiers decay
     this.updateModifiers()
-    
+
     // Simulate combat
     this.simulateCombat()
-    
+
     // Regenerate stamina
     this.regenerateStamina()
-    
+
     // Check for round/fight end
     this.checkFightEnd()
-    
+
     // Record tick for replay
     this.recorder?.recordTick(this.fightState)
 
@@ -601,27 +628,185 @@ export class FightEngine {
 
     if (this.fightState.clock <= 0) {
       if (this.fightState.round < this.fightState.maxRounds) {
-        this.nextRound()
+        this.enterRepricing()
       } else {
         this.endByDecision()
       }
     }
   }
 
-  private nextRound(): void {
+  /** Enter repricing window between rounds — calculates recovery + round score */
+  private enterRepricing(): void {
+    const f1 = this.fightState.fighter1
+    const f2 = this.fightState.fighter2
+
+    // Calculate round score from stats diff since round start
+    const roundScore = this.calculateRoundScore()
+    if (!this.fightState.roundScores) this.fightState.roundScores = []
+    this.fightState.roundScores.push(roundScore)
+
+    // Determine trailing fighter (lost the round)
+    const f1IsTrailing = roundScore.winner === 2
+    const f2IsTrailing = roundScore.winner === 1
+
+    // Calculate HP recovery per V13 formula
+    const completedRound = this.fightState.round // round that just ended (1 or 2)
+    const f1Recovery = this.calculateRecovery(f1, this.fighter1End, completedRound, f1IsTrailing)
+    const f2Recovery = this.calculateRecovery(f2, this.fighter2End, completedRound, f2IsTrailing)
+
+    // Snapshot HP/stamina before recovery
+    const f1HpBefore = f1.hp
+    const f2HpBefore = f2.hp
+    const f1StaminaBefore = f1.stamina
+    const f2StaminaBefore = f2.stamina
+
+    // Apply HP recovery
+    f1.hp = Math.min(FIGHTER_MAX_HP, f1.hp + f1Recovery.total)
+    f2.hp = Math.min(FIGHTER_MAX_HP, f2.hp + f2Recovery.total)
+
+    // Apply stamina recovery (+25-30, keep existing behavior)
+    f1.stamina = Math.min(100, f1.stamina + 25)
+    f2.stamina = Math.min(100, f2.stamina + 25)
+
+    // Reset positions — fighters return to corners
+    f1.position.x = 180
+    f2.position.x = 300
+    f1.animation = { state: 'idle', frameCount: 0, duration: 0 }
+    f2.animation = { state: 'idle', frameCount: 0, duration: 0 }
+
+    // Expose recovery data on fight state
+    this.fightState.lastRecovery = {
+      fighter1: {
+        ...f1Recovery,
+        hpBefore: f1HpBefore,
+        hpAfter: f1.hp,
+        staminaBefore: f1StaminaBefore,
+        staminaAfter: f1.stamina,
+      },
+      fighter2: {
+        ...f2Recovery,
+        hpBefore: f2HpBefore,
+        hpAfter: f2.hp,
+        staminaBefore: f2StaminaBefore,
+        staminaAfter: f2.stamina,
+      },
+      roundWinner: roundScore.winner,
+    }
+
+    // Enter repricing phase
+    this.fightState.phase = 'repricing'
+    this.fightState.repricingTimeLeft = REPRICING_DURATION
+    this.repricingTickCounter = 0
+
+    this.onStateUpdate?.(this.fightState)
+  }
+
+  /** Tick during repricing window — counts down timer, then advances round */
+  private tickRepricing(): void {
+    this.repricingTickCounter++
+    if (this.repricingTickCounter >= this.ticksPerSecond) {
+      this.repricingTickCounter = 0
+      this.fightState.repricingTimeLeft = (this.fightState.repricingTimeLeft ?? 0) - 1
+    }
+
+    // Broadcast every tick so canvas can animate
+    this.onStateUpdate?.(this.fightState)
+
+    if ((this.fightState.repricingTimeLeft ?? 0) <= 0) {
+      this.advanceRound()
+    }
+  }
+
+  /** Advance to the next round after repricing completes */
+  private advanceRound(): void {
     this.fightState.round++
     this.fightState.clock = 180
     this.tickCounter = 0
-    
-    // Rest between rounds
-    this.fightState.fighter1.stamina = Math.min(100, this.fightState.fighter1.stamina + 25)
-    this.fightState.fighter2.stamina = Math.min(100, this.fightState.fighter2.stamina + 25)
-    
-    // Reset positions
-    this.fightState.fighter1.position.x = 180
-    this.fightState.fighter2.position.x = 300
-    
+    this.fightState.phase = 'fighting'
+    this.fightState.repricingTimeLeft = undefined
+    this.fightState.lastRecovery = undefined
+
+    // Snapshot stats for new round tracking
+    this.snapshotRoundStart()
+
     this.addCommentary(`Round ${this.fightState.round} begins!`, 'general', 'high')
+    this.onStateUpdate?.(this.fightState)
+  }
+
+  /** Calculate HP recovery for a fighter per V13 formula */
+  private calculateRecovery(
+    fighter: FighterState,
+    endStat: number,
+    completedRound: number,
+    isTrailing: boolean
+  ): { base: number; trailing: number; endBonus: number; total: number } {
+    // Base recovery: 15% after R1, 10% after R2. No recovery after R3.
+    const baseRate = completedRound === 1 ? 0.15 : 0.10
+    const base = Math.round(baseRate * FIGHTER_MAX_HP)
+
+    // Trailing bonus: +5% if fighter lost the round
+    const trailingRate = isTrailing ? 0.05 : 0
+    const trailing = Math.round(trailingRate * FIGHTER_MAX_HP)
+
+    // END modifier: continuous (END - 50) / 15, capped ±3
+    const endMod = Math.max(-3, Math.min(3, (endStat - 50) / 15))
+    const endBonus = Math.round(endMod * 0.02 * FIGHTER_MAX_HP)
+
+    const total = Math.max(0, base + trailing + endBonus)
+
+    return { base, trailing, endBonus, total }
+  }
+
+  /** Compute round score from stats accumulated during the round */
+  private calculateRoundScore(): RoundScore {
+    const f1 = this.fightState.fighter1
+    const f2 = this.fightState.fighter2
+
+    const f1Strikes = f1.stats.strikes - (this.roundStartStatsF1?.strikes ?? 0)
+    const f1Landed = f1.stats.landed - (this.roundStartStatsF1?.landed ?? 0)
+    const f1Power = f1.stats.powerShots - (this.roundStartStatsF1?.powerShots ?? 0)
+    const f2Strikes = f2.stats.strikes - (this.roundStartStatsF2?.strikes ?? 0)
+    const f2Landed = f2.stats.landed - (this.roundStartStatsF2?.landed ?? 0)
+    const f2Power = f2.stats.powerShots - (this.roundStartStatsF2?.powerShots ?? 0)
+
+    // Damage dealt this round = opponent's HP loss
+    const f1DamageDealt = this.roundStartHpF2 - f2.hp
+    const f2DamageDealt = this.roundStartHpF1 - f1.hp
+
+    // Score: same formula as decision but per-round
+    const f1Score = f1Landed * 3 + f1Power * 8 + f1DamageDealt * 0.5
+    const f2Score = f2Landed * 3 + f2Power * 8 + f2DamageDealt * 0.5
+
+    let winner: 1 | 2 | 0 = 0
+    if (f1Score > f2Score) winner = 1
+    else if (f2Score > f1Score) winner = 2
+
+    return {
+      round: this.fightState.round,
+      winner,
+      fighter1: {
+        strikes: f1Strikes,
+        landed: f1Landed,
+        powerShots: f1Power,
+        accuracy: f1Strikes > 0 ? Math.round((f1Landed / f1Strikes) * 100) : 0,
+        damageDealt: Math.round(f1DamageDealt),
+      },
+      fighter2: {
+        strikes: f2Strikes,
+        landed: f2Landed,
+        powerShots: f2Power,
+        accuracy: f2Strikes > 0 ? Math.round((f2Landed / f2Strikes) * 100) : 0,
+        damageDealt: Math.round(f2DamageDealt),
+      },
+    }
+  }
+
+  /** Snapshot fighter stats at the start of a round for per-round scoring */
+  private snapshotRoundStart(): void {
+    this.roundStartStatsF1 = { ...this.fightState.fighter1.stats }
+    this.roundStartStatsF2 = { ...this.fightState.fighter2.stats }
+    this.roundStartHpF1 = this.fightState.fighter1.hp
+    this.roundStartHpF2 = this.fightState.fighter2.hp
   }
 
   private endFight(winnerId: string, method: 'KO' | 'TKO' | 'Decision'): void {

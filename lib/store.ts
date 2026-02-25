@@ -14,6 +14,7 @@ import {
   WalletConnection,
   OnboardingStep,
   DemoTrade,
+  DataDensity,
 } from '@/types'
 import { FighterEvolutionEngine } from './evolution-engine'
 import { TournamentEngine } from './tournament-engine'
@@ -73,6 +74,10 @@ interface GameState {
   advanceOnboarding: (step: OnboardingStep) => void
   placeDemoTrade: (side: 'yes' | 'no', price: number, quantity: number) => DemoTrade
   resetOnboarding: () => void
+
+  // Data density — controls how much detail is shown during repricing
+  dataDensity: DataDensity
+  cycleDataDensity: () => void
 }
 
 // Sample fighters with evolution data
@@ -658,6 +663,16 @@ export const useGameStore = create<GameState>()(
           demoTrades: [] as DemoTrade[],
           hasCompletedOnboarding: false,
           pickedFighter: null,
+        })
+      },
+
+      // Data density (gut → informed → expert → gut)
+      dataDensity: 'gut' as DataDensity,
+      cycleDataDensity: () => {
+        set(state => {
+          const order: DataDensity[] = ['gut', 'informed', 'expert']
+          const idx = order.indexOf(state.dataDensity)
+          return { dataDensity: order[(idx + 1) % order.length] }
         })
       },
 
