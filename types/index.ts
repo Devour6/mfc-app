@@ -210,6 +210,8 @@ export interface Commentary {
   priority: 'low' | 'medium' | 'high'
 }
 
+export type DataDensity = 'gut' | 'informed' | 'expert'
+
 export interface GameSettings {
   soundEnabled: boolean
   commentaryEnabled: boolean
