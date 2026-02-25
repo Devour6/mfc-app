@@ -75,13 +75,52 @@ export interface Fighter {
   totalTrainingSessions?: number
 }
 
+export interface FighterRecoveryData {
+  base: number
+  trailing: number
+  endBonus: number
+  total: number
+  hpBefore: number
+  hpAfter: number
+  staminaBefore: number
+  staminaAfter: number
+}
+
+export interface RecoveryData {
+  fighter1: FighterRecoveryData
+  fighter2: FighterRecoveryData
+  roundWinner: 1 | 2 | 0 // 0 = draw
+}
+
+export interface RoundScore {
+  round: number
+  winner: 1 | 2 | 0
+  fighter1: {
+    strikes: number
+    landed: number
+    powerShots: number
+    accuracy: number
+    damageDealt: number
+  }
+  fighter2: {
+    strikes: number
+    landed: number
+    powerShots: number
+    accuracy: number
+    damageDealt: number
+  }
+}
+
 export interface FightState {
   round: number
   maxRounds: number
   clock: number
-  phase: 'intro' | 'fighting' | 'ko' | 'decision' | 'ended'
+  phase: 'intro' | 'fighting' | 'repricing' | 'ko' | 'decision' | 'ended'
   fighter1: FighterState
   fighter2: FighterState
+  repricingTimeLeft?: number
+  lastRecovery?: RecoveryData
+  roundScores?: RoundScore[]
   result?: {
     winner: string
     method: 'KO' | 'TKO' | 'Decision' | 'Submission'
