@@ -76,7 +76,7 @@ const KICK_PARAMS: Record<string, { maxExtension: number; bodyLean: number; legA
 }
 
 // ── Fighter visual scale + skin tone palettes ──────────────────────────────
-const FIGHTER_SCALE = 1.8
+const FIGHTER_SCALE = 2.0
 
 // Per-fighter skin tones — 8 distinct palettes for visual differentiation
 // Each: [base, shadow, highlight]
@@ -791,84 +791,110 @@ export default function EnhancedFightCanvas({
 
     let headY = y - 50
     let torsoY = y - 35
-    let armY = y - 30
-    let legY = y - 10
+    let armY = y - 30    // shoulder attachment Y
+    let legY = y - 10    // hip attachment Y
     let bodyLean = 0
-    let armExtension = 0
-    let legExtension = 0
-    let isKicking = false
-    let frontArmAngle: number | undefined
-    let frontLegAngle: number | undefined
-    let isGuardArms = false
-    let walkPhase: number | undefined
+
+    // ── Joint angles: 8 DOF (4 limbs × 2 joints each) ──────────────────
+    // Shoulder/Hip: degrees from vertical (0=down, 90=horizontal)
+    // Elbow/Knee: degrees of bend (0=straight, higher=more bent)
+    let fShA = 55, fElB = 110   // front arm: shoulder angle, elbow bend (guard default)
+    let bShA = 45, bElB = 120   // back arm (slightly different for asymmetry)
+    let fHiA = 10, fKnB = 20    // front leg: hip angle, knee bend (fighting stance)
+    let bHiA = -8, bKnB = 25    // back leg
+    let punchGlow = false
+    let kickGlow = false
 
     switch (state) {
       case 'idle': {
-        // SF2-style fighting crouch: lower center of gravity, wider base
+        // SF2-style fighting crouch with jointed limbs
         // Asymmetric timing (slow rise, fast fall = gravity feel)
-        // Fists move 3x more than torso. Head barely moves (stability anchor).
-        // Stats: speed→cycle rate, aggression→bounce intensity+lean+crouch depth
         const time = Date.now() * 0.001
-        const cycleSpeed = 3.5 * spdMod   // fast fighters have quicker idle rhythm
+        const cycleSpeed = 3.5 * spdMod
         const phase = ((time * cycleSpeed + fighterNumber * Math.PI) % (Math.PI * 2)) / (Math.PI * 2)
-        const bounceAmp = 3.0 * agrMod    // aggressive fighters bounce more
+        const bounceAmp = 4.0 * agrMod    // bigger bounce for more visible idle
         let bounce: number
         if (phase < 0.55) {
           bounce = Math.sin((phase / 0.55) * Math.PI * 0.5) * bounceAmp
         } else {
           bounce = Math.cos(((phase - 0.55) / 0.45) * Math.PI * 0.5) * bounceAmp
         }
-        // Fighting crouch: lower the whole stance + add knee bend feel
-        const crouchDepth = 4 * agrMod    // aggressive fighters crouch deeper
-        headY += bounce * 0.3 + crouchDepth * 0.3   // head barely moves
-        torsoY += bounce * 0.7 + crouchDepth * 0.5  // torso drops into crouch
-        armY += bounce * 2.2 + crouchDepth * 0.3    // fists bounce most
-        legY += bounce * 0.5 - crouchDepth * 0.2    // legs absorb the crouch (knees bend)
-        bodyLean = facing * 5 * agrMod   // stronger forward lean — fighting stance
-        isGuardArms = true
+        const crouchDepth = 5 * agrMod
+        headY += bounce * 0.3 + crouchDepth * 0.3
+        torsoY += bounce * 0.7 + crouchDepth * 0.5
+        armY += bounce * 1.5 + crouchDepth * 0.3
+        legY += bounce * 0.5 - crouchDepth * 0.2
+        bodyLean = facing * 6 * agrMod
+
+        // Arms: fighting guard — bent elbows, fists near chin, bobbing
+        const defBoost = (defMod - 1) * 8
+        fShA = 55 + bounce * 3 + defBoost
+        fElB = 110 + bounce * 5 + defBoost * 1.5
+        bShA = 45 + bounce * 2 + defBoost * 0.7
+        bElB = 120 + bounce * 4 + defBoost
+
+        // Legs: fighting crouch — knees visibly bent
+        fHiA = 10
+        fKnB = 20 + bounce * 2 + crouchDepth * 0.5
+        bHiA = -8
+        bKnB = 25 + bounce * 3 + crouchDepth * 0.5
         break
       }
 
       case 'punching': {
-        // Stats: strength→extension/lean (power fighters punch harder/wider)
+        punchGlow = true
         const params = PUNCH_PARAMS[attackType] || PUNCH_PARAMS.jab
-        const ext = params.maxExtension * strMod
-        const lean = params.bodyLean * strMod
         const phase = getAttackPhase(animProgress, attackType)
         const phaseT = getPhaseProgress(animProgress, attackType, phase)
+        const isHook = attackType === 'hook'
+        const isUppercut = attackType === 'uppercut'
+
+        // Back arm stays in guard throughout
+        bShA = 55; bElB = 125
+
+        // Legs: planted deep for stability
+        fHiA = 12; fKnB = 25 * strMod
+        bHiA = -10; bKnB = 30 * strMod
+
+        // Target pose at full extension — each punch type is VISUALLY DISTINCT
+        const targetShA = params.armAngle
+        const targetElB = isHook ? 75 : isUppercut ? 25 : 5
 
         switch (phase) {
           case 'startup': {
             const t = easeInQuad(phaseT)
-            armExtension = lerp(0, -18, t)
+            // Chamber: pull arm back TIGHT (visible wind-up)
+            fShA = lerp(55, 25, t)
+            fElB = lerp(110, 75, t)
             bodyLean = facing * lerp(0, params.windUpLean, t)
             headY -= lerp(0, params.headDip * 0.3, t)
-            torsoY += lerp(0, 2, t)
+            torsoY += lerp(0, 3, t)
             break
           }
           case 'active': {
+            // SNAP TO POSE — full extension in first 15% of active phase
             const t = phaseT < 0.15 ? phaseT / 0.15 : 1.0
-            armExtension = lerp(-18, ext, t)
-            bodyLean = facing * lerp(params.windUpLean, lean, t)
+            fShA = lerp(25, targetShA, t)
+            fElB = lerp(75, targetElB, t)
+            bodyLean = facing * lerp(params.windUpLean, params.bodyLean * strMod, t)
             headY -= lerp(params.headDip * 0.3, params.headDip, t)
-            frontArmAngle = lerp(0, params.armAngle, t)
-            torsoY += lerp(2, -1, t)
+            torsoY += lerp(3, -1, t)
             break
           }
           case 'hold': {
-            armExtension = ext
-            bodyLean = facing * lean
+            fShA = targetShA
+            fElB = targetElB
+            bodyLean = facing * params.bodyLean * strMod
             headY -= params.headDip
-            frontArmAngle = params.armAngle
             torsoY -= 1
             break
           }
           case 'recovery': {
             const t = easeInOutQuad(phaseT)
-            armExtension = lerp(ext, 0, t)
-            bodyLean = facing * lerp(lean, 3, t)
+            fShA = lerp(targetShA, 55, t)
+            fElB = lerp(targetElB, 110, t)
+            bodyLean = facing * lerp(params.bodyLean * strMod, 3, t)
             headY -= lerp(params.headDip, 0, t)
-            frontArmAngle = lerp(params.armAngle, 0, t)
             torsoY -= lerp(1, 0, t)
             break
           }
@@ -877,45 +903,65 @@ export default function EnhancedFightCanvas({
       }
 
       case 'kicking': {
-        // Stats: strength→extension/lean (power fighters kick wider)
-        isKicking = true
+        kickGlow = true
         const params = KICK_PARAMS[attackType] || KICK_PARAMS.kick
-        const ext = params.maxExtension * strMod
-        const lean = params.bodyLean * strMod
         const phase = getAttackPhase(animProgress, attackType)
         const phaseT = getPhaseProgress(animProgress, attackType, phase)
+        const isRoundhouse = attackType === 'roundhouse'
+
+        // Arms: raise for balance, open guard
+        fShA = 40; fElB = 90
+        bShA = 55; bElB = 80
+
+        // Plant leg: back leg stays grounded
+        bHiA = -5; bKnB = 22
+
+        // Target kick angles
+        const targetHiA = params.legAngle
+        const targetKnB = isRoundhouse ? 5 : 8
 
         switch (phase) {
           case 'startup': {
+            // CHAMBER: knee comes UP, leg bends TIGHT — classic Muay Thai chamber
             const t = easeInQuad(phaseT)
-            legExtension = lerp(0, -14, t)
-            bodyLean = facing * lerp(0, lean * 0.3, t)
+            fHiA = lerp(10, 50, t)
+            fKnB = lerp(20, 95, t)   // tight chamber — knee bent ~95°
+            bodyLean = facing * lerp(0, params.bodyLean * 0.3, t)
             armY -= lerp(0, params.armRaise * 0.5, t)
             headY += lerp(0, 2, t)
             break
           }
           case 'active': {
+            // SNAP: extend from chamber — this is the money shot
             const t = phaseT < 0.15 ? phaseT / 0.15 : 1.0
-            legExtension = lerp(-14, ext, t)
-            bodyLean = facing * lerp(lean * 0.3, lean, t)
+            fHiA = lerp(50, targetHiA, t)
+            fKnB = lerp(95, targetKnB, t)
+            bodyLean = facing * lerp(params.bodyLean * 0.3, params.bodyLean * strMod, t)
             armY -= lerp(params.armRaise * 0.5, params.armRaise, t)
-            frontLegAngle = lerp(0, params.legAngle, t)
             headY += lerp(2, 0, t)
             break
           }
           case 'hold': {
-            legExtension = ext
-            bodyLean = facing * lean
+            fHiA = targetHiA
+            fKnB = targetKnB
+            bodyLean = facing * params.bodyLean * strMod
             armY -= params.armRaise
-            frontLegAngle = params.legAngle
             break
           }
           case 'recovery': {
+            // Return THROUGH chamber (40%) then to stance (60%)
             const t = easeInOutQuad(phaseT)
-            legExtension = lerp(ext, 0, t)
-            bodyLean = facing * lerp(lean, 0, t)
+            if (t < 0.4) {
+              const rt = t / 0.4
+              fHiA = lerp(targetHiA, 40, rt)
+              fKnB = lerp(targetKnB, 70, rt)
+            } else {
+              const rt = (t - 0.4) / 0.6
+              fHiA = lerp(40, 10, rt)
+              fKnB = lerp(70, 20, rt)
+            }
+            bodyLean = facing * lerp(params.bodyLean * strMod, 0, t)
             armY -= lerp(params.armRaise, 0, t)
-            frontLegAngle = lerp(params.legAngle, 0, t)
             break
           }
         }
@@ -923,20 +969,28 @@ export default function EnhancedFightCanvas({
       }
 
       case 'hit': {
-        // SF2: Snap into recoil pose fast (first 15%), hold briefly, slow recovery.
-        // "Painful damage motions are just as necessary as good attack motions."
         const recoilT = animProgress < 0.15
-          ? easeOutBack(animProgress / 0.15) // SNAP into recoil (easeOutBack = overshoot)
+          ? easeOutBack(animProgress / 0.15)
           : animProgress < 0.4
-            ? 1.0 // HOLD the recoil pose — let hit-stop do its work
-            : lerp(1, 0, easeInOutQuad((animProgress - 0.4) / 0.6)) // Slow recovery
+            ? 1.0
+            : lerp(1, 0, easeInOutQuad((animProgress - 0.4) / 0.6))
 
-        bodyLean = -facing * 25 * recoilT        // Full body rocks back
-        headY += 14 * recoilT                      // Head snaps back hard
-        torsoY += 5 * recoilT                      // Torso buckles
-        armY += 8 * recoilT                        // Arms fly up
-        legY += 3 * recoilT                        // Knees buckle
-        // Stagger oscillation — wobble during recovery
+        bodyLean = -facing * 25 * recoilT
+        headY += 14 * recoilT
+        torsoY += 5 * recoilT
+        armY += 8 * recoilT
+        legY += 3 * recoilT
+
+        // Arms go slack — drop from guard (visible difference from guarding)
+        fShA = lerp(55, 25, recoilT)
+        fElB = lerp(110, 40, recoilT)
+        bShA = lerp(45, 20, recoilT)
+        bElB = lerp(120, 35, recoilT)
+
+        // Knees buckle visibly
+        fKnB = 20 + 18 * recoilT
+        bKnB = 25 + 12 * recoilT
+
         if (animProgress > 0.4) {
           const staggerPhase = (animProgress - 0.4) / 0.6
           const stagger = Math.sin(staggerPhase * Math.PI * 3) * 4 * (1 - staggerPhase)
@@ -946,65 +1000,97 @@ export default function EnhancedFightCanvas({
       }
 
       case 'blocking': {
-        // Stats: defense→guard height (defensive fighters guard tighter/higher)
         const blockT = animProgress < 0.2
           ? easeOutCubic(animProgress / 0.2)
           : animProgress > 0.8
             ? lerp(1, 0, easeInOutQuad((animProgress - 0.8) / 0.2))
             : 1
 
-        armY -= 14 * defMod * blockT   // high defense = tighter guard
+        // High guard: elbows VERY tight, fists covering face
+        fShA = lerp(55, 70 * defMod, blockT)
+        fElB = lerp(110, 140 * defMod, blockT)
+        bShA = lerp(45, 65 * defMod, blockT)
+        bElB = lerp(120, 145 * defMod, blockT)
         bodyLean = -facing * 4 * blockT
         headY += 2 * blockT
+
+        // Legs: brace and sink slightly
+        fKnB = 20 + 10 * blockT
+        bKnB = 25 + 8 * blockT
         break
       }
 
       case 'dodging': {
-        // Quick duck + lean away, fast onset → slow recovery
         const dodgeT = animProgress < 0.25
-          ? easeOutCubic(animProgress / 0.25) // Fast duck
-          : lerp(1, 0, easeInOutQuad((animProgress - 0.25) / 0.75)) // Slow recovery
+          ? easeOutCubic(animProgress / 0.25)
+          : lerp(1, 0, easeInOutQuad((animProgress - 0.25) / 0.75))
 
-        headY += 15 * dodgeT  // Duck down
+        headY += 15 * dodgeT
         torsoY += 8 * dodgeT
-        bodyLean = -facing * 18 * dodgeT // Lean away
+        bodyLean = -facing * 18 * dodgeT
+
+        // Arms tuck in during dodge
+        fShA = lerp(55, 30, dodgeT)
+        fElB = lerp(110, 135, dodgeT)
+        bShA = lerp(45, 25, dodgeT)
+        bElB = lerp(120, 135, dodgeT)
+
+        // Deep duck — knees bend hard
+        fKnB = 20 + 22 * dodgeT
+        bKnB = 25 + 18 * dodgeT
         break
       }
 
       case 'walking': {
-        // SF2 Ryu-style walk cycle: grounded weight, forward/backward distinction
-        // Stats: aggression→forward lean, strength→weight shift amplitude
         const total = fighterState.animation.frameCount + fighterState.animation.duration
         const walkDir = fighterState.animation.walkDirection || 'forward'
         const isForward = walkDir === 'forward'
+        const walkPhase = total > 0 ? (fighterState.animation.frameCount / total) * Math.PI * 2 : 0
 
-        walkPhase = total > 0 ? (fighterState.animation.frameCount / total) * Math.PI * 2 : 0
+        const strideScale = strMod
+        const swingAngle = (isForward ? 25 : 15) * strideScale
 
+        // Leg swing with visible knee bends
+        const legSwing = Math.sin(walkPhase) * swingAngle
+        const oppLegSwing = Math.sin(walkPhase + Math.PI) * swingAngle
+        const kneeOnPlant = Math.abs(Math.cos(walkPhase)) * 18
+
+        fHiA = legSwing
+        fKnB = 15 + kneeOnPlant
+        bHiA = oppLegSwing
+        bKnB = 15 + Math.abs(Math.cos(walkPhase + Math.PI)) * 18
+
+        // Arm counter-swing (opposite to legs)
+        const armSwing = Math.sin(walkPhase + Math.PI) * 15
+        const oppArmSwing = Math.sin(walkPhase) * 15
+
+        if (isForward) {
+          fShA = 55 + armSwing
+          fElB = 100 + armSwing * 0.5
+          bShA = 45 + oppArmSwing
+          bElB = 100 + oppArmSwing * 0.5
+          bodyLean = facing * 8 * agrMod
+        } else {
+          fShA = 60 + armSwing * 0.5
+          fElB = 115
+          bShA = 50 + oppArmSwing * 0.5
+          bElB = 115
+          bodyLean = facing * -4 * defMod
+        }
+
+        // Vertical bob
         const normalizedPhase = (walkPhase % (Math.PI * 2)) / (Math.PI * 2)
-        const bobAmp = 3 * strMod // stronger fighters have heavier footfalls
+        const bobAmp = 3 * strMod
         let verticalBob: number
         if (normalizedPhase < 0.4) {
           verticalBob = -Math.sin((normalizedPhase / 0.4) * Math.PI * 0.5) * bobAmp
         } else {
           verticalBob = -Math.cos(((normalizedPhase - 0.4) / 0.6) * Math.PI * 0.5) * bobAmp
         }
-
-        if (isForward) {
-          bodyLean = facing * 8 * agrMod   // aggressive fighters lean in harder
-          torsoY += verticalBob * 0.7
-          headY += verticalBob * 0.2
-          armY += verticalBob * 1.2
-          legY += verticalBob * 0.4
-        } else {
-          bodyLean = facing * -4 * defMod  // defensive fighters retreat more cautiously
-          torsoY += verticalBob * 0.5
-          headY += verticalBob * 0.15
-          armY += verticalBob * 0.8
-          armY -= 4 * defMod               // high defense = tighter retreat guard
-          legY += verticalBob * 0.3
-        }
-
-        isGuardArms = true
+        torsoY += verticalBob * 0.7
+        headY += verticalBob * 0.2
+        armY += verticalBob * 0.8
+        legY += verticalBob * 0.3
         break
       }
 
@@ -1015,32 +1101,21 @@ export default function EnhancedFightCanvas({
       }
     }
 
-    // Defense-based guard height: high defense = arms ride higher in guard stance
-    if (isGuardArms && fighterStats) {
-      armY -= (defMod - 1) * 6  // up to ~1.8px higher at max defense
-    }
-
     // Apply body lean rotation
     ctx.translate(x, y)
     ctx.rotate(bodyLean * Math.PI / 180)
     ctx.translate(-x, -y)
 
-    // Stride scale: strength affects step width (power fighters take bigger strides)
-    const strideScale = strMod
+    // Draw body parts back-to-front with joint angles
+    // Wider leg stance (±20px) for SF2 fighting game look
 
-    // Draw body parts back-to-front
-    // Torso is now 12 blocks = 48px wide, ±24 from center
-    // Arm attachment points outside torso edge for clear silhouette separation
-    // Wider leg stance for SF2 fighting game look (±18px from center)
+    // Back leg
+    const backLegX = facing === 1 ? x - 20 : x + 20
+    drawLeg(ctx, backLegX, legY, color, facing, bHiA, bKnB, skin, false)
 
-    // Back leg — wider fighting stance
-    const backLegX = facing === 1 ? x - 18 : x + 18
-    drawLeg(ctx, backLegX, legY, color, false, 0, false, undefined, walkPhase !== undefined ? walkPhase + Math.PI : undefined, facing, fighterState.animation.walkDirection, strideScale, skin)
-
-    // Back arm — during punches, the trailing arm retracts to chin (counterbalance)
+    // Back arm
     const backArmX = facing === 1 ? x - 26 : x + 26
-    const backArmIsGuard = isGuardArms || state === 'punching' // back arm guards during punches
-    drawArm(ctx, backArmX, armY, color, facing, false, 0, false, undefined, backArmIsGuard, skin)
+    drawArm(ctx, backArmX, armY, color, facing, bShA, bElB, skin, false)
 
     // Torso
     drawTorso(ctx, x, torsoY, color, state, skin)
@@ -1050,11 +1125,11 @@ export default function EnhancedFightCanvas({
 
     // Front arm (punching arm)
     const frontArmX = facing === 1 ? x + 26 : x - 26
-    drawArm(ctx, frontArmX, armY, color, facing, true, armExtension, state === 'punching', frontArmAngle, isGuardArms, skin)
+    drawArm(ctx, frontArmX, armY, color, facing, fShA, fElB, skin, punchGlow)
 
-    // Front leg (kicking leg) — wider fighting stance
-    const frontLegX = facing === 1 ? x + 18 : x - 18
-    drawLeg(ctx, frontLegX, legY, color, true, legExtension, isKicking, frontLegAngle, walkPhase, facing, fighterState.animation.walkDirection, strideScale, skin)
+    // Front leg (kicking leg)
+    const frontLegX = facing === 1 ? x + 20 : x - 20
+    drawLeg(ctx, frontLegX, legY, color, facing, fHiA, fKnB, skin, kickGlow)
 
     ctx.restore()
   }
@@ -1227,43 +1302,34 @@ export default function EnhancedFightCanvas({
     drawSprite(ctx, ox, oy, torso)
   }
 
+  // ── Two-segment arm with shoulder + elbow joints ────────────────────────
+  // shoulderAngle: degrees from vertical (0=down, 90=horizontal toward opponent)
+  // elbowBend: degrees of elbow bend (0=straight, higher=more bent toward body)
   const drawArm = (
     ctx: CanvasRenderingContext2D,
     x: number, y: number,
     color: string,
     facing: number,
-    isFront: boolean,
-    extension: number,
-    isPunching: boolean,
-    armAngle?: number,
-    isGuard?: boolean,
-    palette?: SkinPalette
+    shoulderAngle: number,
+    elbowBend: number,
+    palette?: SkinPalette,
+    isPunching?: boolean,
   ) => {
     const p = palette || SKIN_PALETTES[0]
-    const SK = p.base
-    const SS = p.shadow
-    const SH = p.highlight
-    const C = color            // fighter color for wraps
+    const SK = p.base, SS = p.shadow, SH = p.highlight
+    const C = color
     const Cs = shade(color)
-    const G = isPunching && isFront ? '#ffdd00' : color
-    const GS = isPunching && isFront ? '#cc9900' : shade(color)
-    const GH = isPunching && isFront ? '#ffe866' : highlight(color)
+    const G = isPunching ? '#ffdd00' : color
+    const GS = isPunching ? '#cc9900' : shade(color)
+    const GH = isPunching ? '#ffe866' : highlight(color)
 
     ctx.save()
     ctx.translate(x, y)
 
-    if (isFront && isPunching && armAngle !== undefined) {
-      ctx.rotate(facing * armAngle * Math.PI / 180)
-    } else if (isGuard) {
-      // Guard stance: fists up near chin. 65° from vertical = ~25° from horizontal.
-      ctx.rotate(facing * 65 * Math.PI / 180)
-    }
-
-    const armLen = Math.floor((28 + Math.max(0, extension)) / P)
-    const ox = -P * 2  // center on 4-wide
-
-    // Upper arm — skin tones, 4 blocks wide (was 3 — beefier for SF2 look)
-    const upperLen = Math.max(2, Math.floor(armLen * 0.4))
+    // ── Segment 1: Upper arm (shoulder → elbow) ──
+    ctx.rotate(facing * shoulderAngle * Math.PI / 180)
+    const ox = -P * 2 // center on 4-wide
+    const upperLen = 4
     for (let i = 0; i < upperLen; i++) {
       pxo(ctx, ox, i * P, SH)
       pxo(ctx, ox + P, i * P, SK)
@@ -1271,18 +1337,19 @@ export default function EnhancedFightCanvas({
       pxo(ctx, ox + P * 3, i * P, SS)
     }
 
-    // Forearm — fighter-colored wraps/tape, 4 blocks wide
-    const forearmStart = upperLen * P
-    const forearmLen = Math.max(2, Math.floor(armLen * 0.4))
-    for (let i = 0; i < forearmLen; i++) {
-      pxo(ctx, ox, forearmStart + i * P, C)
-      pxo(ctx, ox + P, forearmStart + i * P, C)
-      pxo(ctx, ox + P * 2, forearmStart + i * P, C)
-      pxo(ctx, ox + P * 3, forearmStart + i * P, Cs)
+    // ── Segment 2: Forearm (elbow → glove) ──
+    ctx.translate(0, upperLen * P) // move to elbow joint
+    ctx.rotate(-facing * elbowBend * Math.PI / 180) // bend toward body
+    const foreLen = 3
+    for (let i = 0; i < foreLen; i++) {
+      pxo(ctx, ox, i * P, C)
+      pxo(ctx, ox + P, i * P, C)
+      pxo(ctx, ox + P * 2, i * P, C)
+      pxo(ctx, ox + P * 3, i * P, Cs)
     }
 
-    // Glove — 5x4 blocks (bigger fists = SF2 exaggeration: 30-50% larger)
-    const gloveY = (upperLen + forearmLen) * P
+    // ── Glove — 5x4 blocks ──
+    const gloveY = foreLen * P
     const gloveGrid: string[][] = [
       [GH,  G,  G,  G, GS],
       [ G,  G,  G,  G,  G],
@@ -1295,8 +1362,7 @@ export default function EnhancedFightCanvas({
       }
     }
 
-    // Punch glow — bigger and brighter
-    if (isPunching && isFront) {
+    if (isPunching) {
       ctx.fillStyle = 'rgba(255,221,0,0.4)'
       ctx.fillRect(ox - P * 2, gloveY - P, P * 8, P * 6)
     }
@@ -1304,58 +1370,38 @@ export default function EnhancedFightCanvas({
     ctx.restore()
   }
 
+  // ── Two-segment leg with hip + knee joints ──────────────────────────────
+  // hipAngle: degrees from vertical (0=down, positive=forward, negative=back)
+  // kneeBend: degrees of knee bend (0=straight, positive=bends backward naturally)
   const drawLeg = (
     ctx: CanvasRenderingContext2D,
     x: number, y: number,
     color: string,
-    isFront: boolean,
-    extension: number,
-    isKicking: boolean,
-    legAngle?: number,
-    walkPhase?: number,
-    facing?: number,
-    walkDirection?: 'forward' | 'back',
-    strideScale?: number,
-    palette?: SkinPalette
+    facing: number,
+    hipAngle: number,
+    kneeBend: number,
+    palette?: SkinPalette,
+    isKicking?: boolean,
   ) => {
     const p = palette || SKIN_PALETTES[0]
-    const SK = p.base
-    const SS = p.shadow
-    const SH = p.highlight
-    const C = color          // shorts/shin guard color
+    const SK = p.base, SS = p.shadow, SH = p.highlight
+    const C = color
     const Cs = shade(color)
 
     ctx.save()
     ctx.translate(x, y)
 
-    const dir = facing ?? 1
-    if (isKicking && isFront && legAngle !== undefined) {
-      ctx.rotate(dir * legAngle * Math.PI / 180)
-    } else if (walkPhase !== undefined) {
-      // SF2-style walk: forward = wider strides, backward = cautious steps
-      // strideScale: strength-based modifier (power fighters take wider steps)
-      const scale = strideScale ?? 1.0
-      const swingAngle = (walkDirection === 'back' ? 15 : 25) * scale
-      const swing = Math.sin(walkPhase) * swingAngle
-      const kneeBend = Math.abs(Math.cos(walkPhase)) * 5
-      ctx.rotate(dir * swing * Math.PI / 180)
-      ctx.translate(0, kneeBend * 0.3)
-    }
-
-    const legLen = Math.floor((38 + Math.max(0, extension)) / P)
-    const ox = -P * 2  // center on 4-wide (was 3 — beefier for SF2 look)
-
-    // Thigh — shorts top, then exposed skin (4 blocks wide)
-    const thighLen = Math.max(2, Math.floor(legLen * 0.4))
+    // ── Segment 1: Thigh (hip → knee) ──
+    ctx.rotate(facing * hipAngle * Math.PI / 180)
+    const ox = -P * 2 // center on 4-wide
+    const thighLen = 4
     for (let i = 0; i < thighLen; i++) {
       if (i < 2) {
-        // Shorts portion — fighter color
         pxo(ctx, ox, i * P, C)
         pxo(ctx, ox + P, i * P, C)
         pxo(ctx, ox + P * 2, i * P, C)
         pxo(ctx, ox + P * 3, i * P, Cs)
       } else {
-        // Exposed thigh — skin tones with muscle shading
         pxo(ctx, ox, i * P, SH)
         pxo(ctx, ox + P, i * P, SK)
         pxo(ctx, ox + P * 2, i * P, SK)
@@ -1363,42 +1409,37 @@ export default function EnhancedFightCanvas({
       }
     }
 
-    // Shin — fighter-colored shin guards, 4 blocks wide
-    const shinStart = thighLen * P
-    const shinLen = Math.max(2, Math.floor(legLen * 0.4))
+    // ── Segment 2: Shin + boot (knee → foot) ──
+    ctx.translate(0, thighLen * P) // knee joint
+    ctx.rotate(-facing * kneeBend * Math.PI / 180) // bend backward
+    const shinLen = 4
     for (let i = 0; i < shinLen; i++) {
-      pxo(ctx, ox, shinStart + i * P, C)
-      pxo(ctx, ox + P, shinStart + i * P, C)
-      pxo(ctx, ox + P * 2, shinStart + i * P, C)
-      pxo(ctx, ox + P * 3, shinStart + i * P, Cs)
+      pxo(ctx, ox, i * P, C)
+      pxo(ctx, ox + P, i * P, C)
+      pxo(ctx, ox + P * 2, i * P, C)
+      pxo(ctx, ox + P * 3, i * P, Cs)
     }
 
-    // Boot — 5x3 dark blocks (SF2: feet 20-40% larger for grounded feel)
-    const bootY = (thighLen + shinLen) * P
-    const B = '#222'
-    const BD = '#111'
-    const BH = '#333'
-    // Row 0
+    // Boot — 5x3
+    const bootY = shinLen * P
+    const B = '#222', BD = '#111', BH = '#333'
     pxo(ctx, ox - P / 2, bootY, BD)
     pxo(ctx, ox + P / 2, bootY, BH)
     pxo(ctx, ox + P * 3 / 2, bootY, B)
     pxo(ctx, ox + P * 5 / 2, bootY, B)
     pxo(ctx, ox + P * 7 / 2, bootY, BD)
-    // Row 1
     pxo(ctx, ox - P / 2, bootY + P, BD)
     pxo(ctx, ox + P / 2, bootY + P, B)
     pxo(ctx, ox + P * 3 / 2, bootY + P, B)
     pxo(ctx, ox + P * 5 / 2, bootY + P, BD)
     pxo(ctx, ox + P * 7 / 2, bootY + P, BD)
-    // Row 2 — sole
     pxo(ctx, ox - P / 2, bootY + P * 2, BD)
     pxo(ctx, ox + P / 2, bootY + P * 2, BD)
     pxo(ctx, ox + P * 3 / 2, bootY + P * 2, BD)
     pxo(ctx, ox + P * 5 / 2, bootY + P * 2, BD)
     pxo(ctx, ox + P * 7 / 2, bootY + P * 2, BD)
 
-    // Kick glow — bigger
-    if (isKicking && isFront) {
+    if (isKicking) {
       ctx.fillStyle = 'rgba(255,100,0,0.4)'
       ctx.fillRect(ox - P * 2, bootY - P, P * 8, P * 5)
     }
