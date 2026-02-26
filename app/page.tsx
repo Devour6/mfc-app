@@ -11,6 +11,7 @@ import RankingsSection from '@/components/RankingsSection'
 import TournamentBracket from '@/components/TournamentBracket'
 import AchievementSystem from '@/components/AchievementSystem'
 import FightersSection from '@/components/FightersSection'
+import ContentSection from '@/components/ContentSection'
 import SolCreditBridgeModal from '@/components/SolCreditBridgeModal'
 import CreditPurchase from '@/components/CreditPurchase'
 import soundManager from '@/lib/sound-manager'
@@ -188,6 +189,7 @@ export default function Home() {
     tournaments: 'TOURNAMENTS',
     rewards: 'REWARDS',
     achievements: 'ACHIEVEMENTS',
+    content: 'CONTENT',
   }
 
   if (!isLoaded) {
@@ -322,6 +324,9 @@ export default function Home() {
                             notifications={mockNotifications as any[]}
                             onDismissNotification={(notificationId) => console.log('Dismissed notification:', notificationId)}
                           />
+                        )}
+                        {drawerSection === 'content' && (
+                          <ContentSection />
                         )}
                       </div>
                     </motion.div>
