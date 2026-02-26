@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import { useSolanaWallet } from '@/lib/solana/use-wallet'
 
-export type ArenaSection = 'rankings' | 'fighters' | 'tournaments' | 'rewards' | 'achievements'
+export type ArenaSection = 'rankings' | 'fighters' | 'tournaments' | 'rewards' | 'achievements' | 'content'
 
 interface ArenaTopBarProps {
   credits: number
@@ -24,6 +24,7 @@ const dropdownSections: { id: ArenaSection; label: string; icon: string }[] = [
   { id: 'tournaments', label: 'TOURNAMENTS', icon: '\u{1F3DF}\uFE0F' },
   { id: 'rewards', label: 'REWARDS', icon: '\u{1F381}' },
   { id: 'achievements', label: 'ACHIEVEMENTS', icon: '\u{1F396}\uFE0F' },
+  { id: 'content', label: 'CONTENT', icon: '\u{1F4DD}' },
 ]
 
 export default function ArenaTopBar({
