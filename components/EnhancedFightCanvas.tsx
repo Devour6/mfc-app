@@ -800,8 +800,8 @@ export default function EnhancedFightCanvas({
     // Elbow/Knee: degrees of bend (0=straight, higher=more bent)
     let fShA = 55, fElB = 110   // front arm: shoulder angle, elbow bend (guard default)
     let bShA = 45, bElB = 120   // back arm (slightly different for asymmetry)
-    let fHiA = 10, fKnB = 20    // front leg: hip angle, knee bend (fighting stance)
-    let bHiA = -8, bKnB = 25    // back leg
+    let fHiA = -10, fKnB = 20   // front leg: forward toward opponent (negative)
+    let bHiA = 8, bKnB = 25     // back leg: behind fighter (positive)
     let punchGlow = false
     let kickGlow = false
 
@@ -833,10 +833,10 @@ export default function EnhancedFightCanvas({
         bShA = 45 + bounce * 2 + defBoost * 0.7
         bElB = 120 + bounce * 4 + defBoost
 
-        // Legs: fighting crouch — knees visibly bent
-        fHiA = 10
+        // Legs: fighting crouch — front leg forward, back leg behind
+        fHiA = -10
         fKnB = 20 + bounce * 2 + crouchDepth * 0.5
-        bHiA = -8
+        bHiA = 8
         bKnB = 25 + bounce * 3 + crouchDepth * 0.5
         break
       }
@@ -852,20 +852,20 @@ export default function EnhancedFightCanvas({
         // Back arm stays in guard throughout
         bShA = 55; bElB = 125
 
-        // Legs: planted deep for stability
-        fHiA = 12; fKnB = 25 * strMod
-        bHiA = -10; bKnB = 30 * strMod
+        // Legs: planted deep for stability (front forward, back behind)
+        fHiA = -12; fKnB = 25 * strMod
+        bHiA = 10; bKnB = 30 * strMod
 
-        // Target pose at full extension — each punch type is VISUALLY DISTINCT
-        const targetShA = params.armAngle
+        // Target pose at full extension — NEGATIVE angle = toward opponent
+        const targetShA = -params.armAngle
         const targetElB = isHook ? 75 : isUppercut ? 25 : 5
 
         switch (phase) {
           case 'startup': {
             const t = easeInQuad(phaseT)
-            // Chamber: pull arm back TIGHT (visible wind-up)
-            fShA = lerp(55, 25, t)
-            fElB = lerp(110, 75, t)
+            // Chamber: pull arm BACK tight (positive = behind body = wind-up)
+            fShA = lerp(55, 70, t)
+            fElB = lerp(110, 140, t)
             bodyLean = facing * lerp(0, params.windUpLean, t)
             headY -= lerp(0, params.headDip * 0.3, t)
             torsoY += lerp(0, 3, t)
@@ -874,8 +874,8 @@ export default function EnhancedFightCanvas({
           case 'active': {
             // SNAP TO POSE — full extension in first 15% of active phase
             const t = phaseT < 0.15 ? phaseT / 0.15 : 1.0
-            fShA = lerp(25, targetShA, t)
-            fElB = lerp(75, targetElB, t)
+            fShA = lerp(70, targetShA, t)
+            fElB = lerp(140, targetElB, t)
             bodyLean = facing * lerp(params.windUpLean, params.bodyLean * strMod, t)
             headY -= lerp(params.headDip * 0.3, params.headDip, t)
             torsoY += lerp(3, -1, t)
@@ -913,18 +913,18 @@ export default function EnhancedFightCanvas({
         fShA = 40; fElB = 90
         bShA = 55; bElB = 80
 
-        // Plant leg: back leg stays grounded
-        bHiA = -5; bKnB = 22
+        // Plant leg: back leg stays grounded (positive = behind)
+        bHiA = 5; bKnB = 22
 
-        // Target kick angles
-        const targetHiA = params.legAngle
+        // Target kick angles — NEGATIVE = toward opponent
+        const targetHiA = -params.legAngle
         const targetKnB = isRoundhouse ? 5 : 8
 
         switch (phase) {
           case 'startup': {
             // CHAMBER: knee comes UP, leg bends TIGHT — classic Muay Thai chamber
             const t = easeInQuad(phaseT)
-            fHiA = lerp(10, 50, t)
+            fHiA = lerp(-10, -50, t)
             fKnB = lerp(20, 95, t)   // tight chamber — knee bent ~95°
             bodyLean = facing * lerp(0, params.bodyLean * 0.3, t)
             armY -= lerp(0, params.armRaise * 0.5, t)
@@ -934,7 +934,7 @@ export default function EnhancedFightCanvas({
           case 'active': {
             // SNAP: extend from chamber — this is the money shot
             const t = phaseT < 0.15 ? phaseT / 0.15 : 1.0
-            fHiA = lerp(50, targetHiA, t)
+            fHiA = lerp(-50, targetHiA, t)
             fKnB = lerp(95, targetKnB, t)
             bodyLean = facing * lerp(params.bodyLean * 0.3, params.bodyLean * strMod, t)
             armY -= lerp(params.armRaise * 0.5, params.armRaise, t)
@@ -953,11 +953,11 @@ export default function EnhancedFightCanvas({
             const t = easeInOutQuad(phaseT)
             if (t < 0.4) {
               const rt = t / 0.4
-              fHiA = lerp(targetHiA, 40, rt)
+              fHiA = lerp(targetHiA, -40, rt)
               fKnB = lerp(targetKnB, 70, rt)
             } else {
               const rt = (t - 0.4) / 0.6
-              fHiA = lerp(40, 10, rt)
+              fHiA = lerp(-40, -10, rt)
               fKnB = lerp(70, 20, rt)
             }
             bodyLean = facing * lerp(params.bodyLean * strMod, 0, t)
@@ -1371,7 +1371,7 @@ export default function EnhancedFightCanvas({
   }
 
   // ── Two-segment leg with hip + knee joints ──────────────────────────────
-  // hipAngle: degrees from vertical (0=down, positive=forward, negative=back)
+  // hipAngle: degrees from vertical (0=down, negative=toward opponent, positive=away)
   // kneeBend: degrees of knee bend (0=straight, positive=bends backward naturally)
   const drawLeg = (
     ctx: CanvasRenderingContext2D,
@@ -1411,7 +1411,7 @@ export default function EnhancedFightCanvas({
 
     // ── Segment 2: Shin + boot (knee → foot) ──
     ctx.translate(0, thighLen * P) // knee joint
-    ctx.rotate(-facing * kneeBend * Math.PI / 180) // bend backward
+    ctx.rotate(facing * kneeBend * Math.PI / 180) // bend backward naturally
     const shinLen = 4
     for (let i = 0; i < shinLen; i++) {
       pxo(ctx, ox, i * P, C)
