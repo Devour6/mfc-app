@@ -203,27 +203,33 @@ Auth column in the table above: "Human" = `requireHuman()`, "Required" = `requir
 
 ## Current Product Status
 
-**Last updated:** 2026-02-23
+**Last updated:** 2026-02-25
 
 ### Where We Are
-- **Combat system:** V13 design complete (`docs/plans/2026-02-23-v13-combat-design.md`). Waiting on Monte Carlo validation (13 sims, triangle 62-68% is the critical path). V6-V12 are superseded.
-- **Betting framework:** Foundational framing doc complete (`docs/plans/2026-02-23-betting-experience-framework.md`). Mental model for evaluating every betting decision. Open questions remain (fee structure, session cadence, losing streaks).
-- **Training system:** Design complete (`docs/plans/2026-02-22-training-system-design.md`). Needs update for V13's 3-stat system (POW/END/TEC) after Monte Carlo validates.
-- **Codebase:** Existing code is a mockup/prototype. Most will be rewritten once V13 validates.
+- **Combat system:** V13 design LOCKED (`docs/plans/2026-02-23-v13-combat-design.md`). Monte Carlo Run 33 in progress — Phases 1-3 complete (triangle 64.7/62.3/61.7), Phase 4 complete (27/36 gear passives working, target was 20+). Phase 5 (gear sim redesign with median passives) pending. V6-V12 superseded.
+- **Betting experience:** Full spec LOCKED (`docs/plans/2026-02-24-betting-experience-spec.md`). Windowed trading, 3-layer info architecture, repricing windows, session design, chat, owner mode, onboarding, losing streaks. Framework doc (`docs/plans/2026-02-23-betting-experience-framework.md`) remains as reference.
+- **Credit economy (human):** LOCKED (`docs/plans/2026-02-24-credit-economy-design.md`). Tiered fees (2% flat Local, 5% profit Upper), fight tiers by stat, descending rake, entry/position limits, training costs, Agent League soft currency, bonuses, revenue model (~$27K/mo at 1K DAU).
+- **Agent trading economy:** LOCKED (`docs/plans/2026-02-24-agent-trading-economy.md`). Call auction, 0.5% flat fee, bankroll LP/GP model, terminal-first dev funnel, sandbox as launch requirement. Long-term revenue play — human economy carries months 1-12.
+- **Training system:** Design complete (`docs/plans/2026-02-22-training-system-design.md`). Needs update for V13's 3-stat system (POW/END/TEC) after Monte Carlo Phase 5 validates.
+- **Codebase:** Existing code is a mockup/prototype. Will be rewritten once V13 fully validates and implementation plan updates.
 - **Brand identity:** Design in progress (Levi). Kakashi approved with notes.
 
 ### Short-Term Goals (This Week)
-1. **Kakashi:** Run V13 Monte Carlo (13 sims). Triangle validation is the critical path. Everything else gates on this.
-2. **Mina:** Social moments design exploration — moment taxonomy, shareable formats, clip-worthy fight events.
-3. **Levi:** Recovery visualization UI spec — make between-round HP recovery visible to all bettor skill levels.
-4. **Itachi:** Repricing window data spec (3-layer information architecture). Credit economy numbers. Betting framework open questions.
-5. **Jinwoo:** Blocked until V13 validates and implementation plan updates.
+1. **Shikamaru:** Run Monte Carlo Phase 5 (gear sim redesign — Sims 4/6/7 with median passives per tier). Blocked on Kakashi answering Phase 4 questions (accept C vs P at 61.7%, accept 9 dead passives, greenlight Phase 5).
+2. **Kakashi:** Answer Shikamaru's Phase 4 questions. Direct Phase 5.
+3. **Itachi:** CLAUDE.md product status update (this). Next: master GDD consolidation (all 4 locked specs into one canonical doc). Impl plan + Notion updates blocked on Phase 5.
+4. **Mina:** Social moments design exploration.
+5. **Levi:** Recovery visualization UI spec.
+6. **Jinwoo:** Blocked until V13 fully validates and implementation plan updates.
 
 ### Key Design Docs
 | Doc | Path | Status |
 |-----|------|--------|
-| V13 Combat Design | `docs/plans/2026-02-23-v13-combat-design.md` | Awaiting Monte Carlo |
-| Betting Experience Framework | `docs/plans/2026-02-23-betting-experience-framework.md` | Active — open questions pending |
+| V13 Combat Design | `docs/plans/2026-02-23-v13-combat-design.md` | **LOCKED** — Monte Carlo validating (Phase 5 pending) |
+| Betting Experience Spec | `docs/plans/2026-02-24-betting-experience-spec.md` | **LOCKED** |
+| Credit Economy (Human) | `docs/plans/2026-02-24-credit-economy-design.md` | **LOCKED** |
+| Agent Trading Economy | `docs/plans/2026-02-24-agent-trading-economy.md` | **LOCKED** |
+| Betting Experience Framework | `docs/plans/2026-02-23-betting-experience-framework.md` | Reference (superseded by full spec) |
 | Training System | `docs/plans/2026-02-22-training-system-design.md` | Needs V13 stat update |
 | Combat V6 Base | `docs/plans/2026-02-20-combat-system-design.md` | Superseded by V13 |
 | V12 Calibration | `docs/plans/2026-02-23-v12-combat-calibration.md` | Superseded by V13 |
@@ -233,6 +239,13 @@ Auth column in the table above: "Human" = `requireHuman()`, "Required" = `requir
 2. **Replace reliable compounding with exciting variance.** Triggered passives over flat bonuses.
 3. **Ownership edge is agency, not information asymmetry.** All fighter data is public. The owner's advantage is strategic control.
 4. **Gear balance = situational power, not equal power.** Same tier effects average similar win rate across matchups (±1%), but vary per matchup (+1% to +5%).
+
+### Strategic Decisions (Jeff approved)
+- Non-US launch. Geo-block US. Gaming license (Malta MGA Type 3 or Isle of Man).
+- Real money. Play money kills the experience.
+- CLOB exchange model. MFC is an event contract exchange — matches counterparties, takes no directional risk, never sets odds.
+- Photo Finish Live is closest comparable.
+- Gaming lawyer required before finalizing denomination/withdrawal/KYC.
 
 ## Session Startup (Mandatory)
 
