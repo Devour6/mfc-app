@@ -61,6 +61,13 @@ model Fighter {
   totalTrainingHours   Float @default(0.0)
   totalTrainingSessions Int @default(0)
 
+  // V13 stats (nullable for backward compat with legacy fighters)
+  pow           Int?                // Power (0-100)
+  end_stat      Int?                // Endurance (0-100). "end" is reserved in SQL.
+  tec           Int?                // Technique (0-100)
+  archetype     FighterArchetype?   // Pressure, Turtle, Counter, Hybrid
+  condition     FighterCondition @default(NORMAL) // Fresh, Normal, Tired
+
   // Momentum factors
   winStreak     Int @default(0)
   lossStreak    Int @default(0)
@@ -191,9 +198,13 @@ model Bet {
   id          String @id @default(cuid())
   amount      Float
   side        BetSide // YES or NO (or FIGHTER1/FIGHTER2)
-  odds        Float // Odds when bet was placed
+  odds        Float? // Legacy odds (nullable — V13 uses price instead)
   status      BetStatus @default(PENDING)
   payout      Float?
+
+  // V13 contract fields
+  price       Float?          // Contract price (0.01-0.99)
+  quantity    Int @default(1)  // Number of contracts
 
   createdAt   DateTime @default(now())
   settledAt   DateTime?
@@ -333,6 +344,19 @@ enum FighterClass {
   LIGHTWEIGHT
   MIDDLEWEIGHT
   HEAVYWEIGHT
+}
+
+enum FighterArchetype {
+  PRESSURE
+  TURTLE
+  COUNTER
+  HYBRID
+}
+
+enum FighterCondition {
+  FRESH
+  NORMAL
+  TIRED
 }
 
 enum FightStatus {
