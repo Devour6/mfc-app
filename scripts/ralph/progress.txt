@@ -112,3 +112,26 @@ Jinwoo owns: fight engine, DMM quote generation, trading state transition signal
   - Order status transitions (FILLED, PARTIALLY_FILLED)
 - All quality gates passed: type-check, lint (0 errors), build, 198 API tests
 - Engineering-standards checklist: zero violations (extracted magic values, deduplicated PnL calc + credit deduction)
+
+### 1S.4 — Position manager — auto-netting and limits (PASSED)
+- Extracted position logic from matching-engine.ts to lib/position-manager.ts (clean module separation)
+- Auto-netting: 10 YES + buy 5 NO = net 5 YES (single Position record updated, quantity decremented)
+- Side flip: 10 YES + buy 15 NO = net 5 NO (side changes, avgCostBasis set to new fill price, realizedPnl on closed portion)
+- Exact close: 10 YES + buy 10 NO = quantity 0 (flat close with PnL)
+- Position limits enforced via checkPositionLimit(): Local 10,000¢, Regional 25,000¢, Grand 50,000¢, Invitational 100,000¢
+- Agent limits: min(bankroll * 0.05, 10,000¢) — uses AGENT_BANKROLL_FRACTION and AGENT_POSITION_CAP_CENTS constants
+- DMM exempt from all position limits (early return in checkPositionLimit)
+- avgCostBasis: weighted average on same-side fills, fill price on side-flip new portion
+- realizedPnl: computed via computeExitPnl() = exitQty × ((100 - avgCost) - fillPrice), accumulates across partial exits
+- Fixed PnL sign from 1S.3: old formula had inverted sign (fillPrice - complement), now correct ((complement) - fillPrice)
+- Named constants: POSITION_LIMIT_CENTS, AGENT_POSITION_CAP_CENTS, AGENT_BANKROLL_FRACTION
+- Exported types: PositionTxClient, PositionUpdateParams, PositionLimitError
+- matching-engine.ts now imports from position-manager.ts, re-exports constants for backward compatibility
+- 30 unit tests in __tests__/api/position-manager.test.ts:
+  - getPositionLimit: 6 tests (all tiers, agent limits, cap, zero/missing bankroll)
+  - checkPositionLimit: 11 tests (new/existing same-side, opposite reduce, flip, DMM bypass, agent bankroll)
+  - computeExitPnl: 4 tests (positive/negative/zero PnL, NO→YES close)
+  - upsertPosition: 7 tests (new, same-side weighted avg, auto-net, flip, exact close, PnL accumulation)
+  - getOrCreatePosition: 2 tests (existing return, empty create)
+- All quality gates passed: type-check, lint (0 errors), build, 226 API tests (19 suites)
+- Engineering-standards checklist: zero violations
