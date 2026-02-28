@@ -13,7 +13,7 @@ model User {
   email       String @unique
   name        String?
   username    String? @unique
-  credits     Float  @default(1000.0) // Starting credits
+  credits     Int    @default(100000) // Credits in cents. 100000 = $1,000.00
   isAgent     Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -28,6 +28,10 @@ model User {
   skinPurchases SkinPurchase[]
   ownedAgents  AgentProfile[] @relation("AgentOwner")
   billingRequests BillingRequest[] @relation("BillingOwner")
+  ownedGear    Gear[]
+  orders       Order[]
+  positions    Position[]
+  creditTransactions CreditTransaction[]
 
   @@index([auth0Id])
   @@index([email])
@@ -61,6 +65,21 @@ model Fighter {
   totalTrainingHours   Float @default(0.0)
   totalTrainingSessions Int @default(0)
 
+  // V13 stats (nullable for backward compat with legacy fighters)
+  pow           Int?                // Power (0-100)
+  end_stat      Int?                // Endurance (0-100). "end" is reserved in SQL.
+  tec           Int?                // Technique (0-100)
+  archetype     FighterArchetype?   // Pressure, Turtle, Counter, Hybrid
+  condition     FighterCondition @default(NORMAL) // Fresh, Normal, Tired
+
+  // V13 lifecycle fields
+  age           Int       @default(25)      // Current age in fight-years
+  birthDate     DateTime  @default(now())   // For age calculation
+  peakStart     Int       @default(25)      // Start of peak performance window
+  peakEnd       Int       @default(35)      // End of peak performance window
+  fatigueUntil  DateTime?                   // Cannot fight until this time (recovery)
+  summoningCost Int       @default(50000)   // Cost in cents to summon this fighter class
+
   // Momentum factors
   winStreak     Int @default(0)
   lossStreak    Int @default(0)
@@ -79,6 +98,7 @@ model Fighter {
   fightResults  FightResult[]
   bets          Bet[]
   skinPurchases SkinPurchase[]
+  equippedGear  Gear[]    @relation("EquippedGear")
 
   @@index([ownerId])
   @@index([elo(sort: Desc)])
@@ -114,6 +134,7 @@ model Training {
   fighterId   String
   user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
+  gearDrop    Gear?   @relation("DroppedFromTraining")
 
   @@index([fighterId])
   @@index([userId])
@@ -128,6 +149,13 @@ model Fight {
   scheduledAt     DateTime
   startedAt       DateTime?
   endedAt         DateTime?
+
+  // Exchange fields
+  league          League       @default(HUMAN)    // HUMAN or AGENT — required
+  tier            FightTier    @default(LOCAL)     // Determines fees and position limits
+  tradingState    TradingState @default(PREFIGHT)  // Trading window state machine
+  entryFee        Int          @default(0)         // Per-fighter entry fee in cents
+  prizePool       Int          @default(0)         // Total prize pool in cents
 
   // Fight setup
   maxRounds       Int @default(3)
@@ -148,12 +176,17 @@ model Fight {
 
   result          FightResult?
   bets            Bet[]
+  orders          Order[]
+  trades          Trade[]
+  positions       Position[]
 
   @@index([status])
   @@index([fighter1Id])
   @@index([fighter2Id])
   @@index([scheduledAt])
   @@index([status, scheduledAt])
+  @@index([league, status])
+  @@index([league, scheduledAt])
   @@map("fights")
 }
 
@@ -191,9 +224,13 @@ model Bet {
   id          String @id @default(cuid())
   amount      Float
   side        BetSide // YES or NO (or FIGHTER1/FIGHTER2)
-  odds        Float // Odds when bet was placed
+  odds        Float? // Legacy odds (nullable — V13 uses price instead)
   status      BetStatus @default(PENDING)
   payout      Float?
+
+  // V13 contract fields
+  price       Float?          // Contract price (0.01-0.99)
+  quantity    Int @default(1)  // Number of contracts
 
   createdAt   DateTime @default(now())
   settledAt   DateTime?
@@ -248,6 +285,45 @@ model AgentProfile {
   @@index([moltbookId])
   @@index([ownerId])
   @@map("agent_profiles")
+}
+
+model Gear {
+  id            String     @id @default(cuid())
+  name          String
+  description   String?
+  slot          GearSlot
+  rarity        GearRarity
+
+  // V13 3-stat modifiers: POW, END, TEC
+  // Values per rarity: Standard +0.25, Enhanced +0.5, Superior +0.75, Legendary +1.0
+  powMod        Decimal    @default(0) @db.Decimal(4, 2)
+  endMod        Decimal    @default(0) @db.Decimal(4, 2)
+  tecMod        Decimal    @default(0) @db.Decimal(4, 2)
+
+  // Durability (0 = broken, needs repair)
+  durability    Int        @default(100)
+  maxDurability Int        @default(100)
+
+  // Ownership and equip state
+  ownerId       String
+  fighterId     String?
+
+  // Provenance
+  droppedFromId String?    @unique
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  owner         User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  fighter       Fighter?   @relation("EquippedGear", fields: [fighterId], references: [id])
+  droppedFrom   Training?  @relation("DroppedFromTraining", fields: [droppedFromId], references: [id])
+
+  @@index([ownerId])
+  @@index([fighterId])
+  @@index([rarity])
+  @@index([slot])
+  @@map("gear")
 }
 
 model Skin {
@@ -335,6 +411,19 @@ enum FighterClass {
   HEAVYWEIGHT
 }
 
+enum FighterArchetype {
+  PRESSURE
+  TURTLE
+  COUNTER
+  HYBRID
+}
+
+enum FighterCondition {
+  FRESH
+  NORMAL
+  TIRED
+}
+
 enum FightStatus {
   SCHEDULED
   LIVE
@@ -372,4 +461,195 @@ enum TrainingStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+// --- V1 Exchange Models ---
+
+model Order {
+  id           String      @id @default(cuid())
+  userId       String
+  fightId      String
+  league       League                          // Denormalized from Fight for query perf
+  side         OrderSide                       // YES or NO
+  type         OrderType                       // LIMIT or MARKET
+  price        Int                             // Limit price in cents (1-99). MARKET: 0
+  quantity     Int                             // Number of contracts
+  filledQty    Int         @default(0)         // Contracts filled so far
+  remainingQty Int                             // Contracts remaining (= quantity - filledQty)
+  status       OrderStatus @default(OPEN)
+
+  // Fees
+  feeRate      Int         @default(200)       // Fee in basis points (200 = 2.00%)
+  totalFees    Int         @default(0)         // Accumulated fees in cents
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  cancelledAt  DateTime?
+  expiresAt    DateTime?                       // Null = good-til-cancelled
+
+  // Relations
+  user         User        @relation(fields: [userId], references: [id])
+  fight        Fight       @relation(fields: [fightId], references: [id])
+  makerFills   Trade[]     @relation("MakerOrder")
+  takerFills   Trade[]     @relation("TakerOrder")
+
+  @@index([fightId, league, side, status, price])  // Core order book query
+  @@index([fightId, league, status])                // Fight-level order lookups
+  @@index([userId, status])                         // User's open orders
+  @@index([userId, fightId])                        // User's orders for a fight
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model Trade {
+  id           String    @id @default(cuid())
+  fightId      String
+  league       League                          // Denormalized for query perf
+  price        Int                             // Execution price in cents
+  quantity     Int                             // Number of contracts traded
+
+  // Parties
+  makerOrderId String
+  takerOrderId String
+  makerUserId  String                          // Denormalized for fast P&L queries
+  takerUserId  String                          // Denormalized for fast P&L queries
+
+  // Fees
+  makerFee     Int                             // Fee charged to maker in cents
+  takerFee     Int                             // Fee charged to taker in cents
+
+  createdAt    DateTime  @default(now())
+
+  // Relations
+  fight        Fight     @relation(fields: [fightId], references: [id])
+  makerOrder   Order     @relation("MakerOrder", fields: [makerOrderId], references: [id])
+  takerOrder   Order     @relation("TakerOrder", fields: [takerOrderId], references: [id])
+
+  @@index([fightId, league])
+  @@index([makerOrderId])
+  @@index([takerOrderId])
+  @@index([makerUserId])
+  @@index([takerUserId])
+  @@index([createdAt])
+  @@map("trades")
+}
+
+model Position {
+  id            String    @id @default(cuid())
+  userId        String
+  fightId       String
+  league        League
+  side          OrderSide                      // YES or NO
+  quantity      Int                            // Net contracts held (always >= 0)
+  avgCostBasis  Int                            // Weighted average entry price in cents
+  realizedPnl   Int       @default(0)          // Cumulative realized P&L from partial exits (cents)
+  settlementPnl Int?                           // P&L from settlement (null until settled)
+  settled       Boolean   @default(false)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  settledAt     DateTime?
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id])
+  fight         Fight     @relation(fields: [fightId], references: [id])
+
+  @@unique([userId, fightId])                  // ONE position per user per fight (auto-netting)
+  @@index([userId, settled])                   // User's active positions
+  @@index([fightId, settled])                  // All positions for settlement
+  @@index([fightId, league])
+  @@map("positions")
+}
+
+model CreditTransaction {
+  id           String          @id @default(cuid())
+  userId       String
+  type         TransactionType
+  amount       Int                             // Cents. Positive = credit, negative = debit.
+  fee          Int             @default(0)     // Platform fee component (cents)
+  balanceAfter Int                             // User's balance after this transaction
+  description  String?
+  relatedId    String?                         // FK to related entity (orderId, fightId, etc.)
+  relatedType  String?                         // Entity type for polymorphic lookup
+
+  createdAt    DateTime        @default(now())
+
+  // Relations
+  user         User            @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])                 // User's transaction history (paginated)
+  @@index([userId, type])                      // Filter by type
+  @@index([relatedId, relatedType])            // Find transactions for an entity
+  @@index([createdAt])                         // Global audit
+  @@map("credit_transactions")
+}
+
+// --- V1 Exchange Enums ---
+
+enum League {
+  HUMAN
+  AGENT
+}
+
+enum OrderSide {
+  YES
+  NO
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  EXPIRED
+}
+
+enum GearSlot {
+  HEADGEAR
+  BODY
+  GLOVES
+  BOOTS
+}
+
+enum GearRarity {
+  STANDARD
+  ENHANCED
+  SUPERIOR
+  LEGENDARY
+}
+
+enum TradingState {
+  PREFIGHT
+  AUCTION
+  OPEN
+  ROUND_ACTIVE
+  SETTLEMENT
+  CLOSED
+}
+
+enum FightTier {
+  LOCAL
+  REGIONAL
+  GRAND
+  INVITATIONAL
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ORDER_FILL
+  SETTLEMENT
+  TRAINING
+  SUMMONING
+  ENTRY_FEE
+  PRIZE
+  GEAR_REPAIR
+  PLATFORM_FEE
+  REWARD
+  BILLING_TRANSFER
 }

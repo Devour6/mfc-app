@@ -1,0 +1,137 @@
+# Sprint 1 Platform — Progress & Context
+
+## Architecture Context
+
+MFC is a binary outcome contract exchange (like Polymarket/Kalshi) for AI fighter matches.
+This sprint builds the V1 exchange platform from two approved specs:
+- Schema Delta Spec: docs/plans/schema-delta-spec.md
+- V1 Exchange Architecture Spec: docs/plans/v1-exchange-architecture-spec.md
+
+## Key Specs to Read Before Every Story
+
+1. `docs/plans/schema-delta-spec.md` — all Prisma models, enums, fields, types, indexes
+2. `docs/plans/v1-exchange-architecture-spec.md` — matching engine, settlement, fees, position limits, trading state machine
+3. `CLAUDE.md` — master coordination doc with project structure, API patterns, testing, CI rules
+4. `LEARNINGS.md` — rules from past corrections
+
+## Codebase Layout
+
+- `prisma/schema.prisma` — Prisma 7 schema (models only, no url in datasource)
+- `prisma.config.ts` — provides DATABASE_URL for migrations
+- `lib/prisma.ts` — Prisma client singleton with @prisma/adapter-pg
+- `lib/api-utils.ts` — jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError
+- `lib/validations.ts` — Zod schemas for all API inputs
+- `lib/auth-guard.ts` — requireAuth() dual-mode (Auth0 session OR API key)
+- `lib/role-guard.ts` — requireHuman(), requireAgent(), requireAnyRole()
+- `lib/user-sync.ts` — ensureUser() upsert
+- `app/api/` — API route handlers (App Router pattern)
+- `__tests__/api/helpers.ts` — mock setup for Prisma, Auth0, user sync
+- `__tests__/api/` — all API tests (Jest 30, node environment)
+- `types/index.ts` — legacy type definitions
+- `lib/v13/types.ts` — V13 type definitions (CompleteFightRequest, RoundScore, etc.)
+- `lib/v13/constants.ts` — V13 locked constants
+
+## Locked Decisions (DO NOT change these)
+
+- CLOB model with complement matching: YES.price + NO.price >= 100 to cross
+- Credits stored as Int (cents). 1050 = $10.50
+- Auto-netting: one Position per user per fight. @@unique([userId, fightId])
+- No trading during live rounds: ROUND_ACTIVE rejects orders
+- Fee tiers per fight (not per user): Local 2% flat, Upper 5% profit, Agent 0.5% flat
+- DMM = system user, unlimited credits, zero fees
+- Gear stats: powMod/endMod/tecMod as Decimal(4,2), values +0.25/+0.5/+0.75/+1.0 per rarity
+- Gear stats do NOT count toward ability tier thresholds
+- Settlement is atomic: single Prisma $transaction with Serializable isolation
+- Position limits: Local $100, Regional $250, Grand $500, Invitational $1,000, Agent 5%/$100 cap
+
+## API Patterns (MUST follow)
+
+- Every route that requires auth: call requireHuman()/requireAgent()/requireAnyRole() + ensureUser()
+- All inputs validated with Zod schemas from lib/validations.ts
+- Response helpers from lib/api-utils.ts (never manual new Response())
+- Every new route MUST have tests in __tests__/api/
+- No raw fetch() in components — lib/api-client.ts only
+- Fight status transitions: SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED only
+
+## Quality Gates (run after EVERY story)
+
+1. npm run type-check
+2. npm run lint
+3. npm run build
+4. npx jest --selectProjects=api --no-coverage
+5. Run engineering-standards skill checklist against changed files
+
+## Ownership
+
+Sawamura (me) owns: matching engine, settlement engine, position manager, API routes, DB transactions
+Jinwoo owns: fight engine, DMM quote generation, trading state transition signals, market UI
+
+## Completed Stories
+
+### 1S.1 — Schema migration — enums and modified models (PASSED)
+- Added 9 new enums: League, OrderSide, OrderType, OrderStatus, GearSlot, GearRarity, TradingState, FightTier, TransactionType
+- User.credits changed from Float @default(1000.0) to Int @default(100000) (cents)
+- Fighter: added age, birthDate, peakStart, peakEnd, fatigueUntil, summoningCost fields + equippedGear relation
+- Fight: added league, tier, tradingState, entryFee, prizePool fields + 2 new indexes (league+status, league+scheduledAt)
+- Training: added gearDrop relation (DroppedFromTraining)
+- Gear model added (required for Training.gearDrop relation — full model per spec, 1S.2 will add Order/Trade/Position/CreditTransaction)
+- All quality gates passed: type-check, lint, build, 175 API tests
+- Note: Fight.league uses @default(HUMAN) for backward compat with existing rows (spec Option 3)
+
+### 1S.2 — Schema migration — new models (PASSED)
+- Added 4 new models: Order, Trade, Position, CreditTransaction (Gear was added in 1S.1)
+- Order: CLOB order with composite index [fightId, league, side, status, price], feeRate in basis points, maker/taker Trade relations
+- Trade: execution records with denormalized makerUserId/takerUserId for fast P&L queries, 6 indexes
+- Position: auto-netting via @@unique([userId, fightId]), avgCostBasis Int, settlementPnl Int?, realizedPnl
+- CreditTransaction: audit trail with TransactionType enum, balanceAfter, polymorphic relatedId/relatedType
+- Wired relations: User→orders/positions/creditTransactions, Fight→orders/trades/positions
+- All quality gates passed: prisma validate, prisma generate, type-check, lint (0 errors), build, 175 API tests
+- Engineering-standards checklist: zero violations
+
+### 1S.3 — Matching engine — core CLOB module (PASSED)
+- Implemented lib/matching-engine.ts: full CLOB matching engine with price-time priority
+- Complement matching: YES buy at P matches NO buy at >= (100-P), cross condition YES.price + NO.price >= 100
+- LIMIT orders: match against crossable resting orders, remainder rests on book
+- MARKET orders: fill-or-kill against best available, throws MatchingError if no liquidity
+- Returns { fills: Trade[], restingOrder?: Order, position: Position } (MatchResult interface)
+- All DB mutations via TxClient (Prisma interactive transaction), no direct DB access
+- DMM handling: userId === DMM_SYSTEM_ID skips credit checks and pays zero fees
+- Position management: upsertPosition with same-side weighted avg cost + basic opposite-side auto-netting
+- Named constants: CONTRACT_PAYOUT_CENTS = 100, DMM_SYSTEM_ID = 'DMM_SYSTEM'
+- Helper functions: computeFillFee, computeExitPnl, deductCreditsAndAudit, computeWeightedAvgPrice
+- 23 unit tests in __tests__/api/matching-engine.test.ts covering:
+  - LIMIT full fill, partial fill, no match, multi-order fill
+  - MARKET full fill, no liquidity rejection, IOC cancel
+  - Price-time priority (price desc, FIFO on equal prices)
+  - Complement matching (crossing, exact boundary)
+  - DMM as taker/maker (zero fees, no credit deductions)
+  - Fee calculation (floor(cost × qty × rate / 10000))
+  - CreditTransaction audit records for both parties
+  - Position creation, weighted avg cost update, empty position
+  - Trade.price convention (always YES-side)
+  - Order status transitions (FILLED, PARTIALLY_FILLED)
+- All quality gates passed: type-check, lint (0 errors), build, 198 API tests
+- Engineering-standards checklist: zero violations (extracted magic values, deduplicated PnL calc + credit deduction)
+
+### 1S.4 — Position manager — auto-netting and limits (PASSED)
+- Extracted position logic from matching-engine.ts to lib/position-manager.ts (clean module separation)
+- Auto-netting: 10 YES + buy 5 NO = net 5 YES (single Position record updated, quantity decremented)
+- Side flip: 10 YES + buy 15 NO = net 5 NO (side changes, avgCostBasis set to new fill price, realizedPnl on closed portion)
+- Exact close: 10 YES + buy 10 NO = quantity 0 (flat close with PnL)
+- Position limits enforced via checkPositionLimit(): Local 10,000¢, Regional 25,000¢, Grand 50,000¢, Invitational 100,000¢
+- Agent limits: min(bankroll * 0.05, 10,000¢) — uses AGENT_BANKROLL_FRACTION and AGENT_POSITION_CAP_CENTS constants
+- DMM exempt from all position limits (early return in checkPositionLimit)
+- avgCostBasis: weighted average on same-side fills, fill price on side-flip new portion
+- realizedPnl: computed via computeExitPnl() = exitQty × ((100 - avgCost) - fillPrice), accumulates across partial exits
+- Fixed PnL sign from 1S.3: old formula had inverted sign (fillPrice - complement), now correct ((complement) - fillPrice)
+- Named constants: POSITION_LIMIT_CENTS, AGENT_POSITION_CAP_CENTS, AGENT_BANKROLL_FRACTION
+- Exported types: PositionTxClient, PositionUpdateParams, PositionLimitError
+- matching-engine.ts now imports from position-manager.ts, re-exports constants for backward compatibility
+- 30 unit tests in __tests__/api/position-manager.test.ts:
+  - getPositionLimit: 6 tests (all tiers, agent limits, cap, zero/missing bankroll)
+  - checkPositionLimit: 11 tests (new/existing same-side, opposite reduce, flip, DMM bypass, agent bankroll)
+  - computeExitPnl: 4 tests (positive/negative/zero PnL, NO→YES close)
+  - upsertPosition: 7 tests (new, same-side weighted avg, auto-net, flip, exact close, PnL accumulation)
+  - getOrCreatePosition: 2 tests (existing return, empty create)
+- All quality gates passed: type-check, lint (0 errors), build, 226 API tests (19 suites)
+- Engineering-standards checklist: zero violations

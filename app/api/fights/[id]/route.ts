@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, notFound, validationError, serverError } from '@/lib/api-utils'
 import { submitFightResultSchema, updateFightStatusSchema, isLegalStatusTransition } from '@/lib/validations'
 import { requireAgent, requireAnyRole } from '@/lib/role-guard'
+import { settleFight, type SettlementOutcome } from '@/lib/settlement-engine'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -130,12 +131,51 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return errorResponse(`Cannot transition from ${existing.status} to ${status}`)
     }
 
+    // COMPLETED transitions trigger settlement atomically
+    if (status === 'COMPLETED') {
+      const fight = await prisma.$transaction(
+        async (tx: any) => {
+          const updatedFight = await tx.fight.update({
+            where: { id },
+            data: {
+              status,
+              endedAt: new Date(),
+              ...(fightData !== undefined && { fightData: (fightData ?? null) as any }),
+            },
+          })
+
+          // Determine settlement outcome from fight result
+          const fightResult = await tx.fightResult.findFirst({ where: { fightId: id } })
+          let outcome: SettlementOutcome
+          if (fightResult?.winnerId) {
+            const winningSide: 'YES' | 'NO' =
+              fightResult.winnerId === existing.fighter1Id ? 'YES' : 'NO'
+            outcome = { type: 'winner', side: winningSide }
+          } else {
+            outcome = { type: 'draw' }
+          }
+
+          await settleFight(tx, {
+            fightId: id,
+            outcome,
+            fightTier: existing.tier,
+            league: existing.league,
+          })
+
+          return updatedFight
+        },
+        { isolationLevel: 'Serializable' }
+      )
+
+      return jsonResponse(fight)
+    }
+
+    // Non-COMPLETED transitions: simple update
     const fight = await prisma.fight.update({
       where: { id },
       data: {
         status,
         ...(status === 'LIVE' && { startedAt: new Date() }),
-        ...(status === 'COMPLETED' && { endedAt: new Date() }),
         ...(fightData !== undefined && { fightData: (fightData ?? null) as any }),
       },
     })
