@@ -19,7 +19,11 @@ const UPPER_TIERS: ReadonlySet<string> = new Set(['REGIONAL', 'GRAND', 'INVITATI
 
 // ── Fighter Stat Fields ──────────────────────────────────────────────────────
 
-const STAT_FIELDS = ['strength', 'speed', 'defense', 'stamina', 'fightIQ', 'aggression'] as const
+/** Legacy V6 + V13 stat fields. V13 fighters use pow/end_stat/tec. */
+const STAT_FIELDS = [
+  'strength', 'speed', 'defense', 'stamina', 'fightIQ', 'aggression',
+  'pow', 'end_stat', 'tec',
+] as const
 
 // ── Functions ────────────────────────────────────────────────────────────────
 
@@ -77,8 +81,8 @@ export function computeFightTier(
 /**
  * Get the highest individual stat value from a fighter record.
  *
- * Reads strength, speed, defense, stamina, fightIQ, aggression.
- * Returns 0 if no stat fields are present.
+ * Reads legacy stats (strength, speed, defense, stamina, fightIQ, aggression)
+ * and V13 stats (pow, end_stat, tec). Returns 0 if no stat fields are present.
  */
 export function getMaxFighterStat(fighter: Record<string, unknown>): number {
   let max = 0

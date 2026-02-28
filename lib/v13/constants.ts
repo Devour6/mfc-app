@@ -159,11 +159,12 @@ export const EXHAUSTION = {
 
 // Gear
 
+/** Fractional stat mods per rarity tier. Source: GDD §3.10 + Itachi 2026-02-27 ruling. */
 export const GEAR_TIER_BONUSES: Record<string, number> = {
-  standard: 1,
-  enhanced: 1,
-  superior: 2,
-  legendary: 3,
+  standard: 0.25,
+  enhanced: 0.5,
+  superior: 0.75,
+  legendary: 1.0,
 }
 
 // Archetype Matchup
