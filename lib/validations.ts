@@ -179,6 +179,24 @@ export const checkoutSessionSchema = z.object({
   packageId: z.string().min(1, 'Package ID is required'),
 })
 
+// ─── Orders ────────────────────────────────────────────────────────────────
+
+export const OrderSide = z.enum(['YES', 'NO'])
+export const OrderType = z.enum(['LIMIT', 'MARKET'])
+
+export const createOrderSchema = z
+  .object({
+    fightId: z.string().min(1, 'Fight ID is required'),
+    side: OrderSide,
+    type: OrderType,
+    price: z.number().int().min(1).max(99).optional(),
+    quantity: z.number().int().min(1, 'Quantity must be at least 1'),
+  })
+  .refine(
+    (data) => data.type === 'MARKET' || (data.price !== undefined && data.price >= 1 && data.price <= 99),
+    { message: 'Price (1-99) is required for LIMIT orders', path: ['price'] }
+  )
+
 // ─── Query params ───────────────────────────────────────────────────────────
 
 export const fighterQuerySchema = z.object({
