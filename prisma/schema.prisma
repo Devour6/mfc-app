@@ -13,7 +13,7 @@ model User {
   email       String @unique
   name        String?
   username    String? @unique
-  credits     Float  @default(1000.0) // Starting credits
+  credits     Int    @default(100000) // Credits in cents. 100000 = $1,000.00
   isAgent     Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -28,6 +28,7 @@ model User {
   skinPurchases SkinPurchase[]
   ownedAgents  AgentProfile[] @relation("AgentOwner")
   billingRequests BillingRequest[] @relation("BillingOwner")
+  ownedGear    Gear[]
 
   @@index([auth0Id])
   @@index([email])
@@ -68,6 +69,14 @@ model Fighter {
   archetype     FighterArchetype?   // Pressure, Turtle, Counter, Hybrid
   condition     FighterCondition @default(NORMAL) // Fresh, Normal, Tired
 
+  // V13 lifecycle fields
+  age           Int       @default(25)      // Current age in fight-years
+  birthDate     DateTime  @default(now())   // For age calculation
+  peakStart     Int       @default(25)      // Start of peak performance window
+  peakEnd       Int       @default(35)      // End of peak performance window
+  fatigueUntil  DateTime?                   // Cannot fight until this time (recovery)
+  summoningCost Int       @default(50000)   // Cost in cents to summon this fighter class
+
   // Momentum factors
   winStreak     Int @default(0)
   lossStreak    Int @default(0)
@@ -86,6 +95,7 @@ model Fighter {
   fightResults  FightResult[]
   bets          Bet[]
   skinPurchases SkinPurchase[]
+  equippedGear  Gear[]    @relation("EquippedGear")
 
   @@index([ownerId])
   @@index([elo(sort: Desc)])
@@ -121,6 +131,7 @@ model Training {
   fighterId   String
   user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
+  gearDrop    Gear?   @relation("DroppedFromTraining")
 
   @@index([fighterId])
   @@index([userId])
@@ -135,6 +146,13 @@ model Fight {
   scheduledAt     DateTime
   startedAt       DateTime?
   endedAt         DateTime?
+
+  // Exchange fields
+  league          League       @default(HUMAN)    // HUMAN or AGENT — required
+  tier            FightTier    @default(LOCAL)     // Determines fees and position limits
+  tradingState    TradingState @default(PREFIGHT)  // Trading window state machine
+  entryFee        Int          @default(0)         // Per-fighter entry fee in cents
+  prizePool       Int          @default(0)         // Total prize pool in cents
 
   // Fight setup
   maxRounds       Int @default(3)
@@ -161,6 +179,8 @@ model Fight {
   @@index([fighter2Id])
   @@index([scheduledAt])
   @@index([status, scheduledAt])
+  @@index([league, status])
+  @@index([league, scheduledAt])
   @@map("fights")
 }
 
@@ -259,6 +279,45 @@ model AgentProfile {
   @@index([moltbookId])
   @@index([ownerId])
   @@map("agent_profiles")
+}
+
+model Gear {
+  id            String     @id @default(cuid())
+  name          String
+  description   String?
+  slot          GearSlot
+  rarity        GearRarity
+
+  // V13 3-stat modifiers: POW, END, TEC
+  // Values per rarity: Standard +0.25, Enhanced +0.5, Superior +0.75, Legendary +1.0
+  powMod        Decimal    @default(0) @db.Decimal(4, 2)
+  endMod        Decimal    @default(0) @db.Decimal(4, 2)
+  tecMod        Decimal    @default(0) @db.Decimal(4, 2)
+
+  // Durability (0 = broken, needs repair)
+  durability    Int        @default(100)
+  maxDurability Int        @default(100)
+
+  // Ownership and equip state
+  ownerId       String
+  fighterId     String?
+
+  // Provenance
+  droppedFromId String?    @unique
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  owner         User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  fighter       Fighter?   @relation("EquippedGear", fields: [fighterId], references: [id])
+  droppedFrom   Training?  @relation("DroppedFromTraining", fields: [droppedFromId], references: [id])
+
+  @@index([ownerId])
+  @@index([fighterId])
+  @@index([rarity])
+  @@index([slot])
+  @@map("gear")
 }
 
 model Skin {
@@ -396,4 +455,74 @@ enum TrainingStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+// --- V1 Exchange Enums ---
+
+enum League {
+  HUMAN
+  AGENT
+}
+
+enum OrderSide {
+  YES
+  NO
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  EXPIRED
+}
+
+enum GearSlot {
+  HEADGEAR
+  BODY
+  GLOVES
+  BOOTS
+}
+
+enum GearRarity {
+  STANDARD
+  ENHANCED
+  SUPERIOR
+  LEGENDARY
+}
+
+enum TradingState {
+  PREFIGHT
+  AUCTION
+  OPEN
+  ROUND_ACTIVE
+  SETTLEMENT
+  CLOSED
+}
+
+enum FightTier {
+  LOCAL
+  REGIONAL
+  GRAND
+  INVITATIONAL
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ORDER_FILL
+  SETTLEMENT
+  TRAINING
+  SUMMONING
+  ENTRY_FEE
+  PRIZE
+  GEAR_REPAIR
+  PLATFORM_FEE
+  REWARD
+  BILLING_TRANSFER
 }

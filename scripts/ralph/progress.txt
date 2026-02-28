@@ -1,0 +1,79 @@
+# Sprint 1 Platform — Progress & Context
+
+## Architecture Context
+
+MFC is a binary outcome contract exchange (like Polymarket/Kalshi) for AI fighter matches.
+This sprint builds the V1 exchange platform from two approved specs:
+- Schema Delta Spec: docs/plans/schema-delta-spec.md
+- V1 Exchange Architecture Spec: docs/plans/v1-exchange-architecture-spec.md
+
+## Key Specs to Read Before Every Story
+
+1. `docs/plans/schema-delta-spec.md` — all Prisma models, enums, fields, types, indexes
+2. `docs/plans/v1-exchange-architecture-spec.md` — matching engine, settlement, fees, position limits, trading state machine
+3. `CLAUDE.md` — master coordination doc with project structure, API patterns, testing, CI rules
+4. `LEARNINGS.md` — rules from past corrections
+
+## Codebase Layout
+
+- `prisma/schema.prisma` — Prisma 7 schema (models only, no url in datasource)
+- `prisma.config.ts` — provides DATABASE_URL for migrations
+- `lib/prisma.ts` — Prisma client singleton with @prisma/adapter-pg
+- `lib/api-utils.ts` — jsonResponse, errorResponse, notFound, unauthorized, serverError, validationError
+- `lib/validations.ts` — Zod schemas for all API inputs
+- `lib/auth-guard.ts` — requireAuth() dual-mode (Auth0 session OR API key)
+- `lib/role-guard.ts` — requireHuman(), requireAgent(), requireAnyRole()
+- `lib/user-sync.ts` — ensureUser() upsert
+- `app/api/` — API route handlers (App Router pattern)
+- `__tests__/api/helpers.ts` — mock setup for Prisma, Auth0, user sync
+- `__tests__/api/` — all API tests (Jest 30, node environment)
+- `types/index.ts` — legacy type definitions
+- `lib/v13/types.ts` — V13 type definitions (CompleteFightRequest, RoundScore, etc.)
+- `lib/v13/constants.ts` — V13 locked constants
+
+## Locked Decisions (DO NOT change these)
+
+- CLOB model with complement matching: YES.price + NO.price >= 100 to cross
+- Credits stored as Int (cents). 1050 = $10.50
+- Auto-netting: one Position per user per fight. @@unique([userId, fightId])
+- No trading during live rounds: ROUND_ACTIVE rejects orders
+- Fee tiers per fight (not per user): Local 2% flat, Upper 5% profit, Agent 0.5% flat
+- DMM = system user, unlimited credits, zero fees
+- Gear stats: powMod/endMod/tecMod as Decimal(4,2), values +0.25/+0.5/+0.75/+1.0 per rarity
+- Gear stats do NOT count toward ability tier thresholds
+- Settlement is atomic: single Prisma $transaction with Serializable isolation
+- Position limits: Local $100, Regional $250, Grand $500, Invitational $1,000, Agent 5%/$100 cap
+
+## API Patterns (MUST follow)
+
+- Every route that requires auth: call requireHuman()/requireAgent()/requireAnyRole() + ensureUser()
+- All inputs validated with Zod schemas from lib/validations.ts
+- Response helpers from lib/api-utils.ts (never manual new Response())
+- Every new route MUST have tests in __tests__/api/
+- No raw fetch() in components — lib/api-client.ts only
+- Fight status transitions: SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED only
+
+## Quality Gates (run after EVERY story)
+
+1. npm run type-check
+2. npm run lint
+3. npm run build
+4. npx jest --selectProjects=api --no-coverage
+5. Run engineering-standards skill checklist against changed files
+
+## Ownership
+
+Sawamura (me) owns: matching engine, settlement engine, position manager, API routes, DB transactions
+Jinwoo owns: fight engine, DMM quote generation, trading state transition signals, market UI
+
+## Completed Stories
+
+### 1S.1 — Schema migration — enums and modified models (PASSED)
+- Added 9 new enums: League, OrderSide, OrderType, OrderStatus, GearSlot, GearRarity, TradingState, FightTier, TransactionType
+- User.credits changed from Float @default(1000.0) to Int @default(100000) (cents)
+- Fighter: added age, birthDate, peakStart, peakEnd, fatigueUntil, summoningCost fields + equippedGear relation
+- Fight: added league, tier, tradingState, entryFee, prizePool fields + 2 new indexes (league+status, league+scheduledAt)
+- Training: added gearDrop relation (DroppedFromTraining)
+- Gear model added (required for Training.gearDrop relation — full model per spec, 1S.2 will add Order/Trade/Position/CreditTransaction)
+- All quality gates passed: type-check, lint, build, 175 API tests
+- Note: Fight.league uses @default(HUMAN) for backward compat with existing rows (spec Option 3)
