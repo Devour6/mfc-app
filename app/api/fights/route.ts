@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, validationError, serverError } from '@/lib/api-utils'
 import { createFightSchema, fightQuerySchema } from '@/lib/validations'
 import { requireAgent } from '@/lib/role-guard'
+import { computeFightTier, getMaxFighterStat } from '@/lib/fee-engine'
 
 // GET /api/fights?status=...&limit=... — List fights
 export async function GET(request: NextRequest) {
@@ -51,6 +52,12 @@ export async function POST(request: NextRequest) {
     if (!f1 || !f2) return errorResponse('One or both fighters not found')
     if (!f1.isActive || !f2.isActive) return errorResponse('Both fighters must be active')
 
+    // Compute fight tier from fighters' highest individual stats
+    const tier = computeFightTier(
+      getMaxFighterStat(f1 as Record<string, unknown>),
+      getMaxFighterStat(f2 as Record<string, unknown>)
+    )
+
     const fight = await prisma.fight.create({
       data: {
         fighter1Id,
@@ -59,6 +66,7 @@ export async function POST(request: NextRequest) {
         maxRounds,
         venue,
         title,
+        tier,
       },
       include: {
         fighter1: { select: { id: true, name: true, emoji: true, elo: true } },

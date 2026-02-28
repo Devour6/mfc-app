@@ -4,21 +4,11 @@ import { jsonResponse, validationError, errorResponse, notFound, serverError } f
 import { createOrderSchema, orderQuerySchema } from '@/lib/validations'
 import { requireAnyRole } from '@/lib/role-guard'
 import { matchOrder, MatchingError } from '@/lib/matching-engine'
-import { checkPositionLimit, PositionLimitError, DMM_SYSTEM_ID } from '@/lib/position-manager'
+import { checkPositionLimit, PositionLimitError } from '@/lib/position-manager'
+import { computeFeeRate, DMM_SYSTEM_ID } from '@/lib/fee-engine'
 
 /** Trading states that accept new orders. */
 const TRADEABLE_STATES = new Set(['PREFIGHT', 'OPEN'])
-
-/** Upper tiers charge 0 per-trade (settlement-only fees). */
-const UPPER_TIERS = new Set(['REGIONAL', 'GRAND', 'INVITATIONAL'])
-
-/** Compute fee rate in basis points for a new order. */
-function computeFeeRate(fightTier: string, league: string, userId: string): number {
-  if (userId === DMM_SYSTEM_ID) return 0
-  if (league === 'AGENT') return 50     // 0.5% flat
-  if (UPPER_TIERS.has(fightTier)) return 0  // 5% profit at settlement, 0 per-trade
-  return 200                             // Local: 2% flat
-}
 
 // GET /api/orders — List user's orders with optional filters
 export async function GET(request: NextRequest) {
@@ -79,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Credit check: user.credits >= price * quantity + estimated fee
-    const feeRate = computeFeeRate(fight.tier, fight.league, dbUser.id)
+    const feeRate = computeFeeRate(fight.tier, fight.league, dbUser.id === DMM_SYSTEM_ID)
     const estimatedCost = orderType === 'MARKET' ? quantity * 99 : price * quantity
     const estimatedFee = Math.floor(estimatedCost * feeRate / 10000)
     const totalEstimated = estimatedCost + estimatedFee

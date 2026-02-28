@@ -28,6 +28,8 @@ export const mockPrisma = {
   },
   fightResult: {
     create: jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
   },
   bet: {
     findMany: jest.fn(),
