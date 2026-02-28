@@ -29,6 +29,7 @@ export interface V13FighterStats {
 }
 
 export type Condition = 'fresh' | 'normal' | 'tired'
+export type Archetype = 'pressure' | 'turtle' | 'counter' | 'hybrid'
 
 export type GearSlot = 'gloves' | 'headgear' | 'body' | 'boots'
 export type GearTier = 'standard' | 'enhanced' | 'superior' | 'legendary'
@@ -47,8 +48,6 @@ export interface V13GearPiece {
 export interface V13GearLoadout {
   pieces: V13GearPiece[]
 }
-
-export type Archetype = 'pressure' | 'turtle' | 'counter' | 'hybrid'
 
 /** Static fighter configuration — set before the fight starts. */
 export interface V13Fighter {

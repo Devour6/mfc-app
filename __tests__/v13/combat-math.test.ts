@@ -130,9 +130,9 @@ describe('relentlessMitigation', () => {
 
   it('bypass scales with ability ramp at R3', () => {
     const result = relentlessMitigation(2, 2)
-    // bypass = max(1, 2 * min(1, 0.38 * 1.8)) = max(1, 2 * 0.684) = max(1, 1.368) = 1.368
-    expect(result.bypass).toBeCloseTo(1.368, 2)
-    expect(result.effectiveMitigation).toBeCloseTo(0.632, 2)
+    // bypass = max(1, 2 * min(1, 0.42 * 1.8)) = max(1, 2 * 0.756) = max(1, 1.512) = 1.512
+    expect(result.bypass).toBeCloseTo(1.512, 2)
+    expect(result.effectiveMitigation).toBeCloseTo(0.488, 2)
   })
 
   it('floor of +1 applies when mitigation is 0', () => {
@@ -319,16 +319,16 @@ describe('resolveTierAbilities', () => {
 // ─── Ability Scaling ────────────────────────────────────────────────────────
 
 describe('relentlessBypass', () => {
-  it('R1 = 38% base', () => {
-    expect(relentlessBypass(0)).toBeCloseTo(0.38)
+  it('R1 = 42% base', () => {
+    expect(relentlessBypass(0)).toBeCloseTo(0.42)
   })
 
-  it('R2 = 0.38 * 1.3 = 0.494', () => {
-    expect(relentlessBypass(1)).toBeCloseTo(0.494)
+  it('R2 = 0.42 * 1.3 = 0.546', () => {
+    expect(relentlessBypass(1)).toBeCloseTo(0.546)
   })
 
-  it('R3 = 0.38 * 1.8 = 0.684', () => {
-    expect(relentlessBypass(2)).toBeCloseTo(0.684)
+  it('R3 = 0.42 * 1.8 = 0.756', () => {
+    expect(relentlessBypass(2)).toBeCloseTo(0.756)
   })
 
   it('capped at 1.0', () => {
@@ -339,16 +339,17 @@ describe('relentlessBypass', () => {
 })
 
 describe('ironGuardCatch', () => {
-  it('R1 = 42% base', () => {
-    expect(ironGuardCatch(0)).toBeCloseTo(0.42)
+  it('R1 = 55% base', () => {
+    expect(ironGuardCatch(0)).toBeCloseTo(0.55)
   })
 
-  it('R2 = 0.42 * 1.3 = 0.546', () => {
-    expect(ironGuardCatch(1)).toBeCloseTo(0.546)
+  it('R2 = 0.55 * 1.3 = 0.70 (capped)', () => {
+    // 0.55 * 1.3 = 0.715, capped at 0.70
+    expect(ironGuardCatch(1)).toBeCloseTo(0.70)
   })
 
   it('R3 capped at 70%', () => {
-    // 0.42 * 1.8 = 0.756, capped at 0.70
+    // 0.55 * 1.8 = 0.99, capped at 0.70
     expect(ironGuardCatch(2)).toBeCloseTo(0.70)
   })
 })
