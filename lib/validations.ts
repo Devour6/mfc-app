@@ -220,6 +220,12 @@ export const positionQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+// ─── Public market data ─────────────────────────────────────────────────────
+
+export const publicTradeQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
 // ─── Query params ───────────────────────────────────────────────────────────
 
 export const fighterQuerySchema = z.object({
