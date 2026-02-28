@@ -89,6 +89,7 @@ export const mockPrisma = {
   },
   trade: {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
     create: jest.fn(),
   },
   creditTransaction: {

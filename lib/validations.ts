@@ -205,6 +205,21 @@ export const orderQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+// ─── Trades ───────────────────────────────────────────────────────────────
+
+export const tradeQuerySchema = z.object({
+  fightId: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+// ─── Positions ────────────────────────────────────────────────────────────
+
+export const positionQuerySchema = z.object({
+  fightId: z.string().optional(),
+  settled: z.enum(['true', 'false']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
 // ─── Query params ───────────────────────────────────────────────────────────
 
 export const fighterQuerySchema = z.object({
