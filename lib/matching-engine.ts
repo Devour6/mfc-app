@@ -1,10 +1,13 @@
 import type { PrismaClient, Order, Trade, Position } from '@prisma/client'
+import {
+  CONTRACT_PAYOUT_CENTS,
+  DMM_SYSTEM_ID,
+  upsertPosition,
+  getOrCreatePosition,
+} from './position-manager'
 
-/** Binary contract payout ceiling in cents: YES price + NO price always equals this. */
-export const CONTRACT_PAYOUT_CENTS = 100
-
-/** Well-known user ID for the Designated Market Maker system account. */
-export const DMM_SYSTEM_ID = 'DMM_SYSTEM'
+// Re-export shared constants for backward compatibility with existing imports
+export { CONTRACT_PAYOUT_CENTS, DMM_SYSTEM_ID } from './position-manager'
 
 /** Prisma interactive transaction client — subset of PrismaClient used by the matching engine. */
 export interface TxClient {
@@ -233,14 +236,9 @@ export async function matchOrder(
   }
 }
 
-/** Fee for a single fill: floor(costPerContract × quantity × feeRate / 10000). */
+/** Fee for a single fill: floor(costPerContract x quantity x feeRate / 10000). */
 function computeFillFee(costPerContract: number, quantity: number, feeRate: number): number {
   return Math.floor(costPerContract * quantity * feeRate / 10000)
-}
-
-/** Realized P&L when exiting a position by buying the opposite side. */
-function computeExitPnl(exitQty: number, fillPrice: number, existingAvgCost: number): number {
-  return exitQty * (fillPrice - (CONTRACT_PAYOUT_CENTS - existingAvgCost))
 }
 
 interface DeductCreditsParams {
@@ -285,92 +283,4 @@ function computeWeightedAvgPrice(fills: Trade[], takerSide: 'YES' | 'NO'): numbe
     totalQty += fill.quantity
   }
   return Math.round(totalCost / totalQty)
-}
-
-interface PositionUpdateParams {
-  userId: string
-  fightId: string
-  league: 'HUMAN' | 'AGENT'
-  side: 'YES' | 'NO'
-  fillQty: number
-  fillPrice: number
-}
-
-/**
- * Upsert a position: create if new, update avgCostBasis if existing same side.
- * Basic opposite-side netting included; full position manager in 1S.4.
- */
-async function upsertPosition(tx: TxClient, p: PositionUpdateParams): Promise<Position> {
-  const existing = await tx.position.findUnique({
-    where: { userId_fightId: { userId: p.userId, fightId: p.fightId } },
-  })
-
-  if (!existing) {
-    return tx.position.create({
-      data: {
-        userId: p.userId,
-        fightId: p.fightId,
-        league: p.league,
-        side: p.side,
-        quantity: p.fillQty,
-        avgCostBasis: p.fillPrice,
-        realizedPnl: 0,
-      },
-    })
-  }
-
-  if (existing.side === p.side) {
-    // Same side: increase quantity, recalculate weighted average cost
-    const newQty = existing.quantity + p.fillQty
-    const newAvgCost = Math.round(
-      (existing.quantity * existing.avgCostBasis + p.fillQty * p.fillPrice) / newQty
-    )
-    return tx.position.update({
-      where: { id: existing.id },
-      data: { quantity: newQty, avgCostBasis: newAvgCost },
-    })
-  }
-
-  // Opposite side: basic auto-netting (full implementation in 1S.4)
-  if (p.fillQty <= existing.quantity) {
-    const closedQty = p.fillQty
-    const exitPnl = computeExitPnl(closedQty, p.fillPrice, existing.avgCostBasis)
-    return tx.position.update({
-      where: { id: existing.id },
-      data: {
-        quantity: existing.quantity - closedQty,
-        realizedPnl: existing.realizedPnl + exitPnl,
-      },
-    })
-  }
-
-  // Side flip: fillQty > existing.quantity
-  const closedQty = existing.quantity
-  const exitPnl = computeExitPnl(closedQty, p.fillPrice, existing.avgCostBasis)
-  return tx.position.update({
-    where: { id: existing.id },
-    data: {
-      side: p.side,
-      quantity: p.fillQty - closedQty,
-      avgCostBasis: p.fillPrice,
-      realizedPnl: existing.realizedPnl + exitPnl,
-    },
-  })
-}
-
-/** Get existing position or create an empty one. */
-async function getOrCreatePosition(
-  tx: TxClient,
-  userId: string,
-  fightId: string,
-  league: 'HUMAN' | 'AGENT',
-  side: 'YES' | 'NO'
-): Promise<Position> {
-  const existing = await tx.position.findUnique({
-    where: { userId_fightId: { userId, fightId } },
-  })
-  if (existing) return existing
-  return tx.position.create({
-    data: { userId, fightId, league, side, quantity: 0, avgCostBasis: 0, realizedPnl: 0 },
-  })
 }
