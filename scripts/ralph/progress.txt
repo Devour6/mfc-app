@@ -77,3 +77,38 @@ Jinwoo owns: fight engine, DMM quote generation, trading state transition signal
 - Gear model added (required for Training.gearDrop relation — full model per spec, 1S.2 will add Order/Trade/Position/CreditTransaction)
 - All quality gates passed: type-check, lint, build, 175 API tests
 - Note: Fight.league uses @default(HUMAN) for backward compat with existing rows (spec Option 3)
+
+### 1S.2 — Schema migration — new models (PASSED)
+- Added 4 new models: Order, Trade, Position, CreditTransaction (Gear was added in 1S.1)
+- Order: CLOB order with composite index [fightId, league, side, status, price], feeRate in basis points, maker/taker Trade relations
+- Trade: execution records with denormalized makerUserId/takerUserId for fast P&L queries, 6 indexes
+- Position: auto-netting via @@unique([userId, fightId]), avgCostBasis Int, settlementPnl Int?, realizedPnl
+- CreditTransaction: audit trail with TransactionType enum, balanceAfter, polymorphic relatedId/relatedType
+- Wired relations: User→orders/positions/creditTransactions, Fight→orders/trades/positions
+- All quality gates passed: prisma validate, prisma generate, type-check, lint (0 errors), build, 175 API tests
+- Engineering-standards checklist: zero violations
+
+### 1S.3 — Matching engine — core CLOB module (PASSED)
+- Implemented lib/matching-engine.ts: full CLOB matching engine with price-time priority
+- Complement matching: YES buy at P matches NO buy at >= (100-P), cross condition YES.price + NO.price >= 100
+- LIMIT orders: match against crossable resting orders, remainder rests on book
+- MARKET orders: fill-or-kill against best available, throws MatchingError if no liquidity
+- Returns { fills: Trade[], restingOrder?: Order, position: Position } (MatchResult interface)
+- All DB mutations via TxClient (Prisma interactive transaction), no direct DB access
+- DMM handling: userId === DMM_SYSTEM_ID skips credit checks and pays zero fees
+- Position management: upsertPosition with same-side weighted avg cost + basic opposite-side auto-netting
+- Named constants: CONTRACT_PAYOUT_CENTS = 100, DMM_SYSTEM_ID = 'DMM_SYSTEM'
+- Helper functions: computeFillFee, computeExitPnl, deductCreditsAndAudit, computeWeightedAvgPrice
+- 23 unit tests in __tests__/api/matching-engine.test.ts covering:
+  - LIMIT full fill, partial fill, no match, multi-order fill
+  - MARKET full fill, no liquidity rejection, IOC cancel
+  - Price-time priority (price desc, FIFO on equal prices)
+  - Complement matching (crossing, exact boundary)
+  - DMM as taker/maker (zero fees, no credit deductions)
+  - Fee calculation (floor(cost × qty × rate / 10000))
+  - CreditTransaction audit records for both parties
+  - Position creation, weighted avg cost update, empty position
+  - Trade.price convention (always YES-side)
+  - Order status transitions (FILLED, PARTIALLY_FILLED)
+- All quality gates passed: type-check, lint (0 errors), build, 198 API tests
+- Engineering-standards checklist: zero violations (extracted magic values, deduplicated PnL calc + credit deduction)
