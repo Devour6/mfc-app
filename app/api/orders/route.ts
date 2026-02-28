@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, validationError, errorResponse, notFound, serverError } from '@/lib/api-utils'
-import { createOrderSchema } from '@/lib/validations'
+import { createOrderSchema, orderQuerySchema } from '@/lib/validations'
 import { requireAnyRole } from '@/lib/role-guard'
 import { matchOrder, MatchingError } from '@/lib/matching-engine'
 import { checkPositionLimit, PositionLimitError, DMM_SYSTEM_ID } from '@/lib/position-manager'
@@ -18,6 +18,32 @@ function computeFeeRate(fightTier: string, league: string, userId: string): numb
   if (league === 'AGENT') return 50     // 0.5% flat
   if (UPPER_TIERS.has(fightTier)) return 0  // 5% profit at settlement, 0 per-trade
   return 200                             // Local: 2% flat
+}
+
+// GET /api/orders — List user's orders with optional filters
+export async function GET(request: NextRequest) {
+  try {
+    const dbUser = await requireAnyRole()
+
+    const raw = Object.fromEntries(request.nextUrl.searchParams.entries())
+    const parsed = orderQuerySchema.safeParse(raw)
+    if (!parsed.success) return validationError(parsed.error)
+
+    const { fightId, status, limit } = parsed.data
+    const where: Record<string, unknown> = { userId: dbUser.id }
+    if (fightId) where.fightId = fightId
+    if (status) where.status = status
+
+    const orders = await prisma.order.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
+
+    return jsonResponse(orders)
+  } catch (error) {
+    return serverError(error)
+  }
 }
 
 // POST /api/orders — Place an order

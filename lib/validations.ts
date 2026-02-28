@@ -197,6 +197,14 @@ export const createOrderSchema = z
     { message: 'Price (1-99) is required for LIMIT orders', path: ['price'] }
   )
 
+export const OrderStatus = z.enum(['OPEN', 'PARTIALLY_FILLED', 'FILLED', 'CANCELLED', 'EXPIRED'])
+
+export const orderQuerySchema = z.object({
+  fightId: z.string().optional(),
+  status: OrderStatus.optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
 // ─── Query params ───────────────────────────────────────────────────────────
 
 export const fighterQuerySchema = z.object({

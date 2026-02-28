@@ -5,6 +5,7 @@ import {
   mockPrisma,
   mockRequireAnyRole,
   createRequest,
+  params,
 } from './helpers'
 
 // Mock matching engine
@@ -32,7 +33,8 @@ jest.mock('@/lib/position-manager', () => ({
   DMM_SYSTEM_ID: 'DMM_SYSTEM',
 }))
 
-import { POST } from '@/app/api/orders/route'
+import { POST, GET } from '@/app/api/orders/route'
+import { GET as GET_BY_ID, DELETE as DELETE_BY_ID } from '@/app/api/orders/[id]/route'
 
 // Re-import PositionLimitError and MatchingError from the mocked modules
 // so we can throw instances that match instanceof checks
@@ -331,5 +333,236 @@ describe('POST /api/orders', () => {
     expect(mockCheckPositionLimit).toHaveBeenCalledWith(
       expect.objectContaining({ agentBankroll: 50_000, league: 'AGENT' })
     )
+  })
+})
+
+// ── Fixtures for GET/DELETE ──────────────────────────────────────────────────
+
+const ORDER_1 = {
+  id: 'o1',
+  userId: 'u1',
+  fightId: 'fight-1',
+  league: 'HUMAN',
+  side: 'YES',
+  type: 'LIMIT',
+  price: 60,
+  quantity: 10,
+  filledQty: 0,
+  remainingQty: 10,
+  status: 'OPEN',
+  feeRate: 200,
+  totalFees: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  cancelledAt: null,
+  expiresAt: null,
+}
+
+const PARTIALLY_FILLED_ORDER = {
+  ...ORDER_1,
+  id: 'o2',
+  filledQty: 4,
+  remainingQty: 6,
+  status: 'PARTIALLY_FILLED',
+}
+
+const FILLED_ORDER = {
+  ...ORDER_1,
+  id: 'o3',
+  filledQty: 10,
+  remainingQty: 0,
+  status: 'FILLED',
+}
+
+function getRequest(queryString = '') {
+  return createRequest(`/api/orders${queryString}`, { method: 'GET' })
+}
+
+// ── GET /api/orders ─────────────────────────────────────────────────────────
+
+describe('GET /api/orders', () => {
+  it('returns user orders with default limit', async () => {
+    mockPrisma.order.findMany.mockResolvedValue([ORDER_1])
+
+    const res = await GET(getRequest())
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data).toHaveLength(1)
+    expect(data[0].id).toBe('o1')
+    expect(mockPrisma.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1' },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      })
+    )
+  })
+
+  it('filters by fightId query param', async () => {
+    mockPrisma.order.findMany.mockResolvedValue([])
+
+    await GET(getRequest('?fightId=fight-1'))
+
+    expect(mockPrisma.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1', fightId: 'fight-1' },
+      })
+    )
+  })
+
+  it('filters by status query param', async () => {
+    mockPrisma.order.findMany.mockResolvedValue([])
+
+    await GET(getRequest('?status=OPEN'))
+
+    expect(mockPrisma.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1', status: 'OPEN' },
+      })
+    )
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    const { NextResponse } = require('next/server')
+    mockRequireAnyRole.mockRejectedValue({
+      response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    })
+
+    const res = await GET(getRequest())
+    expect(res.status).toBe(401)
+  })
+})
+
+// ── GET /api/orders/:id ─────────────────────────────────────────────────────
+
+describe('GET /api/orders/:id', () => {
+  it('returns order with fills', async () => {
+    const orderWithFills = { ...ORDER_1, makerFills: [], takerFills: [{ id: 't1', price: 60, quantity: 5 }] }
+    mockPrisma.order.findUnique.mockResolvedValue(orderWithFills)
+
+    const res = await GET_BY_ID(
+      createRequest('/api/orders/o1', { method: 'GET' }),
+      params('o1')
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.id).toBe('o1')
+    expect(data.takerFills).toHaveLength(1)
+  })
+
+  it('returns 404 when order does not exist', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(null)
+
+    const res = await GET_BY_ID(
+      createRequest('/api/orders/nonexistent', { method: 'GET' }),
+      params('nonexistent')
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when order belongs to another user', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue({ ...ORDER_1, userId: 'other-user' })
+
+    const res = await GET_BY_ID(
+      createRequest('/api/orders/o1', { method: 'GET' }),
+      params('o1')
+    )
+    expect(res.status).toBe(404)
+  })
+})
+
+// ── DELETE /api/orders/:id ──────────────────────────────────────────────────
+
+describe('DELETE /api/orders/:id', () => {
+  it('cancels an OPEN order and refunds credits', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(ORDER_1)
+    const cancelledOrder = { ...ORDER_1, status: 'CANCELLED', remainingQty: 0, cancelledAt: new Date() }
+    mockPrisma.order.update.mockResolvedValue(cancelledOrder)
+    mockPrisma.user.update.mockResolvedValue({ id: 'u1', credits: 100_600 })
+    mockPrisma.creditTransaction.create.mockResolvedValue({})
+
+    const res = await DELETE_BY_ID(
+      createRequest('/api/orders/o1', { method: 'DELETE' }),
+      params('o1')
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.status).toBe('CANCELLED')
+    expect(mockPrisma.$transaction).toHaveBeenCalled()
+  })
+
+  it('cancels a PARTIALLY_FILLED order and refunds remaining', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(PARTIALLY_FILLED_ORDER)
+    const cancelledOrder = { ...PARTIALLY_FILLED_ORDER, status: 'CANCELLED', remainingQty: 0 }
+    mockPrisma.order.update.mockResolvedValue(cancelledOrder)
+    mockPrisma.user.update.mockResolvedValue({ id: 'u1', credits: 100_360 })
+    mockPrisma.creditTransaction.create.mockResolvedValue({})
+
+    const res = await DELETE_BY_ID(
+      createRequest('/api/orders/o2', { method: 'DELETE' }),
+      params('o2')
+    )
+
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 400 when cancelling a FILLED order', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(FILLED_ORDER)
+
+    const res = await DELETE_BY_ID(
+      createRequest('/api/orders/o3', { method: 'DELETE' }),
+      params('o3')
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain('Cannot cancel order with status FILLED')
+  })
+
+  it('returns 404 when order does not exist', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(null)
+
+    const res = await DELETE_BY_ID(
+      createRequest('/api/orders/nonexistent', { method: 'DELETE' }),
+      params('nonexistent')
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when order belongs to another user', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue({ ...ORDER_1, userId: 'other-user' })
+
+    const res = await DELETE_BY_ID(
+      createRequest('/api/orders/o1', { method: 'DELETE' }),
+      params('o1')
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('creates CreditTransaction for refunded amount', async () => {
+    mockPrisma.order.findUnique.mockResolvedValue(ORDER_1)
+    mockPrisma.order.update.mockResolvedValue({ ...ORDER_1, status: 'CANCELLED' })
+    mockPrisma.user.update.mockResolvedValue({ id: 'u1', credits: 100_600 })
+    mockPrisma.creditTransaction.create.mockResolvedValue({})
+
+    await DELETE_BY_ID(
+      createRequest('/api/orders/o1', { method: 'DELETE' }),
+      params('o1')
+    )
+
+    expect(mockPrisma.creditTransaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'u1',
+        type: 'ORDER_FILL',
+        amount: 600, // 10 remaining × 60¢
+        fee: 0,
+        balanceAfter: 100_600,
+        relatedId: 'o1',
+        relatedType: 'order',
+      }),
+    })
   })
 })
