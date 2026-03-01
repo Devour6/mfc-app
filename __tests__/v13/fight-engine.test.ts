@@ -473,7 +473,7 @@ describe('attack resolution', () => {
     }
   })
 
-  it('Devastator triggers once per fight', () => {
+  it('Devastator triggers at most once per fight (exploding dice)', () => {
     // Devastator needs POW 95+
     const devFighter = makeFighter({
       id: 'f1',
@@ -493,8 +493,36 @@ describe('attack resolution', () => {
       advanceToFighting(engine)
       tickN(engine, TICKS_PER_SECOND * 30)
 
-      // Devastator should fire at most once
+      // Devastator fires at most once (devastatorUsedThisFight flag)
       expect(devCount).toBeLessThanOrEqual(1)
+    } finally {
+      Math.random = originalRandom
+    }
+  })
+
+  it('Devastator does not trigger when d6 roll fails', () => {
+    const devFighter = makeFighter({
+      id: 'f1',
+      stats: { pow: 95, end: 50, tec: 60 },
+    })
+
+    let devCount = 0
+    const originalRandom = Math.random
+    // All rolls return 0.5 — action fires, hits land, crits happen,
+    // but d6 roll = floor(0.5 * 6) + 1 = 4, which is < 5 threshold
+    Math.random = () => 0.5
+
+    try {
+      const engine = new V13FightEngine(devFighter, fighter2, {
+        onCommentary: (text) => {
+          if (text.includes('DEVASTATOR')) devCount++
+        },
+      })
+      advanceToFighting(engine)
+      tickN(engine, TICKS_PER_SECOND * 20)
+
+      // d6=4 never meets threshold of 5, so Devastator never fires
+      expect(devCount).toBe(0)
     } finally {
       Math.random = originalRandom
     }

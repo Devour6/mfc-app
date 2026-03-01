@@ -72,8 +72,11 @@ import type {
 /** Heavy Hands (POW T1): flat bonus damage on power attacks. */
 const HEAVY_HANDS_BONUS = 1
 
-/** Devastator (POW T3): flat bonus on first crit of the fight. */
-const DEVASTATOR_CRIT_BONUS = 20
+// Devastator (POW T3): exploding dice on natural crit + power attack, 1x/fight.
+// Roll d6 >= threshold for bonus damage multiplier. Power attack misses cost extra stamina.
+const DEVASTATOR_DAMAGE_MULT = 1.5
+const DEVASTATOR_EXPLODE_THRESHOLD = 5 // d6 >= 5 (~33%)
+const DEVASTATOR_MISS_STAMINA_PENALTY = 3
 
 /** Thick Skin (END T1): flat damage reduction on all incoming hits. */
 const THICK_SKIN_REDUCTION = 1
@@ -462,9 +465,10 @@ export class V13FightEngine {
 
   /**
    * Full damage pipeline for a single attack.
-   * Steps: (1) defender reaction roll → dodge/block/none, (2) accuracy check,
-   * (3) crit check, (4) dice damage + powMod, (5) tier bonuses (Heavy Hands,
-   * Devastator) + desperation + exhaustion, (6) END mitigation (Relentless bypass
+   * Steps: (1) defender reaction roll → dodge/block/none, (2) accuracy check
+   * (Devastator miss penalty on power attacks), (3) crit check, (4) dice damage
+   * + powMod, (5) tier bonuses (Heavy Hands, Devastator exploding dice on crit +
+   * power attack) + desperation + exhaustion, (6) END mitigation (Relentless bypass
    * or standard), (7) Thick Skin reduction, (8) block reduction (Iron Guard
    * doubles + Grinding Guard drain), (9) apply damage, (10) KO/TKO/desperation.
    */
@@ -492,7 +496,14 @@ export class V13FightEngine {
     }
 
     // 2. Accuracy check (applies whether blocked or not)
-    if (Math.random() > hitChance(attacker.tecMod, attacker.isDesperate)) return
+    const power = isPowerAttack(attackType)
+    if (Math.random() > hitChance(attacker.tecMod, attacker.isDesperate)) {
+      // Devastator fighters pay extra stamina on power attack misses
+      if (power && attacker.abilities.tier3.devastator) {
+        attacker.stamina = Math.max(0, attacker.stamina - DEVASTATOR_MISS_STAMINA_PENALTY)
+      }
+      return
+    }
 
     // 3. Crit check
     const isCrit = Math.random() < effectiveCritChance(
@@ -507,17 +518,21 @@ export class V13FightEngine {
     }
 
     // 5. Tier bonuses
-    if (attacker.abilities.tier1.heavyHands && isPowerAttack(attackType)) {
+    if (attacker.abilities.tier1.heavyHands && power) {
       damage += HEAVY_HANDS_BONUS
     }
-    if (isCrit && attacker.abilities.tier3.devastator
+    // Devastator: on natural crit + power attack, roll d6 for exploding dice (1x/fight)
+    if (isCrit && power && attacker.abilities.tier3.devastator
         && !attacker.devastatorUsedThisFight) {
-      damage += DEVASTATOR_CRIT_BONUS
-      attacker.devastatorUsedThisFight = true
-      attacker.stats.abilityProcs++
-      this.emitCommentary(
-        `${attacker.config.name} unleashes DEVASTATOR!`, 'action'
-      )
+      const d6 = Math.floor(Math.random() * 6) + 1
+      if (d6 >= DEVASTATOR_EXPLODE_THRESHOLD) {
+        damage = Math.floor(damage * DEVASTATOR_DAMAGE_MULT)
+        attacker.devastatorUsedThisFight = true
+        attacker.stats.abilityProcs++
+        this.emitCommentary(
+          `${attacker.config.name} unleashes DEVASTATOR!`, 'action'
+        )
+      }
     }
 
     // Desperation bonus
