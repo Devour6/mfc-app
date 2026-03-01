@@ -33,7 +33,7 @@ import {
   BASE_CP_CATCH,
   statToMod,
 } from './constants'
-import type { Condition, RoundScore } from './types'
+import type { Condition } from './types'
 
 // ─── Power Attack Set ───────────────────────────────────────────────────────
 
