@@ -170,7 +170,35 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return jsonResponse(fight)
     }
 
-    // Non-COMPLETED transitions: simple update
+    // CANCELLED transitions trigger settlement atomically (unwind positions, refund credits)
+    if (status === 'CANCELLED') {
+      const fight = await prisma.$transaction(
+        async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
+          const updatedFight = await tx.fight.update({
+            where: { id },
+            data: {
+              status,
+              endedAt: new Date(),
+              ...(fightData !== undefined && { fightData: (fightData ?? null) as any }),
+            },
+          })
+
+          await settleFight(tx, {
+            fightId: id,
+            outcome: { type: 'cancelled' },
+            fightTier: existing.tier,
+            league: existing.league,
+          })
+
+          return updatedFight
+        },
+        { isolationLevel: 'Serializable' }
+      )
+
+      return jsonResponse(fight)
+    }
+
+    // Non-COMPLETED, non-CANCELLED transitions: simple update
     const fight = await prisma.fight.update({
       where: { id },
       data: {

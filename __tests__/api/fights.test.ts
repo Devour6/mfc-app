@@ -315,8 +315,11 @@ describe('Fight lifecycle (status transitions)', () => {
     expect(res.status).toBe(400)
   })
 
-  it('allows SCHEDULED → CANCELLED without settlement', async () => {
-    mockPrisma.fight.findUnique.mockResolvedValue({ id: 'fight1', status: 'SCHEDULED' })
+  it('transitions SCHEDULED → CANCELLED and triggers settlement', async () => {
+    mockPrisma.fight.findUnique.mockResolvedValue({
+      id: 'fight1', status: 'SCHEDULED', tier: 'LOCAL', league: 'HUMAN',
+    })
+    mockPrisma.$transaction.mockImplementation(async (fn: Function) => fn(mockPrisma))
     mockPrisma.fight.update.mockResolvedValue({ id: 'fight1', status: 'CANCELLED' })
 
     const res = await PATCH(
@@ -328,7 +331,42 @@ describe('Fight lifecycle (status transitions)', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(mockSettleFight).not.toHaveBeenCalled()
+    expect(mockSettleFight).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        fightId: 'fight1',
+        outcome: { type: 'cancelled' },
+        fightTier: 'LOCAL',
+        league: 'HUMAN',
+      })
+    )
+  })
+
+  it('transitions LIVE → CANCELLED and triggers settlement', async () => {
+    mockPrisma.fight.findUnique.mockResolvedValue({
+      id: 'fight1', status: 'LIVE', tier: 'REGIONAL', league: 'HUMAN',
+    })
+    mockPrisma.$transaction.mockImplementation(async (fn: Function) => fn(mockPrisma))
+    mockPrisma.fight.update.mockResolvedValue({ id: 'fight1', status: 'CANCELLED' })
+
+    const res = await PATCH(
+      createRequest('/api/fights/fight1', {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'CANCELLED' }),
+      }),
+      params('fight1')
+    )
+
+    expect(res.status).toBe(200)
+    expect(mockSettleFight).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        fightId: 'fight1',
+        outcome: { type: 'cancelled' },
+        fightTier: 'REGIONAL',
+        league: 'HUMAN',
+      })
+    )
   })
 })
 
