@@ -69,7 +69,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         await tx.creditTransaction.create({
           data: {
             userId: dbUser.id,
-            type: 'ORDER_FILL',
+            type: 'ORDER_CANCEL',
             amount: refundAmount,
             fee: 0,
             balanceAfter: updatedUser.credits,
