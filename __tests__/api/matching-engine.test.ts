@@ -533,6 +533,34 @@ describe('matchOrder', () => {
     expect(result.position.quantity).toBe(0)
   })
 
+  // ── Self-match guard ─────────────────────────────────────────────────────
+
+  it('skips resting orders from the same user (self-match prevention)', async () => {
+    const tx = createMockTx()
+    // Resting order belongs to same userId as the incoming order
+    const selfOrder = makeRestingOrder({ userId: 'u1', price: 42, quantity: 10, remainingQty: 10 })
+    const otherOrder = makeRestingOrder({ userId: 'maker-1', price: 40, quantity: 10, remainingQty: 10 })
+    ;(tx.order.findMany as jest.Mock).mockResolvedValue([selfOrder, otherOrder])
+
+    const result = await matchOrder(tx, yesLimitInput({ userId: 'u1', price: 60, quantity: 5 }))
+
+    // Should skip selfOrder and fill against otherOrder
+    expect(result.fills).toHaveLength(1)
+    expect(result.fills[0].makerUserId).toBe('maker-1')
+  })
+
+  it('rests order when only self-match orders are on the book', async () => {
+    const tx = createMockTx()
+    const selfOrder = makeRestingOrder({ userId: 'u1', price: 42, quantity: 10, remainingQty: 10 })
+    ;(tx.order.findMany as jest.Mock).mockResolvedValue([selfOrder])
+
+    const result = await matchOrder(tx, yesLimitInput({ userId: 'u1', price: 60, quantity: 10 }))
+
+    // No fills — order should rest
+    expect(result.fills).toHaveLength(0)
+    expect(result.restingOrder).toBeDefined()
+  })
+
   // ── Trade.price convention ────────────────────────────────────────────────
 
   it('Trade.price is YES-side price when taker is NO', async () => {

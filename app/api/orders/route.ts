@@ -7,7 +7,11 @@ import { matchOrder, MatchingError } from '@/lib/matching-engine'
 import { checkPositionLimit, PositionLimitError } from '@/lib/position-manager'
 import { computeFeeRate, DMM_SYSTEM_ID } from '@/lib/fee-engine'
 
-/** Trading states that accept new orders. */
+/**
+ * Trading states that accept new orders via continuous matching.
+ * AUCTION is intentionally excluded — it uses a separate call auction flow
+ * (clearing price batch execution) that will be implemented in Sprint 2.
+ */
 const TRADEABLE_STATES = new Set(['PREFIGHT', 'OPEN'])
 
 // GET /api/orders — List user's orders with optional filters
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     // Execute matching inside a serializable transaction
     const result = await prisma.$transaction(
-      async (tx: any) => {
+      async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
         return matchOrder(tx, {
           userId: dbUser.id,
           fightId,

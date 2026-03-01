@@ -556,7 +556,7 @@ describe('DELETE /api/orders/:id', () => {
     expect(mockPrisma.creditTransaction.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'u1',
-        type: 'ORDER_FILL',
+        type: 'ORDER_CANCEL',
         amount: 600, // 10 remaining × 60¢
         fee: 0,
         balanceAfter: 100_600,
