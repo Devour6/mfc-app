@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     // Execute matching inside a serializable transaction
     const result = await prisma.$transaction(
-      async (tx: any) => {
+      async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
         return matchOrder(tx, {
           userId: dbUser.id,
           fightId,

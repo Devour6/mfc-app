@@ -7,6 +7,9 @@ import { settleFight, type SettlementOutcome } from '@/lib/settlement-engine'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
+/** Prisma interactive transaction client type extracted from prisma.$transaction callback. */
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
 // GET /api/fights/:id — Get fight details with result
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Use transaction: create result + update fight status + update fighter records
-    const result = await prisma.$transaction(async (tx: any) => {
+    const result = await prisma.$transaction(async (tx: TxClient) => {
       const fightResult = await tx.fightResult.create({
         data: {
           fightId: id,
@@ -134,7 +137,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // COMPLETED transitions trigger settlement atomically
     if (status === 'COMPLETED') {
       const fight = await prisma.$transaction(
-        async (tx: any) => {
+        async (tx: TxClient) => {
           const updatedFight = await tx.fight.update({
             where: { id },
             data: {
@@ -173,7 +176,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // CANCELLED transitions trigger settlement atomically (unwind positions, refund credits)
     if (status === 'CANCELLED') {
       const fight = await prisma.$transaction(
-        async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
+        async (tx: TxClient) => {
           const updatedFight = await tx.fight.update({
             where: { id },
             data: {

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const { amount, type, description } = parsed.data
 
     // Use a transaction to prevent race conditions
-    const user = await prisma.$transaction(async (tx: any) => {
+    const user = await prisma.$transaction(async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
       const current = await tx.user.findUnique({
         where: { id: dbUser.id },
         select: { id: true, credits: true },

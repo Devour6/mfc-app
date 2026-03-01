@@ -8,6 +8,9 @@ const CANCELLABLE_STATUSES = new Set(['OPEN', 'PARTIALLY_FILLED'])
 
 type RouteParams = { params: Promise<{ id: string }> }
 
+/** Prisma interactive transaction client type. */
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
 // GET /api/orders/:id — Get order details with fills
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -50,7 +53,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const refundAmount = order.remainingQty * order.price
 
-    const cancelled = await prisma.$transaction(async (tx: any) => {
+    const cancelled = await prisma.$transaction(async (tx: TxClient) => {
       const updated = await tx.order.update({
         where: { id },
         data: {

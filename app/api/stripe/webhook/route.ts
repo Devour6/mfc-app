@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
       // Credit the user's account
       try {
-        await prisma.$transaction(async (tx: any) => {
+        await prisma.$transaction(async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
           const user = await tx.user.findUnique({
             where: { id: userId },
             select: { id: true, credits: true },
