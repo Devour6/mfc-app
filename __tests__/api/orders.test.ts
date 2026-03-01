@@ -95,6 +95,9 @@ beforeEach(() => {
   mockRequireAnyRole.mockResolvedValue(HUMAN_USER)
   mockPrisma.fight.findUnique.mockResolvedValue(HUMAN_FIGHT)
   mockPrisma.position.findUnique.mockResolvedValue(null)
+  // Credit + position checks now happen inside the $transaction callback,
+  // which receives mockPrisma as `tx`. Mock tx.user.findUnique for credit reads.
+  mockPrisma.user.findUnique.mockResolvedValue({ credits: HUMAN_USER.credits })
   mockCheckPositionLimit.mockReturnValue(undefined)
   mockMatchOrder.mockResolvedValue(MATCH_RESULT)
   mockPrisma.$transaction.mockImplementation(async (fn: Function) => fn(mockPrisma))
@@ -268,7 +271,8 @@ describe('POST /api/orders', () => {
   // --- Credit check ---
 
   it('returns 409 when user has insufficient credits', async () => {
-    mockRequireAnyRole.mockResolvedValue({ ...HUMAN_USER, credits: 10 })
+    // Credit check now reads from tx.user.findUnique inside the transaction
+    mockPrisma.user.findUnique.mockResolvedValue({ credits: 10 })
 
     const res = await POST(postRequest(orderBody()))
     expect(res.status).toBe(409)
@@ -327,6 +331,8 @@ describe('POST /api/orders', () => {
   it('passes agent bankroll to checkPositionLimit for agent users', async () => {
     mockRequireAnyRole.mockResolvedValue(AGENT_USER)
     mockPrisma.fight.findUnique.mockResolvedValue(AGENT_FIGHT)
+    // Agent bankroll now read from tx.user.findUnique inside the transaction
+    mockPrisma.user.findUnique.mockResolvedValue({ credits: AGENT_USER.credits })
 
     await POST(postRequest(orderBody({ fightId: 'fight-2' })))
 
