@@ -623,13 +623,14 @@ enum GearRarity {
   LEGENDARY
 }
 
+/// Trading window state machine for a fight's order book lifecycle.
 enum TradingState {
-  PREFIGHT
-  AUCTION
-  OPEN
-  ROUND_ACTIVE
-  SETTLEMENT
-  CLOSED
+  PREFIGHT      /// Pre-fight window: continuous orders accepted
+  AUCTION       /// Call auction: Agent League only, batch clearing price (Sprint 2)
+  OPEN          /// Live trading: continuous orders accepted between rounds
+  ROUND_ACTIVE  /// During a round: orders rejected
+  SETTLEMENT    /// Positions being settled: no new orders
+  CLOSED        /// Fight complete: order book closed
 }
 
 enum FightTier {
