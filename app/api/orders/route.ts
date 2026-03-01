@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, validationError, errorResponse, notFound, serverError } from '@/lib/api-utils'
 import { createOrderSchema, orderQuerySchema } from '@/lib/validations'
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
           feeRate,
         })
       },
-      { isolationLevel: 'Serializable' }
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     )
 
     return jsonResponse(result, 201)
