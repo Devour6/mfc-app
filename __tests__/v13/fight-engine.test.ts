@@ -548,9 +548,8 @@ describe('attack resolution', () => {
       const f1Desperate = state.fighter1.isDesperate
       const f2Desperate = state.fighter2.isDesperate
 
-      if (f1Desperate || f2Desperate) {
-        expect(desperationFired).toBe(true)
-      }
+      expect(f1Desperate || f2Desperate).toBe(true)
+      expect(desperationFired).toBe(true)
     } finally {
       Math.random = originalRandom
     }
