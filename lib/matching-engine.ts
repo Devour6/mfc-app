@@ -117,6 +117,9 @@ export async function matchOrder(
   for (const resting of restingOrders) {
     if (remaining <= 0) break
 
+    // Self-match guard: skip resting orders owned by the same user
+    if (resting.userId === userId) continue
+
     const fillQty = Math.min(remaining, resting.remainingQty)
 
     // V1 execution: resting order's stated price is honored.
