@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, validationError, errorResponse, notFound, serverError } from '@/lib/api-utils'
 import { createOrderSchema, orderQuerySchema } from '@/lib/validations'
@@ -13,6 +14,14 @@ import { computeFeeRate, DMM_SYSTEM_ID } from '@/lib/fee-engine'
  * (clearing price batch execution) that will be implemented in Sprint 2.
  */
 const TRADEABLE_STATES = new Set(['PREFIGHT', 'OPEN'])
+
+/** Thrown inside the transaction when the user can't cover the order. */
+class InsufficientCreditsError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'InsufficientCreditsError'
+  }
+}
 
 // GET /api/orders — List user's orders with optional filters
 export async function GET(request: NextRequest) {
@@ -72,38 +81,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Credit check: user.credits >= price * quantity + estimated fee
+    // Fee rate is stable — derived from fight tier (set at creation), not user state
     const feeRate = computeFeeRate(fight.tier, fight.league, dbUser.id === DMM_SYSTEM_ID)
-    const estimatedCost = orderType === 'MARKET' ? quantity * 99 : price * quantity
-    const estimatedFee = Math.floor(estimatedCost * feeRate / 10000)
-    const totalEstimated = estimatedCost + estimatedFee
 
-    if (dbUser.credits < totalEstimated) {
-      return errorResponse(
-        `Insufficient credits: need ${totalEstimated}¢, have ${dbUser.credits}¢`,
-        409
-      )
-    }
-
-    // Position limit check
-    const existingPosition = await prisma.position.findUnique({
-      where: { userId_fightId: { userId: dbUser.id, fightId } },
-    })
-
-    checkPositionLimit({
-      existingPosition,
-      orderSide: side,
-      orderQuantity: quantity,
-      orderPrice: orderType === 'MARKET' ? 99 : price,
-      fightTier: fight.tier,
-      league: fight.league,
-      userId: dbUser.id,
-      agentBankroll: dbUser.isAgent ? dbUser.credits : undefined,
-    })
-
-    // Execute matching inside a serializable transaction
+    // Credit check + position limit check + matching all inside one serializable
+    // transaction to prevent TOCTOU races from concurrent orders.
     const result = await prisma.$transaction(
       async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
+        // Re-read credit balance inside transaction (serializable snapshot)
+        const freshUser = await tx.user.findUnique({
+          where: { id: dbUser.id },
+          select: { credits: true },
+        })
+        if (!freshUser) throw new MatchingError('User not found')
+
+        const estimatedCost = orderType === 'MARKET' ? quantity * 99 : price * quantity
+        const estimatedFee = Math.floor(estimatedCost * feeRate / 10000)
+        const totalEstimated = estimatedCost + estimatedFee
+
+        if (freshUser.credits < totalEstimated) {
+          throw new InsufficientCreditsError(
+            `Insufficient credits: need ${totalEstimated}¢, have ${freshUser.credits}¢`
+          )
+        }
+
+        // Re-read position inside transaction (serializable snapshot)
+        const existingPosition = await tx.position.findUnique({
+          where: { userId_fightId: { userId: dbUser.id, fightId } },
+        })
+
+        checkPositionLimit({
+          existingPosition,
+          orderSide: side,
+          orderQuantity: quantity,
+          orderPrice: orderType === 'MARKET' ? 99 : price,
+          fightTier: fight.tier,
+          league: fight.league,
+          userId: dbUser.id,
+          agentBankroll: dbUser.isAgent ? freshUser.credits : undefined,
+        })
+
         return matchOrder(tx, {
           userId: dbUser.id,
           fightId,
@@ -115,11 +132,14 @@ export async function POST(request: NextRequest) {
           feeRate,
         })
       },
-      { isolationLevel: 'Serializable' }
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     )
 
     return jsonResponse(result, 201)
   } catch (error) {
+    if (error instanceof InsufficientCreditsError) {
+      return errorResponse(error.message, 409)
+    }
     if (error instanceof PositionLimitError) {
       return errorResponse(error.message, 409)
     }
