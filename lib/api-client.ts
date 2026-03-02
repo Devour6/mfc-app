@@ -462,6 +462,18 @@ export function createCheckoutSession(packageId: string) {
   })
 }
 
+// ─── Content / File Utilities ────────────────────────────────────────────────
+
+export async function readFileContent(path: string): Promise<string> {
+  const res = await fetch(`/api/read-file?path=${encodeURIComponent(path)}`)
+  if (!res.ok) throw new ApiClientError(`Failed to read file: ${path}`, res.status, { error: 'File read failed' })
+  return res.text()
+}
+
+export async function getFileStats(path: string): Promise<{ mtime: string }> {
+  return request<{ mtime: string }>(`/api/file-stats?path=${encodeURIComponent(path)}`)
+}
+
 // ─── Re-export error class for consumers ────────────────────────────────────
 
 export { ApiClientError }

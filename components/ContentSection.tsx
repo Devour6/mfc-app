@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar, User, FileText, Eye } from 'lucide-react'
+import { readFileContent, getFileStats } from '@/lib/api-client'
 
 interface ContentDraft {
   id: string
@@ -58,13 +59,7 @@ export default function ContentSection({ className = '' }: ContentSectionProps) 
 
       for (const file of contentFiles) {
         try {
-          const response = await fetch(`/api/read-file?path=${encodeURIComponent(file.path)}`)
-          if (!response.ok) {
-            console.warn(`Failed to load ${file.path}`)
-            continue
-          }
-          
-          const content = await response.text()
+          const content = await readFileContent(file.path)
           
           // Extract title from first line
           const lines = content.split('\n')
@@ -75,12 +70,11 @@ export default function ContentSection({ className = '' }: ContentSectionProps) 
                          lines.slice(1, 3).join(' ').substring(0, 100) + '...'
           
           // Get file stats
-          const statResponse = await fetch(`/api/file-stats?path=${encodeURIComponent(file.path)}`)
           let fileDate = new Date().toISOString().split('T')[0]
-          if (statResponse.ok) {
-            const stats = await statResponse.json()
+          try {
+            const stats = await getFileStats(file.path)
             fileDate = new Date(stats.mtime).toISOString().split('T')[0]
-          }
+          } catch { /* fallback to today */ }
           
           // Calculate word count and read time
           const wordCount = content.split(/\s+/).length
@@ -271,7 +265,7 @@ export default function ContentSection({ className = '' }: ContentSectionProps) 
       <div className="mb-4">
         <h2 className="font-pixel text-text mb-2">CONTENT DRAFTS</h2>
         <p className="text-xs text-text2">
-          Kelly & Rachel's latest drafts from the workspace
+          Kelly &amp; Rachel&apos;s latest drafts from the workspace
         </p>
       </div>
 
