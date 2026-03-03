@@ -356,10 +356,10 @@ export default function EnhancedFightCanvas({
     const f2State = fightState.fighter2.animation.state
 
     if (f1State === 'hit' && prevAnimRef.current.f1 !== 'hit') {
-      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -14
+      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -18
     }
     if (f2State === 'hit' && prevAnimRef.current.f2 !== 'hit') {
-      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -14
+      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -18
     }
 
     prevAnimRef.current.f1 = f1State
@@ -876,21 +876,30 @@ export default function EnhancedFightCanvas({
       hitStopProgressRef.current[posKey] = 0
     }
 
-    // SF2-style forward lunge: fixed distance (no teleporting across screen).
-    // Punch: 25px forward. Kick: 35px (longer reach).
+    // SF2-style forward lunge: DYNAMIC — close the gap to the opponent so the
+    // fist/foot visually reaches their body. At 2.0× scale with 100-unit fighting
+    // distance, there's a visible gap between fighters. The lunge IS the attack.
+    // Capped at 80px to prevent teleporting on very wide canvases.
     let lungeOffset = 0
     const isAttacking = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking'
     if (isAttacking && animProgress > 0) {
       const atkType = fighterState.animation.attackType || 'jab'
       const phase = getAttackPhase(animProgress, atkType)
       const phaseT = getPhaseProgress(animProgress, atkType, phase)
-      const lungeDistance = fighterState.animation.state === 'kicking' ? 35 : 25
+
+      // Calculate actual screen gap to opponent
+      const opponentState = fighterNumber === 1 ? fightState.fighter2 : fightState.fighter1
+      const opponentScreenX = (opponentState.position.x / 480) * width
+      const gapToOpponent = Math.abs(opponentScreenX - x)
+      // Lunge enough to close ~70% of the gap (leaves some overlap for contact feel)
+      // Minimum 20px (for close range), maximum 80px (prevents teleporting)
+      const lungeDistance = clamp(gapToOpponent * 0.7, 20, 80)
 
       if (phase === 'startup') {
         // Slight pullback during wind-up (anticipation)
-        lungeOffset = fighterState.position.facing * Math.round(lerp(0, -4, easeInQuad(phaseT)))
+        lungeOffset = fighterState.position.facing * Math.round(lerp(0, -6, easeInQuad(phaseT)))
       } else if (phase === 'active' || phase === 'hold') {
-        // INSTANT full lunge
+        // INSTANT full lunge — snap forward to contact range
         lungeOffset = fighterState.position.facing * Math.round(lungeDistance)
       } else {
         // Quick snap back during recovery
