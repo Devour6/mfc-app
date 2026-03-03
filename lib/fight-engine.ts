@@ -196,8 +196,12 @@ export class FightEngine {
     const f2 = this.fightState.fighter2
     const distance = Math.abs(f1.position.x - f2.position.x)
 
-    // Only fight if in range and not stunned
-    if (distance <= 60 && f1.modifiers.stunned === 0 && f2.modifiers.stunned === 0) {
+    // Only fight if in range and not stunned.
+    // At FIGHTER_SCALE=2.0, fighters are ~96px wide on screen. Distance must be
+    // large enough that they don't visually overlap when idle — the LUNGE creates
+    // the forward motion of the attack. Range 120 + press-in 100 keeps ~40px gap
+    // between body edges on a typical canvas.
+    if (distance <= 120 && f1.modifiers.stunned === 0 && f2.modifiers.stunned === 0) {
 
       // Fighter 1 actions
       if (this.shouldAttemptAction(f1, f2)) {
@@ -211,19 +215,20 @@ export class FightEngine {
         this.executeAction(action, f2, f1)
       }
 
-      // Press-in: fighters naturally gravitate to striking distance (~35 units)
-      // so punches/kicks visually connect on screen
-      if (distance > 35) {
+      // Press-in: fighters gravitate to striking distance (~100 units)
+      // At 2.0× scale on ~650px canvas, 100 units ≈ 135px between centers,
+      // giving ~40px gap between 96px-wide fighter bodies.
+      if (distance > 100) {
         this.moveTowardsOpponent(f1, f2)
         this.moveTowardsOpponent(f2, f1)
       }
     }
 
     // Movement when out of range — approach quickly
-    if (distance > 70) {
+    if (distance > 140) {
       this.moveTowardsOpponent(f1, f2)
       this.moveTowardsOpponent(f2, f1)
-    } else if (distance > 50) {
+    } else if (distance > 120) {
       // Auto-approach when idle in mid-range
       if (f1.animation.state === 'idle') this.moveTowardsOpponent(f1, f2)
       if (f2.animation.state === 'idle') this.moveTowardsOpponent(f2, f1)
@@ -289,14 +294,14 @@ export class FightEngine {
     }
     
     // Movement options
-    if (distance > 50 || distance < 25) {
+    if (distance > 110 || distance < 80) {
       actions.push(
-        { action: { type: 'move', fighter: attacker === this.fightState.fighter1 ? 1 : 2, direction: distance > 50 ? 'forward' : 'back' }, weight: 15 }
+        { action: { type: 'move', fighter: attacker === this.fightState.fighter1 ? 1 : 2, direction: distance > 110 ? 'forward' : 'back' }, weight: 15 }
       )
     }
 
     // Clinch when close and low stamina
-    if (distance < 30 && attacker.stamina < 30) {
+    if (distance < 90 && attacker.stamina < 30) {
       actions.push(
         { action: { type: 'clinch', fighter: attacker === this.fightState.fighter1 ? 1 : 2 }, weight: 12 }
       )
@@ -601,7 +606,7 @@ export class FightEngine {
 
   private moveTowardsOpponent(attacker: FighterState, defender: FighterState): void {
     const direction = defender.position.x > attacker.position.x ? 1 : -1
-    attacker.position.x += direction * 5
+    attacker.position.x += direction * 8
     attacker.position.x = Math.max(60, Math.min(420, attacker.position.x))
     // Set walking animation if idle — prevents invisible sliding
     if (attacker.animation.state === 'idle') {
