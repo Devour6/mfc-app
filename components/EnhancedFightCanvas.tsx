@@ -35,10 +35,6 @@ interface VisualEffect {
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
 const easeInQuad = (t: number) => t * t
 const easeInOutQuad = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-const easeOutBack = (t: number) => {
-  const c = 1.7
-  return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2)
-}
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 
@@ -50,13 +46,16 @@ const statMod = (val: number, low: number, high: number) => low + (val / 100) * 
 // SF2 key insight: startup is VISIBLE anticipation, then SNAP to active in 1-2 frames.
 // Recovery is where the weight difference lives (light: short, heavy: long).
 // "hold" is the impact pose held during hit-stop. Active is near-instant.
+// SF2 timing: startup is SHORT (just enough to telegraph), active is INSTANT (1 tick),
+// hold is LONG (the pose reads for 50%+ of the animation), recovery fills the rest.
+// Jab = 12f total in SF2: 3f startup, 4f active, 5f recovery. Hold comes from hit-stop.
 const ATTACK_PHASES: Record<string, { startup: number; active: number; hold: number }> = {
-  jab:        { startup: 0.20, active: 0.30, hold: 0.50 },
-  cross:      { startup: 0.25, active: 0.35, hold: 0.55 },
-  hook:       { startup: 0.30, active: 0.40, hold: 0.55 },
-  uppercut:   { startup: 0.35, active: 0.45, hold: 0.60 },
-  kick:       { startup: 0.25, active: 0.35, hold: 0.60 },
-  roundhouse: { startup: 0.30, active: 0.40, hold: 0.65 },
+  jab:        { startup: 0.10, active: 0.15, hold: 0.60 },
+  cross:      { startup: 0.12, active: 0.17, hold: 0.58 },
+  hook:       { startup: 0.15, active: 0.20, hold: 0.58 },
+  uppercut:   { startup: 0.18, active: 0.23, hold: 0.60 },
+  kick:       { startup: 0.12, active: 0.17, hold: 0.60 },
+  roundhouse: { startup: 0.15, active: 0.20, hold: 0.62 },
 }
 
 // Per-attack-type parameters
@@ -107,12 +106,6 @@ const lerpPose = (a: FighterPose, b: FighterPose, t: number): FighterPose => ({
   bootScale: lerp(a.bootScale, b.bootScale, t),
 })
 
-// Snap-lerp: reaches target in first 15% of t (SF2-style near-instant pose change)
-const snapPose = (a: FighterPose, b: FighterPose, t: number): FighterPose => {
-  const st = t < 0.15 ? t / 0.15 : 1.0
-  return lerpPose(a, b, st)
-}
-
 // ── Named pose constants ─────────────────────────────────────────────────────
 const POSE_GUARD: FighterPose = {
   fShA: 55, fElB: 110, bShA: 45, bElB: 120,
@@ -121,29 +114,32 @@ const POSE_GUARD: FighterPose = {
   gloveScale: 1.0, bootScale: 1.0,
 }
 
-// Idle: 6 discrete keyframes with asymmetric timing (slow rise 100ms, fast fall 67ms)
+// SF2 Idle: 4-frame breathing loop. Arms MAINTAIN GUARD SHAPE — they just bob Y.
+// The bounce comes from knees bending, not arm rotation. Head barely moves.
+// Fists move 2-4× more than torso (SF2 reference: 4px fists vs 1px torso).
+// All offsets are INTEGERS for pixel-perfect hard cuts between frames.
 const IDLE_FRAMES: FighterPose[] = [
-  // Frame 0: neutral low
-  { ...POSE_GUARD, fShA: 53, fElB: 106, bShA: 43, bElB: 117, fKnB: 24, bKnB: 29,
-    headOff: 1, torsoOff: 2, armOff: 5, legOff: 1, gloveScale: 1.0, bootScale: 1.0 },
+  // Frame 0: bottom of bounce (deepest knee bend)
+  { ...POSE_GUARD, fKnB: 30, bKnB: 34,
+    headOff: 2, torsoOff: 4, armOff: 10, legOff: 2, gloveScale: 1.0, bootScale: 1.0 },
   // Frame 1: rising
-  { ...POSE_GUARD, fShA: 56, fElB: 112, bShA: 46, bElB: 122, fKnB: 21, bKnB: 26,
-    headOff: 0.3, torsoOff: 0.5, armOff: 1.5, legOff: 0.3, gloveScale: 1.0, bootScale: 1.0 },
-  // Frame 2: peak (top of breath)
-  { ...POSE_GUARD, fShA: 59, fElB: 118, bShA: 48, bElB: 127, fKnB: 18, bKnB: 23,
-    headOff: -0.5, torsoOff: -1, armOff: -2, legOff: -0.5, gloveScale: 1.0, bootScale: 1.0 },
-  // Frame 3: falling fast
-  { ...POSE_GUARD, fShA: 56, fElB: 114, bShA: 46, bElB: 123, fKnB: 20, bKnB: 25,
+  { ...POSE_GUARD, fKnB: 24, bKnB: 28,
+    headOff: 1, torsoOff: 2, armOff: 5, legOff: 1, gloveScale: 1.0, bootScale: 1.0 },
+  // Frame 2: peak (top — knees most straight)
+  { ...POSE_GUARD, fKnB: 18, bKnB: 22,
     headOff: 0, torsoOff: 0, armOff: 0, legOff: 0, gloveScale: 1.0, bootScale: 1.0 },
-  // Frame 4: sinking past neutral
-  { ...POSE_GUARD, fShA: 52, fElB: 105, bShA: 42, bElB: 115, fKnB: 23, bKnB: 28,
-    headOff: 0.8, torsoOff: 1.5, armOff: 4, legOff: 0.8, gloveScale: 1.0, bootScale: 1.0 },
-  // Frame 5: deepest bounce
-  { ...POSE_GUARD, fShA: 51, fElB: 103, bShA: 41, bElB: 113, fKnB: 25, bKnB: 30,
-    headOff: 1.2, torsoOff: 2.5, armOff: 6, legOff: 1.2, gloveScale: 1.0, bootScale: 1.0 },
+  // Frame 3: start falling
+  { ...POSE_GUARD, fKnB: 20, bKnB: 24,
+    headOff: 0, torsoOff: 1, armOff: 3, legOff: 0, gloveScale: 1.0, bootScale: 1.0 },
+  // Frame 4: falling fast
+  { ...POSE_GUARD, fKnB: 26, bKnB: 30,
+    headOff: 1, torsoOff: 3, armOff: 7, legOff: 1, gloveScale: 1.0, bootScale: 1.0 },
+  // Frame 5: bottom again
+  { ...POSE_GUARD, fKnB: 30, bKnB: 34,
+    headOff: 2, torsoOff: 4, armOff: 10, legOff: 2, gloveScale: 1.0, bootScale: 1.0 },
 ]
-// Frame durations: slow rise (100ms × 3), fast fall (67ms × 3) = ~501ms cycle
-const IDLE_FRAME_MS = [100, 100, 100, 67, 67, 67]
+// Asymmetric timing: slow rise (100ms × 3), fast fall (50ms × 3) = ~450ms cycle
+const IDLE_FRAME_MS = [100, 100, 100, 50, 50, 50]
 const IDLE_CYCLE_MS = IDLE_FRAME_MS.reduce((a, b) => a + b, 0)
 
 // Punch poses — per attack type
@@ -154,10 +150,10 @@ const POSE_JAB_CHAMBER: FighterPose = {
   gloveScale: 0.85, bootScale: 1.0,
 }
 const POSE_JAB_EXTEND: FighterPose = {
-  fShA: -82, fElB: 5, bShA: 55, bElB: 125,
-  fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
-  bodyLean: 12, headOff: -3, torsoOff: -1, armOff: 0, legOff: 0,
-  gloveScale: 1.35, bootScale: 1.0,
+  fShA: -85, fElB: 2, bShA: 50, bElB: 130,
+  fHiA: -15, fKnB: 20, bHiA: 12, bKnB: 28,
+  bodyLean: 18, headOff: -4, torsoOff: -2, armOff: -3, legOff: 0,
+  gloveScale: 1.45, bootScale: 1.0,
 }
 const POSE_CROSS_CHAMBER: FighterPose = {
   fShA: 70, fElB: 140, bShA: 55, bElB: 125,
@@ -166,10 +162,10 @@ const POSE_CROSS_CHAMBER: FighterPose = {
   gloveScale: 0.85, bootScale: 1.0,
 }
 const POSE_CROSS_EXTEND: FighterPose = {
-  fShA: -88, fElB: 5, bShA: 55, bElB: 125,
-  fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
-  bodyLean: 26, headOff: -6, torsoOff: -1, armOff: 0, legOff: 0,
-  gloveScale: 1.4, bootScale: 1.0,
+  fShA: -90, fElB: 2, bShA: 50, bElB: 130,
+  fHiA: -18, fKnB: 18, bHiA: 14, bKnB: 25,
+  bodyLean: 32, headOff: -8, torsoOff: -3, armOff: -5, legOff: 0,
+  gloveScale: 1.5, bootScale: 1.0,
 }
 const POSE_HOOK_CHAMBER: FighterPose = {
   fShA: 70, fElB: 140, bShA: 55, bElB: 125,
@@ -178,10 +174,10 @@ const POSE_HOOK_CHAMBER: FighterPose = {
   gloveScale: 0.85, bootScale: 1.0,
 }
 const POSE_HOOK_EXTEND: FighterPose = {
-  fShA: -75, fElB: 75, bShA: 55, bElB: 125,
-  fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
-  bodyLean: 30, headOff: -4, torsoOff: -1, armOff: 0, legOff: 0,
-  gloveScale: 1.35, bootScale: 1.0,
+  fShA: -78, fElB: 70, bShA: 50, bElB: 130,
+  fHiA: -18, fKnB: 22, bHiA: 14, bKnB: 28,
+  bodyLean: 36, headOff: -5, torsoOff: -2, armOff: -4, legOff: 0,
+  gloveScale: 1.45, bootScale: 1.0,
 }
 const POSE_UPPER_CHAMBER: FighterPose = {
   fShA: 70, fElB: 140, bShA: 55, bElB: 125,
@@ -190,10 +186,10 @@ const POSE_UPPER_CHAMBER: FighterPose = {
   gloveScale: 0.85, bootScale: 1.0,
 }
 const POSE_UPPER_EXTEND: FighterPose = {
-  fShA: -135, fElB: 25, bShA: 55, bElB: 125,
-  fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
-  bodyLean: -6, headOff: 10, torsoOff: -1, armOff: 0, legOff: 0,
-  gloveScale: 1.4, bootScale: 1.0,
+  fShA: -140, fElB: 15, bShA: 50, bElB: 130,
+  fHiA: -15, fKnB: 15, bHiA: 12, bKnB: 22,
+  bodyLean: -10, headOff: -12, torsoOff: -6, armOff: -8, legOff: 0,
+  gloveScale: 1.5, bootScale: 1.0,
 }
 
 // Kick poses
@@ -204,10 +200,10 @@ const POSE_KICK_CHAMBER: FighterPose = {
   gloveScale: 1.0, bootScale: 0.85,
 }
 const POSE_KICK_EXTEND: FighterPose = {
-  fShA: 40, fElB: 90, bShA: 55, bElB: 80,
-  fHiA: -80, fKnB: 8, bHiA: 5, bKnB: 22,
-  bodyLean: -16, headOff: 0, torsoOff: 0, armOff: -12, legOff: 0,
-  gloveScale: 1.0, bootScale: 1.3,
+  fShA: 35, fElB: 85, bShA: 50, bElB: 75,
+  fHiA: -85, fKnB: 5, bHiA: 8, bKnB: 20,
+  bodyLean: -22, headOff: -2, torsoOff: 2, armOff: -16, legOff: 0,
+  gloveScale: 1.0, bootScale: 1.4,
 }
 const POSE_ROUNDHOUSE_CHAMBER: FighterPose = {
   fShA: 40, fElB: 90, bShA: 55, bElB: 80,
@@ -216,17 +212,17 @@ const POSE_ROUNDHOUSE_CHAMBER: FighterPose = {
   gloveScale: 1.0, bootScale: 0.85,
 }
 const POSE_ROUNDHOUSE_EXTEND: FighterPose = {
-  fShA: 40, fElB: 90, bShA: 55, bElB: 80,
-  fHiA: -95, fKnB: 5, bHiA: 5, bKnB: 22,
-  bodyLean: -24, headOff: 0, torsoOff: 0, armOff: -16, legOff: 0,
-  gloveScale: 1.0, bootScale: 1.3,
+  fShA: 35, fElB: 85, bShA: 50, bElB: 75,
+  fHiA: -100, fKnB: 3, bHiA: 8, bKnB: 20,
+  bodyLean: -30, headOff: -3, torsoOff: 3, armOff: -20, legOff: 0,
+  gloveScale: 1.0, bootScale: 1.4,
 }
 
 // Defensive poses
 const POSE_HIT_RECOIL: FighterPose = {
-  fShA: 25, fElB: 40, bShA: 20, bElB: 35,
-  fHiA: -10, fKnB: 38, bHiA: 8, bKnB: 37,
-  bodyLean: -25, headOff: 14, torsoOff: 5, armOff: 8, legOff: 3,
+  fShA: 20, fElB: 30, bShA: 15, bElB: 25,
+  fHiA: -8, fKnB: 42, bHiA: 10, bKnB: 40,
+  bodyLean: -30, headOff: 18, torsoOff: 8, armOff: 12, legOff: 4,
   gloveScale: 1.0, bootScale: 1.0,
 }
 const POSE_BLOCK_HIGH: FighterPose = {
@@ -360,10 +356,10 @@ export default function EnhancedFightCanvas({
     const f2State = fightState.fighter2.animation.state
 
     if (f1State === 'hit' && prevAnimRef.current.f1 !== 'hit') {
-      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -18
+      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -24
     }
     if (f2State === 'hit' && prevAnimRef.current.f2 !== 'hit') {
-      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -18
+      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -24
     }
 
     prevAnimRef.current.f1 = f1State
@@ -809,8 +805,8 @@ export default function EnhancedFightCanvas({
     let hitStopVibY = 0
     if (isInHitStop) {
       const vibTime = Date.now() * 0.06
-      hitStopVibX = Math.sin(vibTime) * 3.0  // SF2-style horizontal vibration (3px)
-      hitStopVibY = Math.cos(vibTime * 1.5) * 1.5
+      hitStopVibX = Math.sin(vibTime) * 4.0  // SF2-style horizontal vibration (4px)
+      hitStopVibY = Math.cos(vibTime * 1.5) * 2.0
     }
 
     const x = baseX + hitStopVibX
@@ -823,7 +819,7 @@ export default function EnhancedFightCanvas({
       const time = Date.now() * 0.001
       const animProgress = getAnimProgress(fighterState)
       const decay = Math.exp(-animProgress * 3)
-      const shakeIntensity = (fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 14 : 8) * decay
+      const shakeIntensity = (fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 18 : 12) * decay
       const shakePhase = time * 30
       // Dual-frequency: main shake + higher-frequency vibration for organic feel
       ctx.translate(
@@ -868,22 +864,25 @@ export default function EnhancedFightCanvas({
       hitStopProgressRef.current[posKey] = 0
     }
 
-    // Forward lunge: during active/hold phase, the whole body steps toward the opponent
+    // SF2-style forward lunge: INSTANT step forward on attack, hold, snap back.
+    // SF2 punches extend 1.5-2× body width from center. No easing — hard cut.
     let lungeOffset = 0
     const isAttacking = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking'
     if (isAttacking && animProgress > 0) {
       const atkType = fighterState.animation.attackType || 'jab'
       const phase = getAttackPhase(animProgress, atkType)
       const phaseT = getPhaseProgress(animProgress, atkType, phase)
-      const lungeDistance = fighterState.animation.state === 'kicking' ? 38 : 30
+      // Lunge distances: punch 50px, kick 60px (SF2 dramatic forward step)
+      const lungeDistance = fighterState.animation.state === 'kicking' ? 60 : 50
       if (phase === 'startup') {
-        lungeOffset = fighterState.position.facing * lerp(0, -4, easeInQuad(phaseT))
-      } else if (phase === 'active') {
-        lungeOffset = fighterState.position.facing * lerp(-4, lungeDistance, easeOutCubic(phaseT))
-      } else if (phase === 'hold') {
+        // Slight pullback during wind-up (anticipation)
+        lungeOffset = fighterState.position.facing * Math.round(lerp(0, -6, easeInQuad(phaseT)))
+      } else if (phase === 'active' || phase === 'hold') {
+        // INSTANT full lunge — no easing, just jump to position
         lungeOffset = fighterState.position.facing * lungeDistance
       } else {
-        lungeOffset = fighterState.position.facing * lerp(lungeDistance, 0, easeInOutQuad(phaseT))
+        // Quick snap back during recovery
+        lungeOffset = fighterState.position.facing * Math.round(lerp(lungeDistance, 0, easeOutCubic(phaseT)))
       }
     }
 
@@ -1049,8 +1048,8 @@ export default function EnhancedFightCanvas({
 
         switch (phase) {
           case 'startup': {
-            // Smooth lerp GUARD → CHAMBER (visible wind-up anticipation)
-            const t = easeInQuad(phaseT)
+            // Quick wind-up — SF2 startup is barely visible for jabs
+            const t = easeOutCubic(phaseT)
             const p = lerpPose(POSE_GUARD, poses.chamber, t)
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
             fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
@@ -1059,24 +1058,10 @@ export default function EnhancedFightCanvas({
             gloveScale = p.gloveScale
             break
           }
-          case 'active': {
-            // SNAP: chamber → extend in first 15% (SF2 snap-to-pose)
-            // Overlapping action: front arm leads, torso follows slightly behind
-            const armT = phaseT < 0.15 ? phaseT / 0.15 : 1.0
-            const bodyT = phaseT < 0.20 ? phaseT / 0.20 : 1.0
-            const p = lerpPose(poses.chamber, poses.extend, armT)
-            fShA = p.fShA; fElB = p.fElB
-            bShA = lerp(poses.chamber.bShA, poses.extend.bShA, bodyT)
-            bElB = lerp(poses.chamber.bElB, poses.extend.bElB, bodyT)
-            fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
-            bodyLean = facing * lerp(poses.chamber.bodyLean, poses.extend.bodyLean * strMod, bodyT)
-            headY += lerp(poses.chamber.headOff, poses.extend.headOff, bodyT)
-            torsoY += lerp(poses.chamber.torsoOff, poses.extend.torsoOff, bodyT)
-            gloveScale = p.gloveScale
-            break
-          }
+          case 'active':
           case 'hold': {
-            // Frozen at full extension — impact pose with exaggerated glove
+            // SF2: INSTANT snap to extend pose — NO interpolation.
+            // Active and hold are the SAME pose. The punch is OUT.
             const p = poses.extend
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
             fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
@@ -1086,8 +1071,8 @@ export default function EnhancedFightCanvas({
             break
           }
           case 'recovery': {
-            // Smooth return to guard
-            const t = easeInOutQuad(phaseT)
+            // Fast snap back to guard — SF2 recovery is quick
+            const t = easeOutCubic(phaseT)
             const p = lerpPose(poses.extend, POSE_GUARD, t)
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
             fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
@@ -1108,8 +1093,8 @@ export default function EnhancedFightCanvas({
 
         switch (phase) {
           case 'startup': {
-            // Smooth lerp GUARD → KICK_CHAMBER (Muay Thai knee-up)
-            const t = easeInQuad(phaseT)
+            // Quick lerp GUARD → KICK_CHAMBER (Muay Thai knee-up)
+            const t = easeOutCubic(phaseT)
             const p = lerpPose(POSE_GUARD, kickPoses.chamber, t)
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
             fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
@@ -1118,22 +1103,10 @@ export default function EnhancedFightCanvas({
             bootScale = p.bootScale
             break
           }
-          case 'active': {
-            // SNAP: chamber → extend in first 15%
-            // Leg leads, body follows slightly behind (overlapping action)
-            const legT = phaseT < 0.15 ? phaseT / 0.15 : 1.0
-            const bodyT = phaseT < 0.20 ? phaseT / 0.20 : 1.0
-            const p = lerpPose(kickPoses.chamber, kickPoses.extend, legT)
-            fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
-            fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-            bodyLean = facing * lerp(kickPoses.chamber.bodyLean, kickPoses.extend.bodyLean * strMod, bodyT)
-            headY += lerp(kickPoses.chamber.headOff, kickPoses.extend.headOff, bodyT)
-            armY += lerp(kickPoses.chamber.armOff, kickPoses.extend.armOff, bodyT)
-            bootScale = p.bootScale
-            break
-          }
+          case 'active':
           case 'hold': {
-            // Frozen at full extension — impact pose with exaggerated boot
+            // SF2: INSTANT snap to extend pose — NO interpolation.
+            // Active and hold are the SAME pose. The kick is OUT.
             const p = kickPoses.extend
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
             fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
@@ -1143,22 +1116,17 @@ export default function EnhancedFightCanvas({
             break
           }
           case 'recovery': {
-            // Return THROUGH partial chamber (40%) then to guard (60%)
-            const t = easeInOutQuad(phaseT)
-            const reCoil: FighterPose = {
-              ...kickPoses.extend,
-              fHiA: -40, fKnB: 70,
-              bodyLean: kickPoses.extend.bodyLean * 0.4,
-              armOff: kickPoses.extend.armOff * 0.5,
-              bootScale: 1.0,
-            }
-            if (t < 0.4) {
-              const p = lerpPose(kickPoses.extend, reCoil, t / 0.4)
+            // SF2: Fast snap back — quick re-chamber then guard
+            const t = easeOutCubic(phaseT)
+            if (t < 0.3) {
+              // Quick re-chamber
+              const p = lerpPose(kickPoses.extend, kickPoses.chamber, t / 0.3)
               fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
               fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
               bodyLean = facing * p.bodyLean; armY += p.armOff; bootScale = p.bootScale
             } else {
-              const p = lerpPose(reCoil, POSE_GUARD, (t - 0.4) / 0.6)
+              // Snap back to guard
+              const p = lerpPose(kickPoses.chamber, POSE_GUARD, (t - 0.3) / 0.7)
               fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
               fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
               bodyLean = facing * p.bodyLean; armY += p.armOff; bootScale = p.bootScale
@@ -1170,38 +1138,33 @@ export default function EnhancedFightCanvas({
       }
 
       case 'hit': {
-        // SF2 hit recoil: SNAP to recoil pose, hold during hit-stop, stagger recover
-        const recoilT = animProgress < 0.15
-          ? easeOutBack(animProgress / 0.15)  // snap to full recoil in 15%
-          : animProgress < 0.4
-            ? 1.0                              // hold during hit-stop
-            : lerp(1, 0, easeInOutQuad((animProgress - 0.4) / 0.6))  // slow stagger recovery
-
-        const p = lerpPose(POSE_GUARD, POSE_HIT_RECOIL, recoilT)
-        fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
-        fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-        bodyLean = facing * p.bodyLean
-        headY += p.headOff; torsoY += p.torsoOff
-        armY += p.armOff; legY += p.legOff
-
-        // Stagger wobble during recovery
-        if (animProgress > 0.4) {
-          const staggerPhase = (animProgress - 0.4) / 0.6
-          const stagger = Math.sin(staggerPhase * Math.PI * 3) * 4 * (1 - staggerPhase)
+        // SF2: INSTANT snap to recoil — 1 frame, no easing. Hold during hit-stop. Stagger back.
+        if (animProgress < 0.5) {
+          // INSTANT full recoil pose — no lerp, just set it
+          const p = POSE_HIT_RECOIL
+          fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+          fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
+          bodyLean = facing * p.bodyLean
+          headY += p.headOff; torsoY += p.torsoOff
+          armY += p.armOff; legY += p.legOff
+        } else {
+          // Stagger recovery — lerp back to guard with wobble
+          const recoverT = easeInOutQuad((animProgress - 0.5) / 0.5)
+          const p = lerpPose(POSE_HIT_RECOIL, POSE_GUARD, recoverT)
+          fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+          fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
+          bodyLean = facing * p.bodyLean
+          headY += p.headOff; torsoY += p.torsoOff
+          armY += p.armOff; legY += p.legOff
+          // Stagger wobble
+          const stagger = Math.sin(recoverT * Math.PI * 3) * 5 * (1 - recoverT)
           headY += stagger
         }
         break
       }
 
       case 'blocking': {
-        // SNAP to block pose, hold, smooth release
-        const blockT = animProgress < 0.15
-          ? easeOutCubic(animProgress / 0.15)  // snap in 15% (was 20%)
-          : animProgress > 0.8
-            ? lerp(1, 0, easeInOutQuad((animProgress - 0.8) / 0.2))
-            : 1
-
-        // Scale block tightness by defense stat
+        // SF2: INSTANT snap to block — hold — quick release
         const blockPose: FighterPose = {
           ...POSE_BLOCK_HIGH,
           fShA: POSE_BLOCK_HIGH.fShA * defMod,
@@ -1209,25 +1172,43 @@ export default function EnhancedFightCanvas({
           bShA: POSE_BLOCK_HIGH.bShA * defMod,
           bElB: POSE_BLOCK_HIGH.bElB * defMod,
         }
-        const p = lerpPose(POSE_GUARD, blockPose, blockT)
-        fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
-        fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-        bodyLean = facing * p.bodyLean
-        headY += p.headOff
+        if (animProgress < 0.85) {
+          // INSTANT full block — no lerp
+          const p = blockPose
+          fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+          fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
+          bodyLean = facing * p.bodyLean
+          headY += p.headOff
+        } else {
+          // Quick snap back to guard
+          const t = easeOutCubic((animProgress - 0.85) / 0.15)
+          const p = lerpPose(blockPose, POSE_GUARD, t)
+          fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+          fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
+          bodyLean = facing * p.bodyLean
+          headY += p.headOff
+        }
         break
       }
 
       case 'dodging': {
-        // SNAP to duck pose, smooth return
-        const dodgeT = animProgress < 0.15
-          ? easeOutCubic(animProgress / 0.15)  // snap in 15% (was 25%)
-          : lerp(1, 0, easeInOutQuad((animProgress - 0.15) / 0.85))
-
-        const p = lerpPose(POSE_GUARD, POSE_DODGE_DUCK, dodgeT)
-        fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
-        fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-        bodyLean = facing * p.bodyLean
-        headY += p.headOff; torsoY += p.torsoOff
+        // SF2: INSTANT duck, hold low, snap back up
+        if (animProgress < 0.6) {
+          // INSTANT full dodge — no lerp
+          const p = POSE_DODGE_DUCK
+          fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+          fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
+          bodyLean = facing * p.bodyLean
+          headY += p.headOff; torsoY += p.torsoOff
+        } else {
+          // Quick snap back to guard
+          const t = easeOutCubic((animProgress - 0.6) / 0.4)
+          const p = lerpPose(POSE_DODGE_DUCK, POSE_GUARD, t)
+          fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+          fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
+          bodyLean = facing * p.bodyLean
+          headY += p.headOff; torsoY += p.torsoOff
+        }
         break
       }
 
@@ -1290,6 +1271,12 @@ export default function EnhancedFightCanvas({
         return
       }
     }
+
+    // SF2 pixel-snap: all offsets to integers for crisp discrete movement
+    headY = Math.round(headY)
+    torsoY = Math.round(torsoY)
+    armY = Math.round(armY)
+    legY = Math.round(legY)
 
     // Apply body lean rotation
     ctx.translate(x, y)
