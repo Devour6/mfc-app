@@ -121,22 +121,22 @@ const POSE_GUARD: FighterPose = {
 const IDLE_FRAMES: FighterPose[] = [
   // Frame 0: bottom of bounce (deepest knee bend)
   { ...POSE_GUARD, fKnB: 30, bKnB: 34,
-    headOff: 2, torsoOff: 4, armOff: 10, legOff: 2, gloveScale: 1.0, bootScale: 1.0 },
+    headOff: 2, torsoOff: 4, armOff: 4, legOff: 2, gloveScale: 1.0, bootScale: 1.0 },
   // Frame 1: rising
   { ...POSE_GUARD, fKnB: 24, bKnB: 28,
-    headOff: 1, torsoOff: 2, armOff: 5, legOff: 1, gloveScale: 1.0, bootScale: 1.0 },
+    headOff: 1, torsoOff: 2, armOff: 2, legOff: 1, gloveScale: 1.0, bootScale: 1.0 },
   // Frame 2: peak (top — knees most straight)
   { ...POSE_GUARD, fKnB: 18, bKnB: 22,
     headOff: 0, torsoOff: 0, armOff: 0, legOff: 0, gloveScale: 1.0, bootScale: 1.0 },
   // Frame 3: start falling
   { ...POSE_GUARD, fKnB: 20, bKnB: 24,
-    headOff: 0, torsoOff: 1, armOff: 3, legOff: 0, gloveScale: 1.0, bootScale: 1.0 },
+    headOff: 0, torsoOff: 1, armOff: 1, legOff: 0, gloveScale: 1.0, bootScale: 1.0 },
   // Frame 4: falling fast
   { ...POSE_GUARD, fKnB: 26, bKnB: 30,
-    headOff: 1, torsoOff: 3, armOff: 7, legOff: 1, gloveScale: 1.0, bootScale: 1.0 },
+    headOff: 1, torsoOff: 3, armOff: 3, legOff: 1, gloveScale: 1.0, bootScale: 1.0 },
   // Frame 5: bottom again
   { ...POSE_GUARD, fKnB: 30, bKnB: 34,
-    headOff: 2, torsoOff: 4, armOff: 10, legOff: 2, gloveScale: 1.0, bootScale: 1.0 },
+    headOff: 2, torsoOff: 4, armOff: 4, legOff: 2, gloveScale: 1.0, bootScale: 1.0 },
 ]
 // Asymmetric timing: slow rise (100ms × 3), fast fall (50ms × 3) = ~450ms cycle
 const IDLE_FRAME_MS = [100, 100, 100, 50, 50, 50]
@@ -146,83 +146,83 @@ const IDLE_CYCLE_MS = IDLE_FRAME_MS.reduce((a, b) => a + b, 0)
 const POSE_JAB_CHAMBER: FighterPose = {
   fShA: 70, fElB: 140, bShA: 55, bElB: 125,
   fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
-  bodyLean: -8, headOff: -1, torsoOff: 3, armOff: 0, legOff: 0,
-  gloveScale: 0.85, bootScale: 1.0,
+  bodyLean: -4, headOff: -1, torsoOff: 2, armOff: 0, legOff: 0,
+  gloveScale: 0.9, bootScale: 1.0,
 }
 const POSE_JAB_EXTEND: FighterPose = {
   fShA: -85, fElB: 2, bShA: 50, bElB: 130,
-  fHiA: -15, fKnB: 20, bHiA: 12, bKnB: 28,
-  bodyLean: 18, headOff: -4, torsoOff: -2, armOff: -3, legOff: 0,
-  gloveScale: 1.45, bootScale: 1.0,
+  fHiA: -14, fKnB: 20, bHiA: 12, bKnB: 28,
+  bodyLean: 10, headOff: -2, torsoOff: -1, armOff: -1, legOff: 0,
+  gloveScale: 1.2, bootScale: 1.0,
 }
 const POSE_CROSS_CHAMBER: FighterPose = {
   fShA: 70, fElB: 140, bShA: 55, bElB: 125,
   fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
-  bodyLean: -14, headOff: -2, torsoOff: 3, armOff: 0, legOff: 0,
-  gloveScale: 0.85, bootScale: 1.0,
+  bodyLean: -6, headOff: -1, torsoOff: 2, armOff: 0, legOff: 0,
+  gloveScale: 0.9, bootScale: 1.0,
 }
 const POSE_CROSS_EXTEND: FighterPose = {
-  fShA: -90, fElB: 2, bShA: 50, bElB: 130,
-  fHiA: -18, fKnB: 18, bHiA: 14, bKnB: 25,
-  bodyLean: 32, headOff: -8, torsoOff: -3, armOff: -5, legOff: 0,
-  gloveScale: 1.5, bootScale: 1.0,
+  fShA: -88, fElB: 2, bShA: 50, bElB: 130,
+  fHiA: -14, fKnB: 20, bHiA: 12, bKnB: 26,
+  bodyLean: 14, headOff: -3, torsoOff: -1, armOff: -2, legOff: 0,
+  gloveScale: 1.2, bootScale: 1.0,
 }
 const POSE_HOOK_CHAMBER: FighterPose = {
   fShA: 70, fElB: 140, bShA: 55, bElB: 125,
   fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
-  bodyLean: -16, headOff: -1.2, torsoOff: 3, armOff: 0, legOff: 0,
-  gloveScale: 0.85, bootScale: 1.0,
+  bodyLean: -8, headOff: -1, torsoOff: 2, armOff: 0, legOff: 0,
+  gloveScale: 0.9, bootScale: 1.0,
 }
 const POSE_HOOK_EXTEND: FighterPose = {
   fShA: -78, fElB: 70, bShA: 50, bElB: 130,
-  fHiA: -18, fKnB: 22, bHiA: 14, bKnB: 28,
-  bodyLean: 36, headOff: -5, torsoOff: -2, armOff: -4, legOff: 0,
-  gloveScale: 1.45, bootScale: 1.0,
+  fHiA: -14, fKnB: 22, bHiA: 12, bKnB: 28,
+  bodyLean: 12, headOff: -2, torsoOff: -1, armOff: -2, legOff: 0,
+  gloveScale: 1.2, bootScale: 1.0,
 }
 const POSE_UPPER_CHAMBER: FighterPose = {
   fShA: 70, fElB: 140, bShA: 55, bElB: 125,
   fHiA: -12, fKnB: 25, bHiA: 10, bKnB: 30,
   bodyLean: -5, headOff: 3, torsoOff: 5, armOff: 0, legOff: 0,
-  gloveScale: 0.85, bootScale: 1.0,
+  gloveScale: 0.9, bootScale: 1.0,
 }
 const POSE_UPPER_EXTEND: FighterPose = {
   fShA: -140, fElB: 15, bShA: 50, bElB: 130,
   fHiA: -15, fKnB: 15, bHiA: 12, bKnB: 22,
-  bodyLean: -10, headOff: -12, torsoOff: -6, armOff: -8, legOff: 0,
-  gloveScale: 1.5, bootScale: 1.0,
+  bodyLean: -6, headOff: -6, torsoOff: -3, armOff: -4, legOff: 0,
+  gloveScale: 1.2, bootScale: 1.0,
 }
 
 // Kick poses
 const POSE_KICK_CHAMBER: FighterPose = {
   fShA: 40, fElB: 90, bShA: 55, bElB: 80,
   fHiA: -50, fKnB: 95, bHiA: 5, bKnB: 22,
-  bodyLean: -5, headOff: 2, torsoOff: 0, armOff: -6, legOff: 0,
-  gloveScale: 1.0, bootScale: 0.85,
+  bodyLean: -4, headOff: 1, torsoOff: 0, armOff: -4, legOff: 0,
+  gloveScale: 1.0, bootScale: 0.9,
 }
 const POSE_KICK_EXTEND: FighterPose = {
   fShA: 35, fElB: 85, bShA: 50, bElB: 75,
   fHiA: -85, fKnB: 5, bHiA: 8, bKnB: 20,
-  bodyLean: -22, headOff: -2, torsoOff: 2, armOff: -16, legOff: 0,
-  gloveScale: 1.0, bootScale: 1.4,
+  bodyLean: -12, headOff: -1, torsoOff: 1, armOff: -8, legOff: 0,
+  gloveScale: 1.0, bootScale: 1.15,
 }
 const POSE_ROUNDHOUSE_CHAMBER: FighterPose = {
   fShA: 40, fElB: 90, bShA: 55, bElB: 80,
   fHiA: -50, fKnB: 95, bHiA: 5, bKnB: 22,
-  bodyLean: -7, headOff: 2, torsoOff: 0, armOff: -8, legOff: 0,
-  gloveScale: 1.0, bootScale: 0.85,
+  bodyLean: -5, headOff: 1, torsoOff: 0, armOff: -5, legOff: 0,
+  gloveScale: 1.0, bootScale: 0.9,
 }
 const POSE_ROUNDHOUSE_EXTEND: FighterPose = {
   fShA: 35, fElB: 85, bShA: 50, bElB: 75,
   fHiA: -100, fKnB: 3, bHiA: 8, bKnB: 20,
-  bodyLean: -30, headOff: -3, torsoOff: 3, armOff: -20, legOff: 0,
-  gloveScale: 1.0, bootScale: 1.4,
+  bodyLean: -14, headOff: -2, torsoOff: 2, armOff: -10, legOff: 0,
+  gloveScale: 1.0, bootScale: 1.15,
 }
 
 // Defensive poses
 const POSE_HIT_RECOIL: FighterPose = {
   fShA: 20, fElB: 30, bShA: 15, bElB: 25,
   fHiA: -8, fKnB: 42, bHiA: 10, bKnB: 40,
-  bodyLean: -30, headOff: 18, torsoOff: 8, armOff: 12, legOff: 4,
+  bodyLean: -16, headOff: 10, torsoOff: 4, armOff: 6, legOff: 2,
   gloveScale: 1.0, bootScale: 1.0,
 }
 const POSE_BLOCK_HIGH: FighterPose = {
@@ -234,7 +234,7 @@ const POSE_BLOCK_HIGH: FighterPose = {
 const POSE_DODGE_DUCK: FighterPose = {
   fShA: 30, fElB: 135, bShA: 25, bElB: 135,
   fHiA: -10, fKnB: 42, bHiA: 8, bKnB: 43,
-  bodyLean: -18, headOff: 15, torsoOff: 8, armOff: 0, legOff: 0,
+  bodyLean: -8, headOff: 10, torsoOff: 5, armOff: 0, legOff: 0,
   gloveScale: 1.0, bootScale: 1.0,
 }
 
@@ -356,10 +356,10 @@ export default function EnhancedFightCanvas({
     const f2State = fightState.fighter2.animation.state
 
     if (f1State === 'hit' && prevAnimRef.current.f1 !== 'hit') {
-      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -24
+      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -14
     }
     if (f2State === 'hit' && prevAnimRef.current.f2 !== 'hit') {
-      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -24
+      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -14
     }
 
     prevAnimRef.current.f1 = f1State
@@ -805,8 +805,8 @@ export default function EnhancedFightCanvas({
     let hitStopVibY = 0
     if (isInHitStop) {
       const vibTime = Date.now() * 0.06
-      hitStopVibX = Math.sin(vibTime) * 4.0  // SF2-style horizontal vibration (4px)
-      hitStopVibY = Math.cos(vibTime * 1.5) * 2.0
+      hitStopVibX = Math.sin(vibTime) * 2.0  // SF2-style horizontal vibration (2px)
+      hitStopVibY = Math.cos(vibTime * 1.5) * 1.0
     }
 
     const x = baseX + hitStopVibX
@@ -819,7 +819,7 @@ export default function EnhancedFightCanvas({
       const time = Date.now() * 0.001
       const animProgress = getAnimProgress(fighterState)
       const decay = Math.exp(-animProgress * 3)
-      const shakeIntensity = (fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 18 : 12) * decay
+      const shakeIntensity = (fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 10 : 6) * decay
       const shakePhase = time * 30
       // Dual-frequency: main shake + higher-frequency vibration for organic feel
       ctx.translate(
@@ -876,30 +876,21 @@ export default function EnhancedFightCanvas({
       hitStopProgressRef.current[posKey] = 0
     }
 
-    // SF2-style forward lunge: DYNAMIC — close the gap to the opponent.
-    // The attacker lunges toward the opponent so the fist/foot visually connects.
+    // SF2-style forward lunge: fixed distance (no teleporting across screen).
+    // Punch: 25px forward. Kick: 35px (longer reach).
     let lungeOffset = 0
     const isAttacking = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking'
     if (isAttacking && animProgress > 0) {
       const atkType = fighterState.animation.attackType || 'jab'
       const phase = getAttackPhase(animProgress, atkType)
       const phaseT = getPhaseProgress(animProgress, atkType, phase)
-
-      // Calculate actual gap to opponent and lunge to close it
-      const opponentState = fighterNumber === 1 ? fightState.fighter2 : fightState.fighter1
-      const opponentScreenX = (opponentState.position.x / 480) * width
-      const myScreenX = x // already has knockback applied
-      const gapToOpponent = Math.abs(opponentScreenX - myScreenX)
-      // Lunge to close most of the gap — leave ~40px for body contact zone
-      // Minimum lunge 40px (for close-range), maximum capped at gap
-      const contactBuffer = 40
-      const lungeDistance = Math.max(40, Math.min(gapToOpponent - contactBuffer, gapToOpponent * 0.75))
+      const lungeDistance = fighterState.animation.state === 'kicking' ? 35 : 25
 
       if (phase === 'startup') {
         // Slight pullback during wind-up (anticipation)
-        lungeOffset = fighterState.position.facing * Math.round(lerp(0, -6, easeInQuad(phaseT)))
+        lungeOffset = fighterState.position.facing * Math.round(lerp(0, -4, easeInQuad(phaseT)))
       } else if (phase === 'active' || phase === 'hold') {
-        // INSTANT full lunge — no easing, just jump to contact range
+        // INSTANT full lunge
         lungeOffset = fighterState.position.facing * Math.round(lungeDistance)
       } else {
         // Quick snap back during recovery
@@ -1303,33 +1294,33 @@ export default function EnhancedFightCanvas({
     armY = Math.round(armY)
     legY = Math.round(legY)
 
-    // Apply body lean rotation
-    ctx.translate(x, y)
-    ctx.rotate(bodyLean * Math.PI / 180)
-    ctx.translate(-x, -y)
+    // Apply body lean as horizontal pixel shift (NO rotation — rotation creates
+    // subpixel antialiasing that destroys the pixel-art aesthetic).
+    // Head gets full shift, torso 60%, legs stay planted.
+    const leanShift = Math.round(facing * bodyLean * 0.4)
 
     // Draw body parts back-to-front with joint angles
     // Wider leg stance (±20px) for SF2 fighting game look
 
-    // Back leg
+    // Back leg — legs stay planted (no lean shift)
     const backLegX = facing === 1 ? x - 20 : x + 20
     drawLeg(ctx, backLegX, legY, color, facing, bHiA, bKnB, skin, false, 1.0)
 
-    // Back arm
-    const backArmX = facing === 1 ? x - 26 : x + 26
+    // Back arm — shifts with lean
+    const backArmX = (facing === 1 ? x - 26 : x + 26) + leanShift
     drawArm(ctx, backArmX, armY, color, facing, bShA, bElB, skin, false, 1.0)
 
-    // Torso
-    drawTorso(ctx, x, torsoY, color, state, skin)
+    // Torso — 60% of lean shift
+    drawTorso(ctx, x + Math.round(leanShift * 0.6), torsoY, color, state, skin)
 
-    // Head
-    drawHead(ctx, x, headY, color, facing, state, fighterState.hp, skin, hair)
+    // Head — full lean shift
+    drawHead(ctx, x + leanShift, headY, color, facing, state, fighterState.hp, skin, hair)
 
-    // Front arm (punching arm) — pass gloveScale for squash/stretch
-    const frontArmX = facing === 1 ? x + 26 : x - 26
+    // Front arm (punching arm) — shifts with lean, pass gloveScale for squash/stretch
+    const frontArmX = (facing === 1 ? x + 26 : x - 26) + leanShift
     drawArm(ctx, frontArmX, armY, color, facing, fShA, fElB, skin, punchGlow, gloveScale)
 
-    // Front leg (kicking leg) — pass bootScale for squash/stretch
+    // Front leg (kicking leg) — legs stay planted, pass bootScale for squash/stretch
     const frontLegX = facing === 1 ? x + 20 : x - 20
     drawLeg(ctx, frontLegX, legY, color, facing, fHiA, fKnB, skin, kickGlow, bootScale)
 
