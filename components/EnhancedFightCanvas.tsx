@@ -854,32 +854,53 @@ export default function EnhancedFightCanvas({
     // Compute animation progress (used by drawHumanoidFighter)
     let animProgress = getAnimProgress(fighterState)
 
-    // Hit-stop freeze: if in hit-stop, cache and use the frozen progress
+    // Hit-stop freeze: if in hit-stop, cache and use the frozen progress.
+    // CRITICAL FIX: When attacker is in hit-stop, force them to HOLD phase
+    // so the fist is visually extended (connecting with opponent). Without this,
+    // the attacker freezes in startup pose because hit lands on the same tick
+    // as the punch starts in the fight engine.
     if (isInHitStop) {
-      if (hitStopProgressRef.current[posKey] === 0 && animProgress > 0) {
+      const isAttackingDuringStop = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking'
+      if (isAttackingDuringStop) {
+        // Force to middle of hold phase — fist/foot fully extended
+        const atkType = fighterState.animation.attackType || 'jab'
+        const phases = ATTACK_PHASES[atkType] || ATTACK_PHASES.jab
+        animProgress = (phases.active + phases.hold) / 2  // midpoint of hold
+      } else if (hitStopProgressRef.current[posKey] === 0 && animProgress > 0) {
         hitStopProgressRef.current[posKey] = animProgress
+        animProgress = hitStopProgressRef.current[posKey]
+      } else {
+        animProgress = hitStopProgressRef.current[posKey]
       }
-      animProgress = hitStopProgressRef.current[posKey]
     } else {
       hitStopProgressRef.current[posKey] = 0
     }
 
-    // SF2-style forward lunge: INSTANT step forward on attack, hold, snap back.
-    // SF2 punches extend 1.5-2× body width from center. No easing — hard cut.
+    // SF2-style forward lunge: DYNAMIC — close the gap to the opponent.
+    // The attacker lunges toward the opponent so the fist/foot visually connects.
     let lungeOffset = 0
     const isAttacking = fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking'
     if (isAttacking && animProgress > 0) {
       const atkType = fighterState.animation.attackType || 'jab'
       const phase = getAttackPhase(animProgress, atkType)
       const phaseT = getPhaseProgress(animProgress, atkType, phase)
-      // Lunge distances: punch 50px, kick 60px (SF2 dramatic forward step)
-      const lungeDistance = fighterState.animation.state === 'kicking' ? 60 : 50
+
+      // Calculate actual gap to opponent and lunge to close it
+      const opponentState = fighterNumber === 1 ? fightState.fighter2 : fightState.fighter1
+      const opponentScreenX = (opponentState.position.x / 480) * width
+      const myScreenX = x // already has knockback applied
+      const gapToOpponent = Math.abs(opponentScreenX - myScreenX)
+      // Lunge to close most of the gap — leave ~40px for body contact zone
+      // Minimum lunge 40px (for close-range), maximum capped at gap
+      const contactBuffer = 40
+      const lungeDistance = Math.max(40, Math.min(gapToOpponent - contactBuffer, gapToOpponent * 0.75))
+
       if (phase === 'startup') {
         // Slight pullback during wind-up (anticipation)
         lungeOffset = fighterState.position.facing * Math.round(lerp(0, -6, easeInQuad(phaseT)))
       } else if (phase === 'active' || phase === 'hold') {
-        // INSTANT full lunge — no easing, just jump to position
-        lungeOffset = fighterState.position.facing * lungeDistance
+        // INSTANT full lunge — no easing, just jump to contact range
+        lungeOffset = fighterState.position.facing * Math.round(lungeDistance)
       } else {
         // Quick snap back during recovery
         lungeOffset = fighterState.position.facing * Math.round(lerp(lungeDistance, 0, easeOutCubic(phaseT)))
@@ -900,9 +921,13 @@ export default function EnhancedFightCanvas({
     const hairStyle = getFighterHairStyle(fighterData.id)
     drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats, palette, hairStyle)
 
-    // Hit spark — larger SF2-style cross + diagonal bursts + orange particles
+    // Hit spark — positioned at CONTACT POINT between fighters
     if (isHitFlash) {
-      const sparkX = drawX + fighterState.position.facing * 30
+      // Calculate opponent's screen position for spark placement
+      const opponentForSpark = fighterNumber === 1 ? fightState.fighter2 : fightState.fighter1
+      const opponentScreenX = (opponentForSpark.position.x / 480) * width
+      // Spark at the near edge of the opponent (where the fist meets their body)
+      const sparkX = opponentScreenX - fighterState.position.facing * 15
       const sparkY = y - 20
       const sparkTime = Date.now() * 0.01
       const sparkSize = 16 + Math.sin(sparkTime * 3) * 6
