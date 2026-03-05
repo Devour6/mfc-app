@@ -24,7 +24,7 @@ export {
 
 export { getAnimProgress, getAttackPhase, getPhaseProgress } from './animation-controller'
 
-export { drawEnhancedRing, drawCrowdAtmosphere } from './stage-renderer'
+export { drawEnhancedRing, drawCrowdAtmosphere, drawStageMood } from './stage-renderer'
 
 export { drawVisualEffects, drawHitSpark, drawSmearFrame, drawImpactFlash, drawMotionTrail, drawSweatParticles } from './effects-renderer'
 

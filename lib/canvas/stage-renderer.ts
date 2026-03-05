@@ -2,6 +2,7 @@ import { FIGHTER_MAX_HP } from '@/lib/fight-engine'
 import { CrowdReactionState } from './types'
 
 // ── Module-level crowd spike state (persists across frames for smooth decay) ─
+// Shared between drawCrowdAtmosphere (updates) and drawStageMood (reads).
 let _crowdSpike = 0
 let _crowdSpikeTime = 0
 const CROWD_SPIKE_DECAY = 2.5 // seconds for spike to fully decay
@@ -203,5 +204,83 @@ export const drawCrowdAtmosphere = (
       }
       ctx.stroke()
     }
+  }
+}
+
+// ── Stage mood lighting ─────────────────────────────────────────────────────
+// Subtle color temperature shifts as fight intensifies. Drawn between
+// ring/crowd and fighters — tints the arena backdrop without affecting sprites.
+// Reads the module-level spike state updated by drawCrowdAtmosphere.
+export const drawStageMood = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  fighter1Hp: number,
+  fighter2Hp: number,
+  reactions?: CrowdReactionState
+) => {
+  const time = Date.now() * 0.001
+  const fightIntensity = 1 - (Math.min(fighter1Hp, fighter2Hp) / FIGHTER_MAX_HP)
+
+  // Read current spike (already updated by drawCrowdAtmosphere this frame)
+  const spikeAge = time - _crowdSpikeTime
+  const spikeDecay = Math.max(0, 1 - spikeAge / CROWD_SPIKE_DECAY)
+  const currentSpike = _crowdSpike * spikeDecay
+
+  // Combined mood level: 0 = calm, 1 = peak intensity
+  const moodLevel = Math.min(fightIntensity + currentSpike * 0.5, 1.0)
+
+  // Detect knockdown for red flash
+  const isKnockdown = reactions && (reactions.f1AnimState === 'down' || reactions.f2AnimState === 'down')
+
+  // ── Warm ambient wash ──────────────────────────────────────────────────
+  // Subtle amber overlay that grows as the fight heats up.
+  // At calm (0): invisible. At peak (1): faint warm tint.
+  if (moodLevel > 0.1) {
+    const warmAlpha = moodLevel * 0.06
+    ctx.fillStyle = `rgba(255, 140, 50, ${warmAlpha})`
+    ctx.fillRect(0, 0, width, height)
+  }
+
+  // ── Ring floor warm tint ───────────────────────────────────────────────
+  // Concentrated warm tint on the ring surface — simulates overhead lights warming.
+  if (moodLevel > 0.2) {
+    const floorY = height * 0.75
+    const ringWidth = width * 0.9
+    const ringX = width * 0.05
+    const floorAlpha = moodLevel * 0.04
+    ctx.fillStyle = `rgba(255, 100, 30, ${floorAlpha})`
+    ctx.fillRect(ringX, floorY, ringWidth, height * 0.2)
+  }
+
+  // ── Knockdown red pulse ────────────────────────────────────────────────
+  // Brief red flash on knockdown — decays with the spike.
+  if (isKnockdown && currentSpike > 0.2) {
+    const pulseAlpha = currentSpike * 0.08
+    ctx.fillStyle = `rgba(255, 30, 10, ${pulseAlpha})`
+    ctx.fillRect(0, 0, width, height)
+  }
+
+  // ── Intensity vignette ─────────────────────────────────────────────────
+  // Edges darken at high intensity, focusing attention on the center.
+  if (moodLevel > 0.3) {
+    const vignetteAlpha = (moodLevel - 0.3) * 0.2 // max ~0.14 at peak
+    const cx = width / 2
+    const cy = height * 0.55 // slightly below center (where fighters are)
+    const radius = Math.max(width, height) * 0.6
+    const vignetteGrad = ctx.createRadialGradient(cx, cy, radius * 0.4, cx, cy, radius)
+    vignetteGrad.addColorStop(0, 'rgba(0,0,0,0)')
+    vignetteGrad.addColorStop(1, `rgba(0,0,0,${vignetteAlpha})`)
+    ctx.fillStyle = vignetteGrad
+    ctx.fillRect(0, 0, width, height)
+  }
+
+  // ── Pulsing warm glow at high intensity ────────────────────────────────
+  // Slow breathing pulse that adds life to the lighting at high fight intensity.
+  if (moodLevel > 0.5) {
+    const pulseT = Math.sin(time * 1.5) * 0.5 + 0.5 // 0-1 at ~0.24 Hz
+    const glowAlpha = (moodLevel - 0.5) * 0.03 * pulseT
+    ctx.fillStyle = `rgba(255, 80, 20, ${glowAlpha})`
+    ctx.fillRect(0, 0, width, height)
   }
 }
