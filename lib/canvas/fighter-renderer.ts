@@ -240,6 +240,8 @@ const drawHumanoidFighter = (
   const agrMod = fighterStats ? statMod(fighterStats.aggression, 0.6, 1.5) : 1.0
   const strMod = fighterStats ? statMod(fighterStats.strength, 0.85, 1.15) : 1.0
   const defMod = fighterStats ? statMod(fighterStats.defense, 0.8, 1.3) : 1.0
+  // Gesture line: amplified strength for body lean (power fighters commit, speed fighters stay centered)
+  const leanStrMod = strMod * strMod
 
   ctx.save()
 
@@ -264,9 +266,9 @@ const drawHumanoidFighter = (
       // Asymmetric inhale/exhale, phase-offset arm bob, micro-variation overlay.
       const tSec = (Date.now() + fighterNumber * 237) * 0.001
 
-      // Primary breathing rhythm (~1.8s cycle)
-      // Inhale (slow rise, 60% of cycle) → Exhale (quick fall, 40%)
-      const BREATH_PERIOD = 1.8
+      // Primary breathing rhythm: period varies by speed stat
+      // Fast fighters breathe lighter/quicker (~1.5s), slow/power fighters heavier (~2.1s)
+      const BREATH_PERIOD = lerp(2.1, 1.5, (spdMod - 0.7) / 0.7)
       const breathCycle = ((tSec / BREATH_PERIOD) % 1.0)
       let breathT: number // 0=exhaled(bottom), 1=inhaled(top)
       if (breathCycle < 0.6) {
@@ -323,11 +325,16 @@ const drawHumanoidFighter = (
         case 'startup': {
           // SF2 anticipation: heavy attacks telegraph (easeIn), light snap fast (easeOut)
           const weight = ATTACK_WEIGHT[attackType] || 'medium'
-          const t = weight === 'heavy' ? easeInQuad(phaseT) : weight === 'light' ? easeOutCubic(phaseT) : phaseT
+          let baseT: number
+          if (weight === 'heavy') baseT = easeInQuad(phaseT)
+          else if (weight === 'light') baseT = easeOutCubic(phaseT)
+          else baseT = phaseT
+          // Gesture line: fast fighters snap to chamber, slow fighters telegraph wind-up
+          const t = Math.pow(baseT, 1 / spdMod)
           const p = lerpPose(POSE_GUARD, poses.chamber, t)
           fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
           fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
-          bodyLean = facing * p.bodyLean
+          bodyLean = facing * p.bodyLean * leanStrMod
           headY += p.headOff; torsoY += p.torsoOff
           gloveScale = p.gloveScale
           break
@@ -337,19 +344,20 @@ const drawHumanoidFighter = (
           const p = poses.extend
           fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
           fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
-          bodyLean = facing * p.bodyLean * strMod
+          bodyLean = facing * p.bodyLean * leanStrMod
           headY += p.headOff; torsoY += p.torsoOff
           gloveScale = p.gloveScale
           break
         }
         case 'recovery': {
-          const t = easeOutCubic(phaseT)
+          // Gesture line: fast fighters retract quickly, slow/power fighters linger
+          const t = easeOutCubic(Math.pow(phaseT, 1 / spdMod))
           // SF2 follow-through: retract through chamber (extend→chamber→guard)
           if (t < 0.3) {
             const p = lerpPose(poses.extend, poses.chamber, t / 0.3)
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
             fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
-            bodyLean = facing * p.bodyLean
+            bodyLean = facing * p.bodyLean * leanStrMod
             headY += p.headOff; torsoY += p.torsoOff
             gloveScale = p.gloveScale
           } else {
@@ -376,11 +384,13 @@ const drawHumanoidFighter = (
         case 'startup': {
           // SF2 anticipation: roundhouse telegraphs (easeIn), regular kick snaps (easeOut)
           const kickWeight = ATTACK_WEIGHT[attackType] || 'medium'
-          const t = kickWeight === 'heavy' ? easeInQuad(phaseT) : easeOutCubic(phaseT)
+          const baseT = kickWeight === 'heavy' ? easeInQuad(phaseT) : easeOutCubic(phaseT)
+          // Gesture line: fast fighters snap to chamber, slow fighters telegraph
+          const t = Math.pow(baseT, 1 / spdMod)
           const p = lerpPose(POSE_GUARD, kickPoses.chamber, t)
           fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
           fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-          bodyLean = facing * p.bodyLean
+          bodyLean = facing * p.bodyLean * leanStrMod
           headY += p.headOff; armY += p.armOff
           bootScale = p.bootScale
           break
@@ -390,18 +400,19 @@ const drawHumanoidFighter = (
           const p = kickPoses.extend
           fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
           fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-          bodyLean = facing * p.bodyLean * strMod
+          bodyLean = facing * p.bodyLean * leanStrMod
           headY += p.headOff; armY += p.armOff
           bootScale = p.bootScale
           break
         }
         case 'recovery': {
-          const t = easeOutCubic(phaseT)
+          // Gesture line: fast fighters retract quickly, slow/power fighters linger
+          const t = easeOutCubic(Math.pow(phaseT, 1 / spdMod))
           if (t < 0.3) {
             const p = lerpPose(kickPoses.extend, kickPoses.chamber, t / 0.3)
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
             fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-            bodyLean = facing * p.bodyLean; armY += p.armOff; bootScale = p.bootScale
+            bodyLean = facing * p.bodyLean * leanStrMod; armY += p.armOff; bootScale = p.bootScale
           } else {
             const p = lerpPose(kickPoses.chamber, POSE_GUARD, (t - 0.3) / 0.7)
             fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
