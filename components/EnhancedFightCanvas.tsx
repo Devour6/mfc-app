@@ -6,6 +6,8 @@ import { FightState, Fighter } from '@/types'
 import { FIGHTER_MAX_HP } from '@/lib/fight-engine'
 import { RoundEvent, VisualEffect } from '@/lib/canvas/types'
 import { clamp } from '@/lib/canvas/utils'
+import { ATTACK_WEIGHT, KB_INITIAL_VELOCITY, KB_FRICTION, KB_SPRING, KB_MAX_OFFSET } from '@/lib/canvas/constants'
+import type { AttackWeight } from '@/lib/canvas/constants'
 import { drawEnhancedRing, drawCrowdAtmosphere } from '@/lib/canvas/stage-renderer'
 import { drawEnhancedFighter } from '@/lib/canvas/fighter-renderer'
 import { drawVisualEffects, drawImpactFlash } from '@/lib/canvas/effects-renderer'
@@ -49,6 +51,9 @@ export default function EnhancedFightCanvas({
   // Track previous animation state to detect transitions (e.g. entering 'hit')
   const prevAnimRef = useRef<{ f1: string; f2: string }>({ f1: 'idle', f2: 'idle' })
 
+  // Knockback weight — persists between frames to drive weight-dependent physics
+  const knockbackWeightRef = useRef<{ f1: AttackWeight; f2: AttackWeight }>({ f1: 'medium', f2: 'medium' })
+
   // Hit-stop: cache animation progress at moment of freeze
   const hitStopProgressRef = useRef<{ f1: number; f2: number }>({ f1: 0, f2: 0 })
 
@@ -80,10 +85,17 @@ export default function EnhancedFightCanvas({
     const f2State = fightState.fighter2.animation.state
 
     if (f1State === 'hit' && prevAnimRef.current.f1 !== 'hit') {
-      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -18
+      // SF2: knockback velocity scales with attacker's attack weight
+      const atkType = fightState.fighter2.animation.attackType || 'jab'
+      const weight: AttackWeight = ATTACK_WEIGHT[atkType] || 'medium'
+      knockbackRef.current.f1.velocity = fightState.fighter1.position.facing * -KB_INITIAL_VELOCITY[weight]
+      knockbackWeightRef.current.f1 = weight
     }
     if (f2State === 'hit' && prevAnimRef.current.f2 !== 'hit') {
-      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -18
+      const atkType = fightState.fighter1.animation.attackType || 'jab'
+      const weight: AttackWeight = ATTACK_WEIGHT[atkType] || 'medium'
+      knockbackRef.current.f2.velocity = fightState.fighter2.position.facing * -KB_INITIAL_VELOCITY[weight]
+      knockbackWeightRef.current.f2 = weight
     }
 
     prevAnimRef.current.f1 = f1State
@@ -222,13 +234,14 @@ export default function EnhancedFightCanvas({
     window.addEventListener('resize', resizeCanvas)
 
     const animate = () => {
-      // Update knockback physics each render frame
+      // Update knockback physics — SF2: weight-dependent friction, spring, clamp
       for (const key of ['f1', 'f2'] as const) {
         const kb = knockbackRef.current[key]
+        const weight = knockbackWeightRef.current[key]
         kb.offset += kb.velocity
-        kb.velocity *= 0.85 // friction
-        kb.offset *= 0.92   // spring back to center
-        kb.offset = clamp(kb.offset, -30, 30)
+        kb.velocity *= KB_FRICTION[weight]
+        kb.offset *= KB_SPRING[weight]
+        kb.offset = clamp(kb.offset, -KB_MAX_OFFSET[weight], KB_MAX_OFFSET[weight])
         if (Math.abs(kb.offset) < 0.5 && Math.abs(kb.velocity) < 0.5) {
           kb.offset = 0
           kb.velocity = 0
