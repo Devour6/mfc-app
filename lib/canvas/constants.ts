@@ -195,6 +195,13 @@ export const POSE_HIT_RECOIL: FighterPose = {
   gloveScale: 1.0, bootScale: 1.0,
 }
 
+// ── Knockback physics by attack weight ───────────────────────────────────
+// SF2: light hits snap back fast, heavy hits skid with delayed recovery.
+export const KB_INITIAL_VELOCITY: Record<AttackWeight, number> = { light: 10, medium: 18, heavy: 28 }
+export const KB_FRICTION: Record<AttackWeight, number> = { light: 0.75, medium: 0.85, heavy: 0.90 }
+export const KB_SPRING: Record<AttackWeight, number> = { light: 0.88, medium: 0.92, heavy: 0.95 }
+export const KB_MAX_OFFSET: Record<AttackWeight, number> = { light: 15, medium: 30, heavy: 40 }
+
 // Lookup: returns the appropriate recoil pose for an attack weight
 export const HIT_RECOIL_BY_WEIGHT: Record<AttackWeight, FighterPose> = {
   light: POSE_HIT_RECOIL_LIGHT,
