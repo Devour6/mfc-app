@@ -168,19 +168,13 @@ Enums: `FighterClass`, `FightStatus`, `FightMethod`, `BetSide`, `BetStatus`, `Sk
 | `/api/fights/[id]` | GET | Public | Get fight details |
 | `/api/fights/[id]` | POST | Human | Submit fight result |
 | `/api/fights/[id]` | PATCH | Human | Update fight status |
-| `/api/orders` | GET, POST | Required | List own orders; place orders via CLOB matching engine (fee-aware, position-limited) |
-| `/api/orders/[id]` | GET, PATCH | Required | Get order details, cancel order |
-| `/api/positions` | GET | Required | List own positions (filter by fight/settled status) |
-| `/api/positions/[id]` | GET | Required | Get position details |
-| `/api/trades` | GET | Required | List own trades as maker or taker (filter by fight) |
-| `/api/stats` | GET | Public | Platform-wide stats: active fighters, live fights, total volume |
 | `/api/user` | GET, POST, PATCH | Required | Get/sync/update user profile (auto-creates on first login) |
 | `/api/user/credits` | GET, POST | Required | Get credit balance, add/deduct credits (transaction-safe) |
 | `/api/bets` | GET, POST | Human | List user's bets, place bet (deducts credits) |
 | `/api/bets/[id]` | GET, PATCH | Human | Get bet details, settle/cancel bet |
 | `/api/training` | GET, POST | Human | List training sessions, create session |
 | `/api/training/[id]` | GET | Human | Get training session details |
-| `/api/stripe/checkout-session` | POST | Required | Create Stripe Checkout Session for credit purchase |
+| `/api/stripe/checkout-session` | POST | Human | Create Stripe Checkout Session for credit purchase |
 | `/api/stripe/webhook` | POST | Public* | Handle Stripe webhook events (signature-verified) |
 | `/api/agents/challenge` | GET | Public | Get a reverse CAPTCHA challenge for agent registration |
 | `/api/agents/register` | POST | Public | Register an AI agent (requires solved challenge), returns API key |
@@ -208,39 +202,32 @@ Auth column in the table above: "Human" = `requireHuman()`, "Required" = `requir
 
 **Fight status transitions:** SCHEDULED→LIVE, SCHEDULED→CANCELLED, LIVE→COMPLETED, LIVE→CANCELLED. All other transitions rejected.
 
-**Order matching:** `POST /api/orders` runs the CLOB matching engine in a serializable Prisma transaction. Validates fight is tradeable (PREFIGHT or OPEN), enforces league matching (humans trade HUMAN fights, agents trade AGENT fights), computes fee rate per fight tier, and checks position limits before matching.
-
 ## Current Product Status
 
-**Last updated:** 2026-03-05
+**Last updated:** 2026-02-23
 
 ### Where We Are
-- **Combat system:** V13 design validated. Fight engine tuned (225 HP, 80ms ticks, 3 rounds). Canvas being modularized by Luna.
-- **Animation quality:** Boss mandate — must reach Street Fighter 2 level or project gets killed. Luna owns canvas/animations. SF2 reference doc at `SF2_ANIMATION_REFERENCE.md`.
-- **Backend:** All API routes built and tested. Auth (Auth0), payments (Stripe), trading (CLOB), training, billing — all functional.
-- **Landing page:** Clean — Turnstile CAPTCHA removed, stats wired to real DB, CSS consolidated, mock data removed.
-- **Stripe:** Routes implemented, UI wired, tests passing. Needs `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in production env.
-- **Solana:** Scaffold built (wallet provider, credit bridge, config endpoint). Not yet wired to a deployed program.
-- **CI/CD:** Fully green. GitHub Actions (lint, type-check, test, build) + AI PR Review + Vercel auto-deploy.
+- **Combat system:** V13 design complete (`docs/plans/2026-02-23-v13-combat-design.md`). Waiting on Monte Carlo validation (13 sims, triangle 62-68% is the critical path). V6-V12 are superseded.
+- **Betting framework:** Foundational framing doc complete (`docs/plans/2026-02-23-betting-experience-framework.md`). Mental model for evaluating every betting decision. Open questions remain (fee structure, session cadence, losing streaks).
+- **Training system:** Design complete (`docs/plans/2026-02-22-training-system-design.md`). Needs update for V13's 3-stat system (POW/END/TEC) after Monte Carlo validates.
+- **Codebase:** Existing code is a mockup/prototype. Most will be rewritten once V13 validates.
+- **Brand identity:** Design in progress (Levi). Kakashi approved with notes.
 
-### Current Team
-- **Lyle** — Lead engineer. Backend, infrastructure, API, auth, DB, coordination, PR review/merge.
-- **Luna** — Frontend/canvas. Fight canvas modularization, SF2-quality animations, visual polish.
-- **Orcus** — Backend support. Testing, cleanup, CSS, Stripe wiring, branch management.
-
-### Priorities
-1. **Canvas quality** (Luna) — SF2-level animation is the existential requirement. Everything else supports this.
-2. **Keep shipping** (all) — Ralph loop: pick task, implement, test, PR, merge, next task. Never leave PRs open.
-3. **Stripe production env** — Set `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` in Vercel to enable real payments.
-4. **Solana integration** — Wire wallet to a deployed program for real trading (future sprint).
+### Short-Term Goals (This Week)
+1. **Kakashi:** Run V13 Monte Carlo (13 sims). Triangle validation is the critical path. Everything else gates on this.
+2. **Mina:** Social moments design exploration — moment taxonomy, shareable formats, clip-worthy fight events.
+3. **Levi:** Recovery visualization UI spec — make between-round HP recovery visible to all bettor skill levels.
+4. **Itachi:** Repricing window data spec (3-layer information architecture). Credit economy numbers. Betting framework open questions.
+5. **Jinwoo:** Blocked until V13 validates and implementation plan updates.
 
 ### Key Design Docs
 | Doc | Path | Status |
 |-----|------|--------|
-| V13 Combat Design | `docs/plans/2026-02-23-v13-combat-design.md` | Validated |
-| SF2 Animation Reference | `SF2_ANIMATION_REFERENCE.md` | Active reference for canvas work |
+| V13 Combat Design | `docs/plans/2026-02-23-v13-combat-design.md` | Awaiting Monte Carlo |
 | Betting Experience Framework | `docs/plans/2026-02-23-betting-experience-framework.md` | Active — open questions pending |
 | Training System | `docs/plans/2026-02-22-training-system-design.md` | Needs V13 stat update |
+| Combat V6 Base | `docs/plans/2026-02-20-combat-system-design.md` | Superseded by V13 |
+| V12 Calibration | `docs/plans/2026-02-23-v12-combat-calibration.md` | Superseded by V13 |
 
 ### Locked Design Principles
 1. **Every mechanic must make the human betting experience more fun.** The prediction market is the product.
@@ -252,7 +239,7 @@ Auth column in the table above: "Human" = `requireHuman()`, "Required" = `requir
 
 **Every agent MUST follow this procedure before starting their first task each session.**
 
-1. **Read this file.** Pay attention to "Current Product Status" and "Priorities" above.
+1. **Read this file.** Pay attention to "Current Product Status" and "Short-Term Goals" above.
 2. **Read the discussion board.** Your team discussion board path is in your Pentagon MEMORY.md or CONTEXT.md. Read the last 200-300 lines — the tail has the latest decisions, designs, and task assignments.
 3. **Check your tasks.** Read your Pentagon `tasks.json`. Check: are you blocked? Is someone blocked on you? What's highest priority?
 4. **Report to the user.** Before doing ANY work, give a quick status update:
@@ -381,7 +368,7 @@ Route checks are **error mode** — violations will fail CI.
 ## Testing
 
 Jest 30 with three projects:
-- **api** (`node`) — API route tests in `__tests__/api/` (26 test suites covering all 15 API route directories)
+- **api** (`node`) — API route tests in `__tests__/api/` (166 tests, 17 suites)
 - **frontend** (`jsdom`) — component tests in `__tests__/` (50 tests, 8 suites)
 - **solana** — Solana module tests in `__tests__/solana/` (27 tests, 2 suites). Per-file `@jest-environment` directives.
 
