@@ -56,3 +56,12 @@ export interface SkinPalette {
 // ── Hair styles ─────────────────────────────────────────────────────────────
 export const HAIR_STYLES = ['full', 'mohawk', 'short', 'bald', 'shaggy'] as const
 export type HairStyle = typeof HAIR_STYLES[number]
+
+// ── Crowd reaction state ────────────────────────────────────────────────────
+// Passed to drawCrowdAtmosphere so the crowd reacts to fight events beyond HP.
+export interface CrowdReactionState {
+  f1AnimState: string
+  f2AnimState: string
+  f1Combo: number
+  f2Combo: number
+}

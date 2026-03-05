@@ -1,7 +1,7 @@
 // ── Canvas module barrel export ──────────────────────────────────────────────
 // Modular fight canvas: types, constants, utils, renderers, animation controller.
 
-export type { EnhancedFightCanvasProps, RoundEvent, VisualEffect, FighterPose, SkinPalette, HairStyle } from './types'
+export type { EnhancedFightCanvasProps, RoundEvent, VisualEffect, FighterPose, SkinPalette, HairStyle, CrowdReactionState } from './types'
 export { HAIR_STYLES } from './types'
 
 export type { AttackWeight } from './constants'

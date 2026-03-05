@@ -1,4 +1,10 @@
 import { FIGHTER_MAX_HP } from '@/lib/fight-engine'
+import { CrowdReactionState } from './types'
+
+// ── Module-level crowd spike state (persists across frames for smooth decay) ─
+let _crowdSpike = 0
+let _crowdSpikeTime = 0
+const CROWD_SPIKE_DECAY = 2.5 // seconds for spike to fully decay
 
 // ── Ring / stage drawing ────────────────────────────────────────────────────
 export const drawEnhancedRing = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -59,38 +65,106 @@ export const drawEnhancedRing = (ctx: CanvasRenderingContext2D, width: number, h
 }
 
 // ── Crowd atmosphere ────────────────────────────────────────────────────────
+// Crowd reacts to fight events: hits spike excitement, knockdowns trigger a roar,
+// combos build energy, close rounds sustain tension. Excitement decays smoothly
+// via a module-level spike that persists across frames.
 export const drawCrowdAtmosphere = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   fighter1Hp: number,
-  fighter2Hp: number
+  fighter2Hp: number,
+  reactions?: CrowdReactionState
 ) => {
   const time = Date.now() * 0.001
+
+  // ── Base excitement from HP (existing behavior) ──────────────────────────
   const fightIntensity = 1 - (Math.min(fighter1Hp, fighter2Hp) / FIGHTER_MAX_HP)
-  const crowdExcitement = 0.3 + fightIntensity * 0.7
+
+  // ── Event-driven spike system ────────────────────────────────────────────
+  let isKnockdown = false
+  if (reactions) {
+    let spikeTarget = 0
+
+    // Hit reaction — crowd surges when someone takes a hit
+    if (reactions.f1AnimState === 'hit' || reactions.f2AnimState === 'hit') {
+      spikeTarget = Math.max(spikeTarget, 0.25)
+    }
+
+    // Knockdown — crowd roar (maximum surge)
+    if (reactions.f1AnimState === 'down' || reactions.f2AnimState === 'down') {
+      spikeTarget = Math.max(spikeTarget, 0.55)
+      isKnockdown = true
+    }
+
+    // Combo excitement — builds with combo count (capped at 0.35)
+    const maxCombo = Math.max(reactions.f1Combo, reactions.f2Combo)
+    if (maxCombo > 2) {
+      spikeTarget = Math.max(spikeTarget, Math.min(maxCombo * 0.09, 0.35))
+    }
+
+    // Only raise the spike — never lower it mid-decay (let decay handle reduction)
+    if (spikeTarget > _crowdSpike) {
+      _crowdSpike = spikeTarget
+      _crowdSpikeTime = time
+    }
+  }
+
+  // Decay spike smoothly over time
+  const spikeAge = time - _crowdSpikeTime
+  const spikeDecay = Math.max(0, 1 - spikeAge / CROWD_SPIKE_DECAY)
+  const currentSpike = _crowdSpike * spikeDecay
+
+  // Close-round bonus — sustained tension when both fighters are hurt and close in HP
+  let closeRoundBonus = 0
+  const hpDiff = Math.abs(fighter1Hp - fighter2Hp) / FIGHTER_MAX_HP
+  const avgHpRatio = (fighter1Hp + fighter2Hp) / (2 * FIGHTER_MAX_HP)
+  if (hpDiff < 0.15 && avgHpRatio < 0.5) {
+    closeRoundBonus = 0.15
+  }
+
+  const crowdExcitement = Math.min(0.3 + fightIntensity * 0.7 + currentSpike + closeRoundBonus, 1.0)
+
+  // ── Crowd silhouettes ────────────────────────────────────────────────────
+  // Knockdown = standing ovation (taller). Higher excitement = faster bob.
+  const ovationBoost = isKnockdown ? 15 : currentSpike * 8
+  const bobSpeed = 3 + crowdExcitement * 4 // 3 baseline → up to 7 at peak
+
+  // Crowd color warms toward red/orange as excitement rises
+  const crowdR = Math.round(20 + crowdExcitement * 40)
+  const crowdG = Math.round(20 - crowdExcitement * 8)
+  const crowdB = Math.round(30 - crowdExcitement * 15)
 
   for (let i = 0; i < width; i += 20) {
-    const baseHeight = 40 + Math.sin(i * 0.1) * 15
-    const animatedHeight = baseHeight + Math.sin(time * 3 + i * 0.1) * crowdExcitement * 10
+    const baseHeight = 40 + Math.sin(i * 0.1) * 15 + ovationBoost
+    const animatedHeight = baseHeight + Math.sin(time * bobSpeed + i * 0.1) * crowdExcitement * 12
     const crowdY = height * 0.35
-    const alpha = 0.15 + crowdExcitement * 0.15
+    const alpha = 0.15 + crowdExcitement * 0.2
     const crowdGrad = ctx.createLinearGradient(i, crowdY, i, crowdY + animatedHeight)
-    crowdGrad.addColorStop(0, `rgba(20,20,30,${alpha})`)
-    crowdGrad.addColorStop(1, 'rgba(20,20,30,0)')
+    crowdGrad.addColorStop(0, `rgba(${crowdR},${crowdG},${crowdB},${alpha})`)
+    crowdGrad.addColorStop(1, `rgba(${crowdR},${crowdG},${crowdB},0)`)
     ctx.fillStyle = crowdGrad
     ctx.fillRect(i, crowdY, 15, animatedHeight)
   }
 
-  if (Math.random() < fightIntensity * 0.02) {
-    const flashX = Math.random() * width
-    const flashY = height * (0.1 + Math.random() * 0.15)
-    ctx.fillStyle = `rgba(255,255,255,${0.6 + Math.random() * 0.4})`
-    ctx.beginPath()
-    ctx.arc(flashX, flashY, 2 + Math.random() * 3, 0, Math.PI * 2)
-    ctx.fill()
+  // ── Camera flashes ───────────────────────────────────────────────────────
+  // More frequent + brighter at high excitement. Knockdowns trigger a burst.
+  const flashChance = fightIntensity * 0.02 + currentSpike * 0.06
+  const flashCount = isKnockdown ? 3 : 1
+  for (let f = 0; f < flashCount; f++) {
+    if (Math.random() < flashChance) {
+      const flashX = Math.random() * width
+      const flashY = height * (0.1 + Math.random() * 0.15)
+      const flashAlpha = 0.6 + Math.random() * 0.4
+      const flashRadius = 2 + Math.random() * 3 + currentSpike * 2
+      ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`
+      ctx.beginPath()
+      ctx.arc(flashX, flashY, flashRadius, 0, Math.PI * 2)
+      ctx.fill()
+    }
   }
 
+  // ── Spotlights ───────────────────────────────────────────────────────────
   const lightPositions = [width * 0.2, width * 0.5, width * 0.8]
   lightPositions.forEach((lx, index) => {
     const baseIntensity = 0.8 + Math.sin(time + index) * 0.2
@@ -101,23 +175,29 @@ export const drawCrowdAtmosphere = (
     ctx.fillStyle = lightGradient
     ctx.fillRect(lx - 150, height * 0.1, 300, height * 0.4)
 
-    if (fightIntensity > 0.6) {
+    // Spotlight beams — activate at lower threshold when spike is active
+    if (fightIntensity > 0.6 || currentSpike > 0.15) {
+      const beamAlpha = excitedIntensity * 0.1 + currentSpike * 0.05
       const beamGradient = ctx.createLinearGradient(lx, height * 0.1, lx, height * 0.6)
-      beamGradient.addColorStop(0, `rgba(255,255,200,${excitedIntensity * 0.1})`)
+      beamGradient.addColorStop(0, `rgba(255,255,200,${beamAlpha})`)
       beamGradient.addColorStop(1, 'rgba(255,255,200,0)')
       ctx.fillStyle = beamGradient
       ctx.fillRect(lx - 30, height * 0.1, 60, height * 0.5)
     }
   })
 
-  if (fightIntensity > 0.4) {
-    ctx.strokeStyle = `rgba(255,255,255,${crowdExcitement * 0.1})`
+  // ── Wave effects ─────────────────────────────────────────────────────────
+  // Lower threshold, higher amplitude when crowd is spiking
+  if (fightIntensity > 0.4 || currentSpike > 0.1) {
+    const waveAlpha = crowdExcitement * 0.1 + currentSpike * 0.05
+    ctx.strokeStyle = `rgba(255,255,255,${waveAlpha})`
     ctx.lineWidth = 1
+    const waveAmp = crowdExcitement * 3 + currentSpike * 3
     for (let i = 0; i < 5; i++) {
       const waveY = height * 0.1 + i * 8
       ctx.beginPath()
       for (let wx = 0; wx < width; wx += 5) {
-        const waveHeight = Math.sin((wx + time * 200) * 0.02 + i) * crowdExcitement * 3
+        const waveHeight = Math.sin((wx + time * 200) * 0.02 + i) * waveAmp
         if (wx === 0) ctx.moveTo(wx, waveY + waveHeight)
         else ctx.lineTo(wx, waveY + waveHeight)
       }

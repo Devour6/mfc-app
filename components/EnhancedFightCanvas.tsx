@@ -310,7 +310,13 @@ export default function EnhancedFightCanvas({
     drawEnhancedRing(ctx, width, height)
     drawCrowdAtmosphere(ctx, width, height,
       fightState.fighter1?.hp ?? FIGHTER_MAX_HP,
-      fightState.fighter2?.hp ?? FIGHTER_MAX_HP
+      fightState.fighter2?.hp ?? FIGHTER_MAX_HP,
+      fightState.fighter1 && fightState.fighter2 ? {
+        f1AnimState: fightState.fighter1.animation.state,
+        f2AnimState: fightState.fighter2.animation.state,
+        f1Combo: fightState.fighter1.combo.count,
+        f2Combo: fightState.fighter2.combo.count,
+      } : undefined
     )
 
     // Fighters
