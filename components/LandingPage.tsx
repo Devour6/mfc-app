@@ -2,16 +2,22 @@
 
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ThePitch from '@/components/ThePitch'
 import HowItWorks from '@/components/HowItWorks'
 import ForAgents from '@/components/ForAgents'
 import TheExchange from '@/components/TheExchange'
-import TurnstileWidget from '@/components/TurnstileWidget'
 
 const HeroFightPreview = dynamic(() => import('@/components/HeroFightPreview'), {
   ssr: false,
 })
+
+function formatVolume(cents: number): string {
+  const dollars = cents / 100
+  if (dollars >= 1_000_000) return `$${(dollars / 1_000_000).toFixed(1)}M`
+  if (dollars >= 1_000) return `$${(dollars / 1_000).toFixed(1)}K`
+  return `$${dollars.toLocaleString()}`
+}
 
 interface LandingPageProps {
   onEnterArena: () => void
@@ -19,19 +25,22 @@ interface LandingPageProps {
 
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [humanVerified, setHumanVerified] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [stats, setStats] = useState<{ activeFighters: number; totalVolumeCents: number; liveFights: number } | null>(null)
   const agentSectionRef = useRef<HTMLDivElement>(null)
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setHumanVerified(true)
-  }, [])
 
   const scrollToAgentSection = () => {
     agentSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -71,6 +80,12 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
     },
     tap: { scale: 0.95 }
   }
+
+  const displayStats = [
+    { label: 'Active Fighters', value: stats ? stats.activeFighters.toLocaleString() : '—' },
+    { label: 'Total Volume', value: stats ? formatVolume(stats.totalVolumeCents) : '—' },
+    { label: 'Live Fights', value: stats ? String(stats.liveFights) : '—' }
+  ]
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -141,17 +156,13 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             variants={itemVariants}
             className="flex flex-col items-center gap-4 mb-12"
           >
-            <div className="mb-3">
-              <TurnstileWidget onVerify={handleTurnstileVerify} />
-            </div>
             <motion.button
               variants={buttonVariants}
               initial="rest"
-              whileHover={humanVerified ? "hover" : undefined}
-              whileTap={humanVerified ? "tap" : undefined}
-              onClick={() => humanVerified && onEnterArena()}
-              disabled={!humanVerified}
-              className={`group relative font-pixel text-sm tracking-wider px-10 py-5 border-2 text-white transition-all duration-300 min-w-[260px] ${humanVerified ? 'bg-accent border-accent hover:shadow-2xl hover:shadow-accent/30' : 'bg-accent/40 border-accent/40 cursor-not-allowed opacity-60'}`}
+              whileHover="hover"
+              whileTap="tap"
+              onClick={onEnterArena}
+              className="group relative font-pixel text-sm tracking-wider px-10 py-5 border-2 text-white transition-all duration-300 min-w-[260px] bg-accent border-accent hover:shadow-2xl hover:shadow-accent/30"
             >
               <span className="relative z-10 flex items-center justify-center gap-3">
                 <motion.span
@@ -159,7 +170,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
-                {humanVerified ? 'ENTER THE ARENA' : 'VERIFY HUMANITY...'}
+                ENTER THE ARENA
               </span>
             </motion.button>
             <p className="text-sm text-text2">
@@ -185,11 +196,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
             variants={itemVariants}
             className="mt-16 flex flex-wrap justify-center gap-8 text-center"
           >
-            {[
-              { label: 'Active Fighters', value: '2,847' },
-              { label: 'Total Volume', value: '$2.4M' },
-              { label: 'Live Fights', value: '12' }
-            ].map((stat, index) => (
+            {displayStats.map((stat, index) => (
               <motion.div
                 key={stat.label}
                 className="group"
@@ -248,11 +255,10 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
           <motion.button
             variants={buttonVariants}
             initial="rest"
-            whileHover={humanVerified ? "hover" : undefined}
-            whileTap={humanVerified ? "tap" : undefined}
-            onClick={() => humanVerified && onEnterArena()}
-            disabled={!humanVerified}
-            className={`group relative font-pixel text-sm tracking-wider px-10 py-5 border-2 text-white transition-all duration-300 min-w-[260px] ${humanVerified ? 'bg-accent border-accent hover:shadow-2xl hover:shadow-accent/30' : 'bg-accent/40 border-accent/40 cursor-not-allowed opacity-60'}`}
+            whileHover="hover"
+            whileTap="tap"
+            onClick={onEnterArena}
+            className="group relative font-pixel text-sm tracking-wider px-10 py-5 border-2 text-white transition-all duration-300 min-w-[260px] bg-accent border-accent hover:shadow-2xl hover:shadow-accent/30"
           >
             <span className="relative z-10 flex items-center justify-center gap-3">
               <motion.span
@@ -260,7 +266,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
                 animate={{ opacity: [1, 0.3, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               />
-              {humanVerified ? 'ENTER THE ARENA' : 'VERIFY HUMANITY...'}
+              ENTER THE ARENA
             </span>
           </motion.button>
           <p className="text-sm text-text2 mt-4">
