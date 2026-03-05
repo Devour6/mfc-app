@@ -369,7 +369,7 @@ Route checks are **error mode** — violations will fail CI.
 
 Jest 30 with three projects:
 - **api** (`node`) — API route tests in `__tests__/api/` (166 tests, 17 suites)
-- **frontend** (`jsdom`) — component tests in `__tests__/` (52 tests, 8 suites)
+- **frontend** (`jsdom`) — component tests in `__tests__/` (50 tests, 8 suites)
 - **solana** — Solana module tests in `__tests__/solana/` (27 tests, 2 suites). Per-file `@jest-environment` directives.
 
 API tests mock Prisma, Auth0 session, and user sync in `__tests__/api/helpers.ts`. CI runs API tests only (`--selectProjects=api`).
