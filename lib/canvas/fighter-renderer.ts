@@ -2,10 +2,11 @@ import { Fighter } from '@/types'
 import { FIGHTER_MAX_HP } from '@/lib/fight-engine'
 import { SkinPalette, HairStyle } from './types'
 import {
-  FIGHTER_SCALE, ATTACK_PHASES,
+  FIGHTER_SCALE, ATTACK_PHASES, ATTACK_WEIGHT,
   POSE_GUARD, IDLE_FRAMES, IDLE_FRAME_MS, IDLE_CYCLE_MS,
   PUNCH_POSES, KICK_POSES,
-  POSE_HIT_RECOIL, POSE_BLOCK_HIGH, POSE_DODGE_DUCK,
+  POSE_HIT_RECOIL, HIT_RECOIL_BY_WEIGHT,
+  POSE_BLOCK_HIGH, POSE_DODGE_DUCK,
 } from './constants'
 import {
   easeOutCubic, easeInQuad, easeInOutQuad, lerp,
@@ -14,7 +15,7 @@ import {
   getFighterPalette, getFighterHairStyle,
 } from './utils'
 import { getAnimProgress, getAttackPhase, getPhaseProgress } from './animation-controller'
-import { drawHitSpark, drawMotionTrail, drawSweatParticles } from './effects-renderer'
+import { drawHitSpark, drawSmearFrame, drawMotionTrail, drawSweatParticles } from './effects-renderer'
 import { drawFighterNameTag } from './hud-renderer'
 
 // ── Main fighter drawing orchestrator ───────────────────────────────────────
@@ -71,12 +72,16 @@ export const drawEnhancedFighter = (
 
   ctx.save()
 
-  // Screen shake on hit
+  // Screen shake on hit — SF2: shake intensity proportional to attack power
   if (fighterState.animation.state === 'hit') {
     const time = Date.now() * 0.001
     const animProgress = getAnimProgress(fighterState)
     const decay = Math.exp(-animProgress * 3)
-    const shakeIntensity = (fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 10 : 6) * decay
+    // Infer hit weight from animation duration (same heuristic as recoil)
+    const hitDur = fighterState.animation.frameCount + fighterState.animation.duration
+    const baseShake = hitDur > 10 ? 10 : hitDur > 6 ? 6 : 3
+    const lowHpBoost = fighterState.hp < FIGHTER_MAX_HP * 0.25 ? 4 : 0
+    const shakeIntensity = (baseShake + lowHpBoost) * decay
     const shakePhase = time * 30
     ctx.translate(
       (Math.sin(shakePhase) + Math.sin(shakePhase * 2.3) * 0.4) * shakeIntensity,
@@ -158,13 +163,24 @@ export const drawEnhancedFighter = (
   const hairStyle = getFighterHairStyle(fighterData.id)
   drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats, palette, hairStyle)
 
-  // Hit spark at contact point
+  // Hit spark at contact point — scaled by attack weight
   if (isHitFlash) {
     const opponentForSpark = fighterNumber === 1 ? fightState.fighter2 : fightState.fighter1
     const opponentScreenX = (opponentForSpark.position.x / 480) * width
     const sparkX = opponentScreenX - fighterState.position.facing * 15
     const sparkY = y - 20
-    drawHitSpark(ctx, sparkX, sparkY)
+    const atkType = fighterState.animation.attackType || 'jab'
+    drawHitSpark(ctx, sparkX, sparkY, atkType)
+  }
+
+  // Smear frames — SF2 snap-to-pose motion blur during active phase
+  if (isAttacking && animProgress > 0) {
+    const atkType = fighterState.animation.attackType || 'jab'
+    const phase = getAttackPhase(animProgress, atkType)
+    if (phase === 'active') {
+      const actionType = fighterState.animation.state === 'punching' ? 'punching' as const : 'kicking' as const
+      drawSmearFrame(ctx, drawX, y, fighterState.position.facing, actionType, atkType)
+    }
   }
 
   // Motion trails
@@ -348,8 +364,14 @@ const drawHumanoidFighter = (
     }
 
     case 'hit': {
+      // SF2: recoil proportional to attack power. Infer weight from hit duration
+      // (fight engine sets: jab=8, kick=6, power punch=14, power kick=12, combo=hits*4)
+      const hitDuration = fighterState.animation.frameCount + fighterState.animation.duration
+      const hitWeight = hitDuration > 10 ? 'heavy' : hitDuration > 6 ? 'medium' : 'light' as const
+      const recoilPose = HIT_RECOIL_BY_WEIGHT[hitWeight]
+
       if (animProgress < 0.5) {
-        const p = POSE_HIT_RECOIL
+        const p = recoilPose
         fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
         fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
         bodyLean = facing * p.bodyLean
@@ -357,13 +379,15 @@ const drawHumanoidFighter = (
         armY += p.armOff; legY += p.legOff
       } else {
         const recoverT = easeInOutQuad((animProgress - 0.5) / 0.5)
-        const p = lerpPose(POSE_HIT_RECOIL, POSE_GUARD, recoverT)
+        const p = lerpPose(recoilPose, POSE_GUARD, recoverT)
         fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
         fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
         bodyLean = facing * p.bodyLean
         headY += p.headOff; torsoY += p.torsoOff
         armY += p.armOff; legY += p.legOff
-        const stagger = Math.sin(recoverT * Math.PI * 3) * 5 * (1 - recoverT)
+        // SF2: heavier hits = bigger stagger wobble
+        const staggerAmp = hitWeight === 'heavy' ? 8 : hitWeight === 'medium' ? 5 : 3
+        const stagger = Math.sin(recoverT * Math.PI * 3) * staggerAmp * (1 - recoverT)
         headY += stagger
       }
       break
