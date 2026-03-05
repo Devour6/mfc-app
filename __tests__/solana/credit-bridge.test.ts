@@ -1,12 +1,19 @@
 /**
  * @jest-environment node
+ *
+ * Solana credit bridge tests — verifies:
+ * 1. buildDepositTransaction — SOL transfer to treasury, blockhash, lamport conversion
+ * 2. confirmDeposit — calls /api/user/credits with deposit payload
+ * 3. requestWithdrawal — calls /api/user/credits with negative amount
+ * 4. getSolanaConfig — fetches and caches config from /api/solana/config
+ * 5. Input validation — rejects zero/negative amounts
+ * 6. Error handling — API failures propagate correctly
  */
 import {
   buildDepositTransaction,
   confirmDeposit,
   requestWithdrawal,
-  CREDITS_PER_SOL,
-  TREASURY_ADDRESS,
+  getSolanaConfig,
 } from '@/lib/solana/credit-bridge'
 
 // ─── Mock @solana/web3.js ─────────────────────────────────────────────────────
@@ -66,8 +73,37 @@ jest.mock('@solana/web3.js', () => {
 const mockFetch = jest.fn()
 global.fetch = mockFetch
 
+// Config returned by /api/solana/config — matches SolanaConfig interface
+const MOCK_CONFIG = {
+  treasuryWallet: 'treasury-wallet-address',
+  creditsPerSol: 1000,
+}
+
+/**
+ * Set up URL-aware fetch mock. Always handles /api/solana/config.
+ * Pass an apiResponse to also handle /api/user/credits calls.
+ */
+function setupFetchMock(apiResponse?: { ok: boolean; json: () => Promise<unknown> }) {
+  mockFetch.mockImplementation((url: string) => {
+    if (url === '/api/solana/config') {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(MOCK_CONFIG),
+      })
+    }
+    if (apiResponse) return Promise.resolve(apiResponse)
+    return Promise.resolve(undefined)
+  })
+}
+
+/** Find the fetch call to a specific URL (robust against config caching). */
+function findFetchCall(url: string): [string, RequestInit] | undefined {
+  return mockFetch.mock.calls.find(([callUrl]: [string]) => callUrl === url)
+}
+
 beforeEach(() => {
   jest.clearAllMocks()
+  setupFetchMock()
 })
 
 // ─── buildDepositTransaction ──────────────────────────────────────────────────
@@ -89,7 +125,7 @@ describe('buildDepositTransaction', () => {
       type: 'transfer',
       lamports: 1_500_000_000,
     })
-    expect(creditAmount).toBe(1.5 * CREDITS_PER_SOL)
+    expect(creditAmount).toBe(1.5 * MOCK_CONFIG.creditsPerSol)
   })
 
   it('sets blockhash and feePayer', async () => {
@@ -133,7 +169,7 @@ describe('buildDepositTransaction', () => {
 
 describe('confirmDeposit', () => {
   it('calls /api/user/credits with correct deposit payload', async () => {
-    mockFetch.mockResolvedValue({
+    setupFetchMock({
       ok: true,
       json: () => Promise.resolve({ credits: 2500 }),
     })
@@ -146,9 +182,10 @@ describe('confirmDeposit', () => {
       body: expect.any(String),
     })
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const creditsCall = findFetchCall('/api/user/credits')
+    const body = JSON.parse(creditsCall![1].body as string)
     expect(body.auth0Id).toBe('auth0|123')
-    expect(body.amount).toBe(1.5 * CREDITS_PER_SOL)
+    expect(body.amount).toBe(1.5 * MOCK_CONFIG.creditsPerSol)
     expect(body.type).toBe('deposit')
     expect(body.description).toContain('1.5 SOL')
     expect(body.description).toContain('tx-signature-abc')
@@ -157,7 +194,7 @@ describe('confirmDeposit', () => {
   })
 
   it('throws on API error', async () => {
-    mockFetch.mockResolvedValue({
+    setupFetchMock({
       ok: false,
       json: () => Promise.resolve({ error: 'User not found' }),
     })
@@ -168,7 +205,7 @@ describe('confirmDeposit', () => {
   })
 
   it('throws default message when API error has no message', async () => {
-    mockFetch.mockResolvedValue({
+    setupFetchMock({
       ok: false,
       json: () => Promise.resolve({}),
     })
@@ -183,24 +220,25 @@ describe('confirmDeposit', () => {
 
 describe('requestWithdrawal', () => {
   it('calls /api/user/credits with negative amount for withdrawal', async () => {
-    mockFetch.mockResolvedValue({
+    setupFetchMock({
       ok: true,
       json: () => Promise.resolve({ credits: 500 }),
     })
 
     const result = await requestWithdrawal('auth0|123', 500)
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const creditsCall = findFetchCall('/api/user/credits')
+    const body = JSON.parse(creditsCall![1].body as string)
     expect(body.auth0Id).toBe('auth0|123')
     expect(body.amount).toBe(-500)
     expect(body.type).toBe('withdrawal')
 
-    expect(result.solAmount).toBe(500 / CREDITS_PER_SOL)
+    expect(result.solAmount).toBe(500 / MOCK_CONFIG.creditsPerSol)
     expect(result.credits).toBe(500)
   })
 
   it('calculates correct SOL amount from credits', async () => {
-    mockFetch.mockResolvedValue({
+    setupFetchMock({
       ok: true,
       json: () => Promise.resolve({ credits: 0 }),
     })
@@ -223,7 +261,7 @@ describe('requestWithdrawal', () => {
   })
 
   it('throws on API error', async () => {
-    mockFetch.mockResolvedValue({
+    setupFetchMock({
       ok: false,
       json: () => Promise.resolve({ error: 'Insufficient credits' }),
     })
@@ -234,15 +272,27 @@ describe('requestWithdrawal', () => {
   })
 })
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── getSolanaConfig ─────────────────────────────────────────────────────────
 
-describe('exported constants', () => {
-  it('exports CREDITS_PER_SOL as 1000 (default)', () => {
-    expect(CREDITS_PER_SOL).toBe(1000)
+describe('getSolanaConfig', () => {
+  it('fetches config from /api/solana/config', async () => {
+    const config = await getSolanaConfig()
+
+    expect(config.creditsPerSol).toBe(1000)
+    expect(config.treasuryWallet).toBe('treasury-wallet-address')
   })
 
-  it('exports TREASURY_ADDRESS as a PublicKey', () => {
-    expect(TREASURY_ADDRESS).toBeDefined()
-    expect(typeof TREASURY_ADDRESS.toBase58).toBe('function')
+  it('throws when config endpoint fails', async () => {
+    // Need a fresh module to clear the config cache
+    jest.resetModules()
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/solana/config') {
+        return Promise.resolve({ ok: false })
+      }
+      return Promise.resolve(undefined)
+    })
+
+    const { getSolanaConfig: freshGetConfig } = require('@/lib/solana/credit-bridge')
+    await expect(freshGetConfig()).rejects.toThrow('Failed to fetch Solana config')
   })
 })
