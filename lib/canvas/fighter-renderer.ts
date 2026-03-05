@@ -3,7 +3,7 @@ import { FIGHTER_MAX_HP } from '@/lib/fight-engine'
 import { SkinPalette, HairStyle } from './types'
 import {
   FIGHTER_SCALE, ATTACK_PHASES, ATTACK_WEIGHT,
-  POSE_GUARD, IDLE_FRAMES, IDLE_FRAME_MS, IDLE_CYCLE_MS,
+  POSE_GUARD,
   PUNCH_POSES, KICK_POSES,
   POSE_HIT_RECOIL, HIT_RECOIL_BY_WEIGHT,
   POSE_BLOCK_HIGH, POSE_DODGE_DUCK,
@@ -260,33 +260,56 @@ const drawHumanoidFighter = (
 
   switch (state) {
     case 'idle': {
-      const now = Date.now()
-      const offsetTime = now + fighterNumber * 200
-      let cyclePos = offsetTime % IDLE_CYCLE_MS
-      let frameIdx = 0
-      for (let i = 0; i < IDLE_FRAME_MS.length; i++) {
-        if (cyclePos < IDLE_FRAME_MS[i]) { frameIdx = i; break }
-        cyclePos -= IDLE_FRAME_MS[i]
+      // SF2 organic breathing: continuous sine-based instead of discrete frame steps.
+      // Asymmetric inhale/exhale, phase-offset arm bob, micro-variation overlay.
+      const tSec = (Date.now() + fighterNumber * 237) * 0.001
+
+      // Primary breathing rhythm (~1.8s cycle)
+      // Inhale (slow rise, 60% of cycle) → Exhale (quick fall, 40%)
+      const BREATH_PERIOD = 1.8
+      const breathCycle = ((tSec / BREATH_PERIOD) % 1.0)
+      let breathT: number // 0=exhaled(bottom), 1=inhaled(top)
+      if (breathCycle < 0.6) {
+        breathT = Math.sin((breathCycle / 0.6) * Math.PI * 0.5)
+      } else {
+        breathT = Math.cos(((breathCycle - 0.6) / 0.4) * Math.PI * 0.5)
       }
 
-      const pose = IDLE_FRAMES[frameIdx]
+      // Micro-variation: slow secondary oscillation prevents robotic feel
+      const micro = Math.sin(tSec * 2.7 + fighterNumber * 1.3) * 0.12
+
+      // Arm phase offset: fists lag ~120ms behind torso (secondary motion = alive)
+      const armCycle = (((tSec + 0.12) / BREATH_PERIOD) % 1.0)
+      let armBreathT: number
+      if (armCycle < 0.6) {
+        armBreathT = Math.sin((armCycle / 0.6) * Math.PI * 0.5)
+      } else {
+        armBreathT = Math.cos(((armCycle - 0.6) / 0.4) * Math.PI * 0.5)
+      }
+
       const crouchDepth = 5 * agrMod
-      headY += pose.headOff * agrMod + crouchDepth * 0.3
-      torsoY += pose.torsoOff * agrMod + crouchDepth * 0.5
-      armY += pose.armOff * agrMod + crouchDepth * 0.3
-      legY += pose.legOff * agrMod - crouchDepth * 0.2
-      bodyLean = facing * pose.bodyLean * agrMod
 
+      // Knees: main bounce driver (same range as before: 18-30 front, 22-34 back)
+      fKnB = Math.round(lerp(30, 18, breathT) + micro * 3) + crouchDepth * 0.5
+      bKnB = Math.round(lerp(34, 22, breathT) + micro * 3) + crouchDepth * 0.5
+
+      // Vertical offsets — pixel-snapped (torso 0-4, arm 0-4, head 0-2, leg 0-2)
+      headY += Math.round(lerp(2, 0, breathT)) * agrMod + crouchDepth * 0.3
+      torsoY += Math.round(lerp(4, 0, breathT) * (1 + micro)) * agrMod + crouchDepth * 0.5
+      armY += Math.round(lerp(4, 0, armBreathT) * (1 + micro)) * agrMod + crouchDepth * 0.3
+      legY += Math.round(lerp(2, 0, breathT)) * agrMod - crouchDepth * 0.2
+
+      bodyLean = facing * POSE_GUARD.bodyLean * agrMod
+
+      // Guard shape: arm angles stay at guard + defensive boost (arms don't rotate, just bob)
       const defBoost = (defMod - 1) * 8
-      fShA = pose.fShA + defBoost
-      fElB = pose.fElB + defBoost * 1.5
-      bShA = pose.bShA + defBoost * 0.7
-      bElB = pose.bElB + defBoost
+      fShA = POSE_GUARD.fShA + defBoost
+      fElB = POSE_GUARD.fElB + defBoost * 1.5
+      bShA = POSE_GUARD.bShA + defBoost * 0.7
+      bElB = POSE_GUARD.bElB + defBoost
 
-      fHiA = pose.fHiA
-      fKnB = pose.fKnB + crouchDepth * 0.5
-      bHiA = pose.bHiA
-      bKnB = pose.bKnB + crouchDepth * 0.5
+      fHiA = POSE_GUARD.fHiA
+      bHiA = POSE_GUARD.bHiA
       break
     }
 
