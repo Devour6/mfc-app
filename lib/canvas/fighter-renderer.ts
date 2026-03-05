@@ -63,8 +63,17 @@ export const drawEnhancedFighter = (
   let hitStopVibY = 0
   if (isInHitStop) {
     const vibTime = Date.now() * 0.06
-    hitStopVibX = Math.sin(vibTime) * 2.0
-    hitStopVibY = Math.cos(vibTime * 1.5) * 1.0
+    // SF2: vibration intensity scales with attack weight
+    let vibScale = 1.0
+    if (fighterState.animation.state === 'punching' || fighterState.animation.state === 'kicking') {
+      const w = ATTACK_WEIGHT[fighterState.animation.attackType || 'jab'] || 'medium'
+      vibScale = w === 'heavy' ? 1.8 : w === 'light' ? 0.5 : 1.0
+    } else if (fighterState.animation.state === 'hit') {
+      const hitDur = fighterState.animation.frameCount + fighterState.animation.duration
+      vibScale = hitDur > 10 ? 1.8 : hitDur > 6 ? 1.0 : 0.5
+    }
+    hitStopVibX = Math.sin(vibTime) * 2.0 * vibScale
+    hitStopVibY = Math.cos(vibTime * 1.5) * 1.0 * vibScale
   }
 
   const x = baseX + hitStopVibX
@@ -146,7 +155,12 @@ export const drawEnhancedFighter = (
     } else if (phase === 'active' || phase === 'hold') {
       lungeOffset = fighterState.position.facing * Math.round(lungeDistance)
     } else {
-      lungeOffset = fighterState.position.facing * Math.round(lerp(lungeDistance, 0, easeOutCubic(phaseT)))
+      // SF2 follow-through: hold forward position briefly, then retract
+      if (phaseT < 0.2) {
+        lungeOffset = fighterState.position.facing * Math.round(lerp(lungeDistance, lungeDistance * 0.85, phaseT / 0.2))
+      } else {
+        lungeOffset = fighterState.position.facing * Math.round(lerp(lungeDistance * 0.85, 0, easeOutCubic((phaseT - 0.2) / 0.8)))
+      }
     }
   }
 
@@ -305,12 +319,22 @@ const drawHumanoidFighter = (
         }
         case 'recovery': {
           const t = easeOutCubic(phaseT)
-          const p = lerpPose(poses.extend, POSE_GUARD, t)
-          fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
-          fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-          bodyLean = facing * lerp(poses.extend.bodyLean * strMod, POSE_GUARD.bodyLean, t)
-          headY += p.headOff; torsoY += p.torsoOff
-          gloveScale = p.gloveScale
+          // SF2 follow-through: retract through chamber (extend→chamber→guard)
+          if (t < 0.3) {
+            const p = lerpPose(poses.extend, poses.chamber, t / 0.3)
+            fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+            fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
+            bodyLean = facing * p.bodyLean
+            headY += p.headOff; torsoY += p.torsoOff
+            gloveScale = p.gloveScale
+          } else {
+            const p = lerpPose(poses.chamber, POSE_GUARD, (t - 0.3) / 0.7)
+            fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
+            fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
+            bodyLean = facing * p.bodyLean
+            headY += p.headOff; torsoY += p.torsoOff
+            gloveScale = p.gloveScale
+          }
           break
         }
       }
