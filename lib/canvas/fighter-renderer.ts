@@ -298,7 +298,9 @@ const drawHumanoidFighter = (
 
       switch (phase) {
         case 'startup': {
-          const t = easeOutCubic(phaseT)
+          // SF2 anticipation: heavy attacks telegraph (easeIn), light snap fast (easeOut)
+          const weight = ATTACK_WEIGHT[attackType] || 'medium'
+          const t = weight === 'heavy' ? easeInQuad(phaseT) : weight === 'light' ? easeOutCubic(phaseT) : phaseT
           const p = lerpPose(POSE_GUARD, poses.chamber, t)
           fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
           fHiA = p.fHiA; fKnB = p.fKnB * strMod; bHiA = p.bHiA; bKnB = p.bKnB * strMod
@@ -349,7 +351,9 @@ const drawHumanoidFighter = (
 
       switch (phase) {
         case 'startup': {
-          const t = easeOutCubic(phaseT)
+          // SF2 anticipation: roundhouse telegraphs (easeIn), regular kick snaps (easeOut)
+          const kickWeight = ATTACK_WEIGHT[attackType] || 'medium'
+          const t = kickWeight === 'heavy' ? easeInQuad(phaseT) : easeOutCubic(phaseT)
           const p = lerpPose(POSE_GUARD, kickPoses.chamber, t)
           fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
           fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB

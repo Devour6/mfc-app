@@ -133,6 +133,33 @@ export const drawSmearFrame = (
   ctx.restore()
 }
 
+// ── Impact flash — SF2 freeze-frame white overlay on heavy hit-stop ──────
+// Called once per frame AFTER both fighters are drawn. Checks if either
+// fighter is attacking during hit-stop and flashes proportionally to weight.
+export const drawImpactFlash = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  fighter1: { modifiers: { hitStopFrames: number }; animation: { state: string; attackType?: string } },
+  fighter2: { modifiers: { hitStopFrames: number }; animation: { state: string; attackType?: string } },
+) => {
+  let maxFlash = 0
+  for (const fs of [fighter1, fighter2]) {
+    if (fs.modifiers.hitStopFrames > 0 && (fs.animation.state === 'punching' || fs.animation.state === 'kicking')) {
+      const weight = ATTACK_WEIGHT[fs.animation.attackType || 'jab'] || 'medium'
+      const flash = weight === 'heavy' ? 0.15 : weight === 'medium' ? 0.07 : 0
+      maxFlash = Math.max(maxFlash, flash)
+    }
+  }
+  if (maxFlash > 0) {
+    ctx.save()
+    ctx.globalAlpha = maxFlash
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, width, height)
+    ctx.restore()
+  }
+}
+
 // ── Motion trails ───────────────────────────────────────────────────────────
 export const drawMotionTrail = (
   ctx: CanvasRenderingContext2D,

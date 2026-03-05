@@ -24,7 +24,7 @@ export { getAnimProgress, getAttackPhase, getPhaseProgress } from './animation-c
 
 export { drawEnhancedRing, drawCrowdAtmosphere } from './stage-renderer'
 
-export { drawVisualEffects, drawHitSpark, drawSmearFrame, drawMotionTrail, drawSweatParticles } from './effects-renderer'
+export { drawVisualEffects, drawHitSpark, drawSmearFrame, drawImpactFlash, drawMotionTrail, drawSweatParticles } from './effects-renderer'
 
 export { drawSF2HUD, drawFighterNameTag } from './hud-renderer'
 
