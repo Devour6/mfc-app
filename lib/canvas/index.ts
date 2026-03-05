@@ -1,7 +1,7 @@
 // ── Canvas module barrel export ──────────────────────────────────────────────
 // Modular fight canvas: types, constants, utils, renderers, animation controller.
 
-export type { EnhancedFightCanvasProps, RoundEvent, VisualEffect, FighterPose, SkinPalette, HairStyle, CrowdReactionState } from './types'
+export type { EnhancedFightCanvasProps, RoundEvent, VisualEffect, FighterPose, SkinPalette, HairStyle, CrowdReactionState, FightOutcome } from './types'
 export { HAIR_STYLES } from './types'
 
 export type { AttackWeight } from './constants'
@@ -13,6 +13,7 @@ export {
   KB_INITIAL_VELOCITY, KB_FRICTION, KB_SPRING, KB_MAX_OFFSET,
   POSE_HIT_RECOIL, POSE_HIT_RECOIL_LIGHT, POSE_HIT_RECOIL_MEDIUM,
   POSE_BLOCK_HIGH, POSE_DODGE_DUCK, POSE_DODGE_LEAN,
+  POSE_VICTORY, POSE_DEFEAT,
 } from './constants'
 
 export {

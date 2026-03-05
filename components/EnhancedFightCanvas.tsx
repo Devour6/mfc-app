@@ -322,8 +322,21 @@ export default function EnhancedFightCanvas({
     // Fighters
     if (fightState.fighter1 && fightState.fighter2) {
       const fightStateForRenderer = { fighter1: fightState.fighter1, fighter2: fightState.fighter2 }
-      drawEnhancedFighter(ctx, fightState.fighter1, fighters[0], width, height, '#ff4444', 1, fightStateForRenderer, renderPositionsRef, prevPositionsRef, knockbackRef, hitStopProgressRef)
-      drawEnhancedFighter(ctx, fightState.fighter2, fighters[1], width, height, '#4488ff', 2, fightStateForRenderer, renderPositionsRef, prevPositionsRef, knockbackRef, hitStopProgressRef)
+
+      // Compute fight outcome for victory/defeat poses
+      const f1Outcome = fightState.result ? {
+        phase: fightState.phase,
+        isWinner: fightState.result.winner === fightState.fighter1.id,
+        method: fightState.result.method,
+      } : undefined
+      const f2Outcome = fightState.result ? {
+        phase: fightState.phase,
+        isWinner: fightState.result.winner === fightState.fighter2.id,
+        method: fightState.result.method,
+      } : undefined
+
+      drawEnhancedFighter(ctx, fightState.fighter1, fighters[0], width, height, '#ff4444', 1, fightStateForRenderer, renderPositionsRef, prevPositionsRef, knockbackRef, hitStopProgressRef, f1Outcome)
+      drawEnhancedFighter(ctx, fightState.fighter2, fighters[1], width, height, '#4488ff', 2, fightStateForRenderer, renderPositionsRef, prevPositionsRef, knockbackRef, hitStopProgressRef, f2Outcome)
 
       // SF2 impact flash — white overlay on medium/heavy hit-stop
       drawImpactFlash(ctx, width, height, fightState.fighter1, fightState.fighter2)
