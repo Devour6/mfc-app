@@ -8,7 +8,7 @@ import { RoundEvent, VisualEffect } from '@/lib/canvas/types'
 import { clamp } from '@/lib/canvas/utils'
 import { ATTACK_WEIGHT, KB_INITIAL_VELOCITY, KB_FRICTION, KB_SPRING, KB_MAX_OFFSET } from '@/lib/canvas/constants'
 import type { AttackWeight } from '@/lib/canvas/constants'
-import { drawEnhancedRing, drawCrowdAtmosphere } from '@/lib/canvas/stage-renderer'
+import { drawEnhancedRing, drawCrowdAtmosphere, drawStageMood } from '@/lib/canvas/stage-renderer'
 import { drawEnhancedFighter } from '@/lib/canvas/fighter-renderer'
 import { drawVisualEffects, drawImpactFlash } from '@/lib/canvas/effects-renderer'
 import { drawSF2HUD } from '@/lib/canvas/hud-renderer'
@@ -309,6 +309,18 @@ export default function EnhancedFightCanvas({
     // Stage + crowd
     drawEnhancedRing(ctx, width, height)
     drawCrowdAtmosphere(ctx, width, height,
+      fightState.fighter1?.hp ?? FIGHTER_MAX_HP,
+      fightState.fighter2?.hp ?? FIGHTER_MAX_HP,
+      fightState.fighter1 && fightState.fighter2 ? {
+        f1AnimState: fightState.fighter1.animation.state,
+        f2AnimState: fightState.fighter2.animation.state,
+        f1Combo: fightState.fighter1.combo.count,
+        f2Combo: fightState.fighter2.combo.count,
+      } : undefined
+    )
+
+    // Stage mood lighting — color temperature shifts as fight intensifies
+    drawStageMood(ctx, width, height,
       fightState.fighter1?.hp ?? FIGHTER_MAX_HP,
       fightState.fighter2?.hp ?? FIGHTER_MAX_HP,
       fightState.fighter1 && fightState.fighter2 ? {
