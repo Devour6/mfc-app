@@ -518,27 +518,32 @@ const drawHumanoidFighter = (
       const isForward = walkDir === 'forward'
       const walkPhase = total > 0 ? (fighterState.animation.frameCount / total) * Math.PI * 2 : 0
 
-      const strideScale = strMod
-      const swingAngle = (isForward ? 25 : 15) * strideScale
+      // Gesture line: stride width by strength (power=wider planted, speed=compact)
+      const swingAngle = (isForward ? 25 : 15) * leanStrMod
 
       const legSwing = Math.sin(walkPhase) * swingAngle
       const oppLegSwing = Math.sin(walkPhase + Math.PI) * swingAngle
-      const kneeOnPlant = Math.abs(Math.cos(walkPhase)) * 18
+      // Knee flex: power fighters plant heavier (deeper flex), speed fighters light touch
+      const strT = (strMod - 0.85) / 0.3
+      const kneeFlexAmp = lerp(14, 22, strT)
+      const kneeOnPlant = Math.abs(Math.cos(walkPhase)) * kneeFlexAmp
 
       fHiA = legSwing
       fKnB = 15 + kneeOnPlant
       bHiA = oppLegSwing
-      bKnB = 15 + Math.abs(Math.cos(walkPhase + Math.PI)) * 18
+      bKnB = 15 + Math.abs(Math.cos(walkPhase + Math.PI)) * kneeFlexAmp
 
-      const armSwing = Math.sin(walkPhase + Math.PI) * 15
-      const oppArmSwing = Math.sin(walkPhase) * 15
+      // Arm counterswing: power fighters swing wide, speed fighters keep arms tight
+      const armAmp = lerp(10, 20, strT)
+      const armSwing = Math.sin(walkPhase + Math.PI) * armAmp
+      const oppArmSwing = Math.sin(walkPhase) * armAmp
 
       if (isForward) {
         fShA = 55 + armSwing
         fElB = 100 + armSwing * 0.5
         bShA = 45 + oppArmSwing
         bElB = 100 + oppArmSwing * 0.5
-        bodyLean = facing * 8 * agrMod
+        bodyLean = facing * 8 * agrMod * leanStrMod
       } else {
         fShA = 60 + armSwing * 0.5
         fElB = 115
@@ -547,13 +552,16 @@ const drawHumanoidFighter = (
         bodyLean = facing * -4 * defMod
       }
 
+      // Vertical bob: power fighters heavier bob, speed fighters lighter bounce
       const normalizedPhase = (walkPhase % (Math.PI * 2)) / (Math.PI * 2)
-      const bobAmp = 3 * strMod
+      const bobAmp = lerp(2, 4.5, strT)
+      // Asymmetric bob: power = quick up / slow heavy down, speed = more symmetric
+      const upRatio = lerp(0.5, 0.35, strT)
       let verticalBob: number
-      if (normalizedPhase < 0.4) {
-        verticalBob = -Math.sin((normalizedPhase / 0.4) * Math.PI * 0.5) * bobAmp
+      if (normalizedPhase < upRatio) {
+        verticalBob = -Math.sin((normalizedPhase / upRatio) * Math.PI * 0.5) * bobAmp
       } else {
-        verticalBob = -Math.cos(((normalizedPhase - 0.4) / 0.6) * Math.PI * 0.5) * bobAmp
+        verticalBob = -Math.cos(((normalizedPhase - upRatio) / (1 - upRatio)) * Math.PI * 0.5) * bobAmp
       }
       torsoY += verticalBob * 0.7
       headY += verticalBob * 0.2
