@@ -474,6 +474,18 @@ export async function getFileStats(path: string): Promise<{ mtime: string }> {
   return request<{ mtime: string }>(`/api/file-stats?path=${encodeURIComponent(path)}`)
 }
 
+// ─── Stats ─────────────────────────────────────────────────────────────────
+
+export interface PlatformStats {
+  activeFighters: number
+  liveFights: number
+  totalVolumeCents: number
+}
+
+export function getStats() {
+  return request<PlatformStats>('/api/stats')
+}
+
 // ─── Re-export error class for consumers ────────────────────────────────────
 
 export { ApiClientError }
