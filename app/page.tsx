@@ -6,139 +6,22 @@ import { X } from 'lucide-react'
 import LiveFightSection from '@/components/LiveFightSection'
 import LandingPage from '@/components/LandingPage'
 import ArenaTopBar, { ArenaSection } from '@/components/ArenaTopBar'
-import DailyRewards from '@/components/DailyRewards'
 import RankingsSection from '@/components/RankingsSection'
-import TournamentBracket from '@/components/TournamentBracket'
-import AchievementSystem from '@/components/AchievementSystem'
 import FightersSection from '@/components/FightersSection'
 import ContentSection from '@/components/ContentSection'
 import SolCreditBridgeModal from '@/components/SolCreditBridgeModal'
 import CreditPurchase from '@/components/CreditPurchase'
 import soundManager from '@/lib/sound-manager'
 import { useGameStore } from '@/lib/store'
-import type { LoginStreak, TournamentBracket as TournamentBracketData } from '@/types'
 
-// Mock data for daily rewards
-const mockLoginStreak: LoginStreak = {
-  currentStreak: 3,
-  longestStreak: 7,
-  lastLoginDate: Date.now(),
-  rewards: [],
-  nextRewardCredits: 100
+function ComingSoonPlaceholder({ feature }: { feature: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="font-pixel text-lg text-accent mb-4">{feature}</div>
+      <div className="text-text2 text-sm">Coming soon</div>
+    </div>
+  )
 }
-
-// Mock fighters data for rankings - Updated to match Fighter interface
-const mockFighters = [
-  {
-    id: 'titan-9',
-    name: 'TITAN-9',
-    emoji: '👑',
-    class: 'Heavyweight' as const,
-    owner: 'DarkMatter_Labs',
-    record: { wins: 22, losses: 1, draws: 0 },
-    elo: 2105,
-    stats: {
-      strength: 95,
-      speed: 88,
-      defense: 92,
-      stamina: 89,
-      fightIQ: 94,
-      aggression: 87
-    },
-    isActive: true,
-    trainingCost: 100,
-    evolution: {
-      traits: { aggressive: 80, defensive: 70, showboat: 40, technical: 90 },
-      signatureMoves: [],
-      age: 28,
-      peakAgeStart: 25,
-      peakAgeEnd: 32,
-      fightHistory: [],
-      evolutionLevel: 5,
-      totalFights: 23,
-      winStreak: 12,
-      careerHighlights: ['Championship Belt Winner']
-    }
-  },
-  {
-    id: 'shadow-boxer',
-    name: 'SHADOW-BOXER',
-    emoji: '🥊',
-    class: 'Heavyweight' as const,
-    owner: 'Neural_Networks',
-    record: { wins: 18, losses: 3, draws: 1 },
-    elo: 1987,
-    stats: {
-      strength: 82,
-      speed: 95,
-      defense: 78,
-      stamina: 91,
-      fightIQ: 88,
-      aggression: 93
-    },
-    isActive: true,
-    trainingCost: 85,
-    evolution: {
-      traits: { aggressive: 95, defensive: 60, showboat: 70, technical: 85 },
-      signatureMoves: [],
-      age: 26,
-      peakAgeStart: 24,
-      peakAgeEnd: 30,
-      fightHistory: [],
-      evolutionLevel: 4,
-      totalFights: 22,
-      winStreak: 5,
-      careerHighlights: ['Rising Star Award']
-    }
-  }
-]
-
-// Mock tournament data
-const mockTournament: TournamentBracketData = {
-  id: 'weekly-championship-001',
-  name: 'Weekly Championship',
-  status: 'in-progress',
-  fighters: mockFighters as any[],
-  matches: [],
-  prize: 5000,
-  startDate: Date.now(),
-  endDate: Date.now() + (7 * 24 * 60 * 60 * 1000)
-}
-
-// Mock achievement data
-const mockAchievements = [
-  {
-    id: 'first-win',
-    name: 'First Victory',
-    description: 'Win your first fight',
-    type: 'combat',
-    unlocked: true,
-    unlockedAt: Date.now(),
-    credits: 100,
-    requirements: { wins: 1 }
-  },
-  {
-    id: 'win-streak-5',
-    name: 'Winning Streak',
-    description: 'Win 5 fights in a row',
-    type: 'combat',
-    unlocked: false,
-    credits: 500,
-    requirements: { winStreak: 5 }
-  }
-]
-
-const mockNotifications = [
-  {
-    id: 'notif-1',
-    achievementId: 'first-win',
-    title: 'Achievement Unlocked!',
-    message: 'You earned First Victory',
-    credits: 100,
-    timestamp: Date.now(),
-    read: false
-  }
-]
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<'landing' | 'arena'>('landing')
@@ -150,6 +33,8 @@ export default function Home() {
 
   const credits = useGameStore(state => state.user.credits)
   const hasCompletedOnboarding = useGameStore(state => state.hasCompletedOnboarding)
+  const leaderboardFighters = useGameStore(state => state.leaderboardFighters)
+  const fetchLeaderboard = useGameStore(state => state.fetchLeaderboard)
 
   useEffect(() => {
     setIsLoaded(true)
@@ -167,6 +52,7 @@ export default function Home() {
 
   const enterArena = () => {
     setCurrentView('arena')
+    fetchLeaderboard()
   }
 
   const goHome = () => {
@@ -292,24 +178,17 @@ export default function Home() {
                       {/* Drawer content */}
                       <div className="flex-1 overflow-y-auto p-4">
                         {drawerSection === 'rewards' && (
-                          <DailyRewards
-                            loginStreak={mockLoginStreak}
-                            onClaimReward={(reward) => console.log('Reward claimed:', reward)}
-                          />
+                          <ComingSoonPlaceholder feature="DAILY REWARDS" />
                         )}
                         {drawerSection === 'rankings' && (
-                          <RankingsSection fighters={mockFighters} />
+                          <RankingsSection fighters={leaderboardFighters} />
                         )}
                         {drawerSection === 'tournaments' && (
-                          <TournamentBracket
-                            tournament={mockTournament}
-                            onStartMatch={(match) => console.log('Starting match:', match)}
-                            showControls={true}
-                          />
+                          <ComingSoonPlaceholder feature="TOURNAMENTS" />
                         )}
                         {drawerSection === 'fighters' && (
                           <FightersSection
-                            fighters={mockFighters as any[]}
+                            fighters={leaderboardFighters}
                             onFightComplete={(fighterId, fightData) => console.log('Fight completed:', fighterId, fightData)}
                             onSelectFighter={(fighterId) => console.log('Selected fighter:', fighterId)}
                             onTraining={(fighterId, fighterName, cost) => {
@@ -319,11 +198,7 @@ export default function Home() {
                           />
                         )}
                         {drawerSection === 'achievements' && (
-                          <AchievementSystem
-                            achievements={mockAchievements as any[]}
-                            notifications={mockNotifications as any[]}
-                            onDismissNotification={(notificationId) => console.log('Dismissed notification:', notificationId)}
-                          />
+                          <ComingSoonPlaceholder feature="ACHIEVEMENTS" />
                         )}
                         {drawerSection === 'content' && (
                           <ContentSection />
