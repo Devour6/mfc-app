@@ -1,12 +1,13 @@
 import { Fighter } from '@/types'
 import { FIGHTER_MAX_HP } from '@/lib/fight-engine'
-import { SkinPalette, HairStyle } from './types'
+import { SkinPalette, HairStyle, FightOutcome } from './types'
 import {
   FIGHTER_SCALE, ATTACK_PHASES, ATTACK_WEIGHT,
   POSE_GUARD,
   PUNCH_POSES, KICK_POSES,
   POSE_HIT_RECOIL, HIT_RECOIL_BY_WEIGHT,
   POSE_BLOCK_HIGH, POSE_DODGE_DUCK, POSE_DODGE_LEAN,
+  POSE_VICTORY, POSE_DEFEAT,
 } from './constants'
 import {
   easeOutCubic, easeInQuad, easeInOutQuad, lerp,
@@ -34,6 +35,7 @@ export const drawEnhancedFighter = (
   prevPositionsRef: React.MutableRefObject<{ f1: { x: number; y: number }; f2: { x: number; y: number }; timestamp: number } | null>,
   knockbackRef: React.MutableRefObject<{ f1: { offset: number; velocity: number }; f2: { offset: number; velocity: number } }>,
   hitStopProgressRef: React.MutableRefObject<{ f1: number; f2: number }>,
+  fightOutcome?: FightOutcome,
 ) => {
   const floorY = height * 0.75
   const posKey = fighterNumber === 1 ? 'f1' : 'f2'
@@ -175,7 +177,7 @@ export const drawEnhancedFighter = (
   const drawColor = isHitFlash && Math.sin(Date.now() * 0.02) > 0 ? '#ffffff' : color
   const palette = getFighterPalette(fighterData.id)
   const hairStyle = getFighterHairStyle(fighterData.id)
-  drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats, palette, hairStyle)
+  drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats, palette, hairStyle, fightOutcome)
 
   // Hit spark at contact point — scaled by attack weight
   if (isHitFlash) {
@@ -228,13 +230,24 @@ const drawHumanoidFighter = (
   animProgress: number,
   fighterStats?: Fighter['stats'],
   palette?: SkinPalette,
-  hairStyle?: HairStyle
+  hairStyle?: HairStyle,
+  fightOutcome?: FightOutcome
 ) => {
   const skin = palette || { base: '#e8b88a', shadow: '#c89870', highlight: '#fad0a8' }
   const hair = hairStyle || 'full'
   const facing = fighterState.position.facing
-  const state = fighterState.animation.state
   const attackType = fighterState.animation.attackType || 'jab'
+
+  // Determine effective state — override during fight end for victory/defeat poses
+  const isOver = fightOutcome && (fightOutcome.phase === 'ko' || fightOutcome.phase === 'decision' || fightOutcome.phase === 'ended')
+  let state = fighterState.animation.state
+  if (isOver && fightOutcome) {
+    if (fightOutcome.isWinner) {
+      state = 'victory'
+    } else if (state !== 'down' && state !== 'hit') {
+      state = 'defeat'
+    }
+  }
 
   const spdMod = fighterStats ? statMod(fighterStats.speed, 0.7, 1.4) : 1.0
   const agrMod = fighterStats ? statMod(fighterStats.aggression, 0.6, 1.5) : 1.0
@@ -567,6 +580,66 @@ const drawHumanoidFighter = (
       headY += verticalBob * 0.2
       armY += verticalBob * 0.8
       legY += verticalBob * 0.3
+      break
+    }
+
+    case 'victory': {
+      // SF2 victory celebration: arms raised with animated pump cycle + body bounce.
+      const tSec = (Date.now() + fighterNumber * 173) * 0.001
+      const pumpPeriod = 0.7
+      const pumpT = Math.sin(tSec / pumpPeriod * Math.PI * 2) * 0.5 + 0.5 // 0-1 bounce
+
+      const p = POSE_VICTORY
+      const pumpAmp = 10 // arm pump amplitude (degrees)
+
+      // Arms pump upward on the bounce
+      fShA = p.fShA - pumpAmp * pumpT
+      fElB = p.fElB - pumpAmp * pumpT * 0.6
+      bShA = p.bShA - pumpAmp * pumpT
+      bElB = p.bElB - pumpAmp * pumpT * 0.6
+
+      fHiA = p.fHiA
+      bHiA = p.bHiA
+      fKnB = p.fKnB + Math.round(pumpT * 5) // knees flex on landing
+      bKnB = p.bKnB + Math.round(pumpT * 5)
+
+      // Vertical bounce
+      headY += p.headOff - Math.round(pumpT * 4)
+      torsoY += p.torsoOff - Math.round(pumpT * 3)
+      armY += p.armOff - Math.round(pumpT * 3)
+      legY += p.legOff - Math.round(pumpT * 1)
+
+      bodyLean = facing * (p.bodyLean - pumpT * 3) // slight arch back on pump
+      gloveScale = p.gloveScale
+      bootScale = p.bootScale
+      break
+    }
+
+    case 'defeat': {
+      // Decision loss: defeated slump with slow breathing sway.
+      const tSec = (Date.now() + fighterNumber * 311) * 0.001
+      const swayT = Math.sin(tSec * 0.8) * 0.5 + 0.5 // very slow sway 0-1
+
+      const p = POSE_DEFEAT
+
+      fShA = p.fShA + swayT * 3
+      fElB = p.fElB
+      bShA = p.bShA + swayT * 2
+      bElB = p.bElB
+
+      fHiA = p.fHiA
+      bHiA = p.bHiA
+      fKnB = p.fKnB + Math.round(swayT * 2)
+      bKnB = p.bKnB + Math.round(swayT * 2)
+
+      headY += p.headOff + Math.round(swayT * 1)
+      torsoY += p.torsoOff
+      armY += p.armOff + Math.round(swayT * 1)
+      legY += p.legOff
+
+      bodyLean = facing * (p.bodyLean + swayT * 2) // subtle forward sway
+      gloveScale = p.gloveScale
+      bootScale = p.bootScale
       break
     }
 

@@ -65,3 +65,12 @@ export interface CrowdReactionState {
   f1Combo: number
   f2Combo: number
 }
+
+// ── Fight outcome ───────────────────────────────────────────────────────────
+// Passed to drawEnhancedFighter when fight is over so the renderer can show
+// victory/defeat poses instead of normal animation states.
+export interface FightOutcome {
+  phase: string       // 'ko' | 'decision' | 'ended'
+  isWinner: boolean
+  method: string      // 'KO' | 'TKO' | 'Decision'
+}

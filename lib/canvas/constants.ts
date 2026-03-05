@@ -229,6 +229,22 @@ export const POSE_DODGE_LEAN: FighterPose = {
   gloveScale: 1.0, bootScale: 1.0,
 }
 
+// ── Victory / defeat poses ──────────────────────────────────────────────────
+// Victory: arms raised high, slight back arch, wide celebratory stance.
+export const POSE_VICTORY: FighterPose = {
+  fShA: -30, fElB: 35, bShA: -35, bElB: 30,
+  fHiA: 5, fKnB: 22, bHiA: -5, bKnB: 24,
+  bodyLean: -5, headOff: -4, torsoOff: -2, armOff: -3, legOff: 0,
+  gloveScale: 1.1, bootScale: 1.0,
+}
+// Defeat (decision loss): slumped forward, arms hanging, head dropped.
+export const POSE_DEFEAT: FighterPose = {
+  fShA: 75, fElB: 95, bShA: 70, bElB: 100,
+  fHiA: 5, fKnB: 30, bHiA: -3, bKnB: 32,
+  bodyLean: 12, headOff: 6, torsoOff: 3, armOff: 4, legOff: 0,
+  gloveScale: 0.9, bootScale: 1.0,
+}
+
 // ── Pose lookup maps ────────────────────────────────────────────────────────
 export const PUNCH_POSES: Record<string, { chamber: FighterPose; extend: FighterPose }> = {
   jab:      { chamber: POSE_JAB_CHAMBER, extend: POSE_JAB_EXTEND },
