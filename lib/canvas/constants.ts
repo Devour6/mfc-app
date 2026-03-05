@@ -221,6 +221,13 @@ export const POSE_DODGE_DUCK: FighterPose = {
   bodyLean: -8, headOff: 10, torsoOff: 5, armOff: 0, legOff: 0,
   gloveScale: 1.0, bootScale: 1.0,
 }
+// Lean-back dodge: sway away (speed fighters). Upright stance, head pulls back.
+export const POSE_DODGE_LEAN: FighterPose = {
+  fShA: 50, fElB: 120, bShA: 45, bElB: 125,
+  fHiA: -5, fKnB: 25, bHiA: 5, bKnB: 28,
+  bodyLean: -18, headOff: -3, torsoOff: -2, armOff: -3, legOff: 0,
+  gloveScale: 1.0, bootScale: 1.0,
+}
 
 // ── Pose lookup maps ────────────────────────────────────────────────────────
 export const PUNCH_POSES: Record<string, { chamber: FighterPose; extend: FighterPose }> = {

@@ -6,7 +6,7 @@ import {
   POSE_GUARD,
   PUNCH_POSES, KICK_POSES,
   POSE_HIT_RECOIL, HIT_RECOIL_BY_WEIGHT,
-  POSE_BLOCK_HIGH, POSE_DODGE_DUCK,
+  POSE_BLOCK_HIGH, POSE_DODGE_DUCK, POSE_DODGE_LEAN,
 } from './constants'
 import {
   easeOutCubic, easeInQuad, easeInOutQuad, lerp,
@@ -456,6 +456,7 @@ const drawHumanoidFighter = (
     }
 
     case 'blocking': {
+      // Stat-driven block: defensive fighters block tighter (higher arm angles)
       const blockPose = {
         ...POSE_BLOCK_HIGH,
         fShA: POSE_BLOCK_HIGH.fShA * defMod,
@@ -463,14 +464,20 @@ const drawHumanoidFighter = (
         bShA: POSE_BLOCK_HIGH.bShA * defMod,
         bElB: POSE_BLOCK_HIGH.bElB * defMod,
       }
+      // Block absorption: initial push-back that decays (absorbing impact)
+      const absorbDecay = 1 - easeOutCubic(Math.min(animProgress / 0.4, 1))
+      const absorbLean = -6 * absorbDecay * (1 / defMod) // weak blockers pushed back more
+      const absorbKnee = 8 * absorbDecay * (1 / defMod)
+
       if (animProgress < 0.85) {
         const p = blockPose
         fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
-        fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-        bodyLean = facing * p.bodyLean
-        headY += p.headOff
+        fHiA = p.fHiA; fKnB = p.fKnB + absorbKnee; bHiA = p.bHiA; bKnB = p.bKnB + absorbKnee
+        bodyLean = facing * (p.bodyLean + absorbLean)
+        headY += p.headOff + Math.round(absorbDecay * 3)
       } else {
-        const t = easeOutCubic((animProgress - 0.85) / 0.15)
+        // Gesture line: fast fighters drop guard quicker
+        const t = easeOutCubic(Math.pow((animProgress - 0.85) / 0.15, 1 / spdMod))
         const p = lerpPose(blockPose, POSE_GUARD, t)
         fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
         fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
@@ -481,15 +488,22 @@ const drawHumanoidFighter = (
     }
 
     case 'dodging': {
+      // Gesture line: speed fighters lean back, power fighters duck
+      const dodgePose = spdMod > 1.05 ? POSE_DODGE_LEAN : POSE_DODGE_DUCK
+
       if (animProgress < 0.6) {
-        const p = POSE_DODGE_DUCK
+        // Enter dodge with speed-driven snap
+        const enterT = Math.min(animProgress / 0.15, 1) // snap into pose in first 15%
+        const t = easeOutCubic(Math.pow(enterT, 1 / spdMod))
+        const p = lerpPose(POSE_GUARD, dodgePose, t)
         fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
         fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
-        bodyLean = facing * p.bodyLean
+        bodyLean = facing * p.bodyLean * leanStrMod
         headY += p.headOff; torsoY += p.torsoOff
       } else {
-        const t = easeOutCubic((animProgress - 0.6) / 0.4)
-        const p = lerpPose(POSE_DODGE_DUCK, POSE_GUARD, t)
+        // Gesture line: fast fighters recover from dodge quicker
+        const t = easeOutCubic(Math.pow((animProgress - 0.6) / 0.4, 1 / spdMod))
+        const p = lerpPose(dodgePose, POSE_GUARD, t)
         fShA = p.fShA; fElB = p.fElB; bShA = p.bShA; bElB = p.bElB
         fHiA = p.fHiA; fKnB = p.fKnB; bHiA = p.bHiA; bKnB = p.bKnB
         bodyLean = facing * p.bodyLean
