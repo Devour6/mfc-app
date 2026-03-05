@@ -19,12 +19,14 @@ export const mockPrisma = {
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    count: jest.fn(),
   },
   fight: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    count: jest.fn(),
   },
   fightResult: {
     create: jest.fn(),
@@ -93,6 +95,7 @@ export const mockPrisma = {
     findMany: jest.fn(),
     findFirst: jest.fn(),
     create: jest.fn(),
+    aggregate: jest.fn(),
   },
   creditTransaction: {
     findMany: jest.fn(),
