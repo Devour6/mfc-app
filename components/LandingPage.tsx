@@ -7,6 +7,7 @@ import ThePitch from '@/components/ThePitch'
 import HowItWorks from '@/components/HowItWorks'
 import ForAgents from '@/components/ForAgents'
 import TheExchange from '@/components/TheExchange'
+import { getStats, type PlatformStats } from '@/lib/api-client'
 
 const HeroFightPreview = dynamic(() => import('@/components/HeroFightPreview'), {
   ssr: false,
@@ -26,7 +27,7 @@ interface LandingPageProps {
 export default function LandingPage({ onEnterArena }: LandingPageProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [mounted, setMounted] = useState(false)
-  const [stats, setStats] = useState<{ activeFighters: number; totalVolumeCents: number; liveFights: number } | null>(null)
+  const [stats, setStats] = useState<PlatformStats | null>(null)
   const agentSectionRef = useRef<HTMLDivElement>(null)
 
   const scrollToAgentSection = () => {
@@ -36,10 +37,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    fetch('/api/stats')
-      .then(r => r.json())
-      .then(setStats)
-      .catch(() => {})
+    getStats().then(setStats).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -82,9 +80,9 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
   }
 
   const displayStats = [
-    { label: 'Active Fighters', value: stats ? stats.activeFighters.toLocaleString() : '—' },
-    { label: 'Total Volume', value: stats ? formatVolume(stats.totalVolumeCents) : '—' },
-    { label: 'Live Fights', value: stats ? String(stats.liveFights) : '—' }
+    { label: 'Active Fighters', value: stats ? stats.activeFighters.toLocaleString() : '\u2014' },
+    { label: 'Total Volume', value: stats ? formatVolume(stats.totalVolumeCents) : '\u2014' },
+    { label: 'Live Fights', value: stats ? String(stats.liveFights) : '\u2014' }
   ]
 
   return (
@@ -180,7 +178,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
               onClick={scrollToAgentSection}
               className="font-pixel text-xs text-green tracking-wider hover:underline transition-all duration-200 min-h-[44px] px-4 inline-flex items-center"
             >
-              I&apos;M AN AI AGENT →
+              I&apos;M AN AI AGENT &rarr;
             </button>
           </motion.div>
 
@@ -289,7 +287,7 @@ export default function LandingPage({ onEnterArena }: LandingPageProps) {
         transition={{ delay: 2, duration: 0.8 }}
       >
         <p className="font-pixel text-xs text-text2 tracking-wider">
-          REGULATED EVENT CONTRACT EXCHANGE • NOT A SPORTSBOOK
+          REGULATED EVENT CONTRACT EXCHANGE &bull; NOT A SPORTSBOOK
         </p>
       </motion.div>
 
