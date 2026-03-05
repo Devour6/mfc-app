@@ -1,4 +1,5 @@
 import { VisualEffect } from './types'
+import { AttackWeight, ATTACK_WEIGHT } from './constants'
 import { P, px } from './utils'
 
 // ── Visual effects dispatcher ───────────────────────────────────────────────
@@ -19,44 +20,144 @@ export const drawVisualEffects = (ctx: CanvasRenderingContext2D, visualEffects: 
   })
 }
 
-// ── Hit spark at contact point ──────────────────────────────────────────────
+// ── Hit spark at contact point (scaled by attack weight) ────────────────────
+// SF2 reference: spark size proportional to attack power. Light=small snap,
+// heavy=large dramatic burst. The spark is the visual "punctuation" that
+// confirms the hit independently of the animation.
+const SPARK_SCALE: Record<AttackWeight, number> = { light: 0.6, medium: 1.0, heavy: 1.5 }
+const SPARK_PARTICLES: Record<AttackWeight, number> = { light: 3, medium: 6, heavy: 10 }
+
 export const drawHitSpark = (
   ctx: CanvasRenderingContext2D,
   sparkX: number,
-  sparkY: number
+  sparkY: number,
+  attackType?: string
 ) => {
+  const weight: AttackWeight = (attackType && ATTACK_WEIGHT[attackType]) || 'medium'
+  const scale = SPARK_SCALE[weight]
+  const particleCount = SPARK_PARTICLES[weight]
   const sparkTime = Date.now() * 0.01
-  const sparkSize = 16 + Math.sin(sparkTime * 3) * 6
+  const sparkSize = (16 + Math.sin(sparkTime * 3) * 6) * scale
 
   ctx.save()
-  // Main cross — bigger and bolder
+  // Main cross — size scales with attack weight
+  const barWidth = Math.max(4, Math.round(6 * scale))
   ctx.fillStyle = '#fff'
-  ctx.fillRect(sparkX - sparkSize, sparkY - 3, sparkSize * 2, 6)
-  ctx.fillRect(sparkX - 3, sparkY - sparkSize, 6, sparkSize * 2)
+  ctx.fillRect(sparkX - sparkSize, sparkY - barWidth / 2, sparkSize * 2, barWidth)
+  ctx.fillRect(sparkX - barWidth / 2, sparkY - sparkSize, barWidth, sparkSize * 2)
 
   // Diagonal bursts
   const diagLen = sparkSize * 0.75
   ctx.fillStyle = '#ffdd00'
-  for (let d = 0; d < 4; d++) {
-    const angle = (d * Math.PI / 2) + Math.PI / 4
+  const diagCount = weight === 'light' ? 2 : 4
+  for (let d = 0; d < diagCount; d++) {
+    const angle = (d * Math.PI / diagCount) + Math.PI / 4
     const dx = Math.cos(angle) * diagLen
     const dy = Math.sin(angle) * diagLen
-    ctx.fillRect(sparkX + dx - 2, sparkY + dy - 2, 5, 5)
+    const blobSize = Math.round(3 * scale) + 2
+    ctx.fillRect(sparkX + dx - blobSize / 2, sparkY + dy - blobSize / 2, blobSize, blobSize)
     ctx.fillRect(sparkX + dx * 0.5 - 1, sparkY + dy * 0.5 - 1, 3, 3)
   }
 
-  // Orange impact particles
+  // Impact particles — more and bigger for heavy attacks
   ctx.fillStyle = '#ff6600'
-  for (let i = 0; i < 6; i++) {
-    const pAngle = (i / 6) * Math.PI * 2 + sparkTime * 0.5
+  for (let i = 0; i < particleCount; i++) {
+    const pAngle = (i / particleCount) * Math.PI * 2 + sparkTime * 0.5
     const pDist = sparkSize * (0.4 + Math.sin(sparkTime + i) * 0.3)
+    const pSize = Math.round(2 * scale) + 2
     ctx.fillRect(
-      sparkX + Math.cos(pAngle) * pDist - 2,
-      sparkY + Math.sin(pAngle) * pDist - 2,
-      4, 4
+      sparkX + Math.cos(pAngle) * pDist - pSize / 2,
+      sparkY + Math.sin(pAngle) * pDist - pSize / 2,
+      pSize, pSize
     )
   }
   ctx.restore()
+}
+
+// ── Smear frame (SF2 snap-to-pose motion blur) ──────────────────────────────
+// SF2/Skullgirls technique: a single frame of color trail connecting the
+// previous limb position to the current one. The smear is unoutlined,
+// tapers toward the tail, and uses 1-3 colors max.
+// Called during the active phase of attacks when the limb snaps to extension.
+export const drawSmearFrame = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  facing: number,
+  actionType: 'punching' | 'kicking',
+  attackType: string
+) => {
+  const weight: AttackWeight = ATTACK_WEIGHT[attackType] || 'medium'
+  // Light attacks: minimal smear. Heavy: bold dramatic smear.
+  if (weight === 'light') return // Jabs are too fast for visible smear
+
+  const smearLen = weight === 'heavy' ? P * 8 : P * 5
+  const smearWidth = weight === 'heavy' ? P * 3 : P * 2
+
+  ctx.save()
+  ctx.globalAlpha = 0.55
+
+  if (actionType === 'punching') {
+    // Horizontal streak from shoulder to fist extension
+    const smearY = y - P * 7
+    const startX = x + facing * P * 2
+    const endX = x + facing * (P * 2 + smearLen)
+
+    // Tapering gradient: bright at fist, fading toward shoulder
+    const grad = ctx.createLinearGradient(startX, smearY, endX, smearY)
+    grad.addColorStop(facing > 0 ? 0 : 1, 'rgba(255,221,0,0)')
+    grad.addColorStop(facing > 0 ? 1 : 0, 'rgba(255,221,0,0.8)')
+    ctx.fillStyle = grad
+    ctx.fillRect(
+      Math.min(startX, endX), smearY - smearWidth / 2,
+      Math.abs(endX - startX), smearWidth
+    )
+
+    // White core at the leading edge
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'
+    ctx.fillRect(endX - facing * P, smearY - P / 2, P, P)
+  } else {
+    // Arc smear for kicks — follows the leg's circular path
+    const arcCenterY = y - P * 3
+    ctx.strokeStyle = 'rgba(255,100,0,0.6)'
+    ctx.lineWidth = smearWidth
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    const arcRadius = P * 6
+    const startAngle = facing > 0 ? -Math.PI * 0.3 : Math.PI * 0.3 + Math.PI
+    const endAngle = facing > 0 ? Math.PI * 0.15 : Math.PI - Math.PI * 0.15
+    ctx.arc(x, arcCenterY, arcRadius, startAngle, endAngle, facing < 0)
+    ctx.stroke()
+  }
+
+  ctx.restore()
+}
+
+// ── Impact flash — SF2 freeze-frame white overlay on heavy hit-stop ──────
+// Called once per frame AFTER both fighters are drawn. Checks if either
+// fighter is attacking during hit-stop and flashes proportionally to weight.
+export const drawImpactFlash = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  fighter1: { modifiers: { hitStopFrames: number }; animation: { state: string; attackType?: string } },
+  fighter2: { modifiers: { hitStopFrames: number }; animation: { state: string; attackType?: string } },
+) => {
+  let maxFlash = 0
+  for (const fs of [fighter1, fighter2]) {
+    if (fs.modifiers.hitStopFrames > 0 && (fs.animation.state === 'punching' || fs.animation.state === 'kicking')) {
+      const weight = ATTACK_WEIGHT[fs.animation.attackType || 'jab'] || 'medium'
+      const flash = weight === 'heavy' ? 0.15 : weight === 'medium' ? 0.07 : 0
+      maxFlash = Math.max(maxFlash, flash)
+    }
+  }
+  if (maxFlash > 0) {
+    ctx.save()
+    ctx.globalAlpha = maxFlash
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, width, height)
+    ctx.restore()
+  }
 }
 
 // ── Motion trails ───────────────────────────────────────────────────────────

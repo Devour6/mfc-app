@@ -8,7 +8,7 @@ import { RoundEvent, VisualEffect } from '@/lib/canvas/types'
 import { clamp } from '@/lib/canvas/utils'
 import { drawEnhancedRing, drawCrowdAtmosphere } from '@/lib/canvas/stage-renderer'
 import { drawEnhancedFighter } from '@/lib/canvas/fighter-renderer'
-import { drawVisualEffects } from '@/lib/canvas/effects-renderer'
+import { drawVisualEffects, drawImpactFlash } from '@/lib/canvas/effects-renderer'
 import { drawSF2HUD } from '@/lib/canvas/hud-renderer'
 
 interface EnhancedFightCanvasProps {
@@ -305,6 +305,9 @@ export default function EnhancedFightCanvas({
       const fightStateForRenderer = { fighter1: fightState.fighter1, fighter2: fightState.fighter2 }
       drawEnhancedFighter(ctx, fightState.fighter1, fighters[0], width, height, '#ff4444', 1, fightStateForRenderer, renderPositionsRef, prevPositionsRef, knockbackRef, hitStopProgressRef)
       drawEnhancedFighter(ctx, fightState.fighter2, fighters[1], width, height, '#4488ff', 2, fightStateForRenderer, renderPositionsRef, prevPositionsRef, knockbackRef, hitStopProgressRef)
+
+      // SF2 impact flash — white overlay on medium/heavy hit-stop
+      drawImpactFlash(ctx, width, height, fightState.fighter1, fightState.fighter2)
     }
 
     // Visual effects + HUD

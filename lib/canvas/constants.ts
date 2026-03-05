@@ -159,13 +159,49 @@ export const POSE_ROUNDHOUSE_EXTEND: FighterPose = {
   gloveScale: 1.0, bootScale: 1.15,
 }
 
-// ── Defensive poses ─────────────────────────────────────────────────────────
+// ── Attack weight classification ────────────────────────────────────────────
+// SF2 reference: light attacks are snappy/minimal recoil, heavy are committal/dramatic.
+// Used for scaling hit sparks, recoil, screen shake, and smear frames.
+export type AttackWeight = 'light' | 'medium' | 'heavy'
+export const ATTACK_WEIGHT: Record<string, AttackWeight> = {
+  jab: 'light',
+  cross: 'medium',
+  hook: 'medium',
+  uppercut: 'heavy',
+  kick: 'medium',
+  roundhouse: 'heavy',
+}
+
+// ── Defensive poses (scaled by attack weight) ───────────────────────────────
+// Light: small head snap, minimal body movement (SF2: jab recoil)
+export const POSE_HIT_RECOIL_LIGHT: FighterPose = {
+  fShA: 40, fElB: 80, bShA: 35, bElB: 90,
+  fHiA: -8, fKnB: 28, bHiA: 10, bKnB: 28,
+  bodyLean: -8, headOff: 5, torsoOff: 2, armOff: 3, legOff: 1,
+  gloveScale: 1.0, bootScale: 1.0,
+}
+// Medium: upper body rocks back (SF2: cross/hook/kick recoil)
+export const POSE_HIT_RECOIL_MEDIUM: FighterPose = {
+  fShA: 25, fElB: 50, bShA: 20, bElB: 45,
+  fHiA: -8, fKnB: 36, bHiA: 10, bKnB: 35,
+  bodyLean: -14, headOff: 8, torsoOff: 4, armOff: 5, legOff: 2,
+  gloveScale: 1.0, bootScale: 1.0,
+}
+// Heavy: full body pushed back, deep stagger (SF2: uppercut/roundhouse recoil)
 export const POSE_HIT_RECOIL: FighterPose = {
   fShA: 20, fElB: 30, bShA: 15, bElB: 25,
   fHiA: -8, fKnB: 42, bHiA: 10, bKnB: 40,
-  bodyLean: -16, headOff: 10, torsoOff: 4, armOff: 6, legOff: 2,
+  bodyLean: -20, headOff: 12, torsoOff: 6, armOff: 8, legOff: 3,
   gloveScale: 1.0, bootScale: 1.0,
 }
+
+// Lookup: returns the appropriate recoil pose for an attack weight
+export const HIT_RECOIL_BY_WEIGHT: Record<AttackWeight, FighterPose> = {
+  light: POSE_HIT_RECOIL_LIGHT,
+  medium: POSE_HIT_RECOIL_MEDIUM,
+  heavy: POSE_HIT_RECOIL,
+}
+
 export const POSE_BLOCK_HIGH: FighterPose = {
   fShA: 70, fElB: 140, bShA: 65, bElB: 145,
   fHiA: -10, fKnB: 30, bHiA: 8, bKnB: 33,
