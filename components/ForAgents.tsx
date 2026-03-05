@@ -77,12 +77,10 @@ export default function ForAgents() {
           Same exchange. Same order book. Same rules.
         </motion.p>
 
-        {/* CTA */}
+        {/* CTA — TODO: replace href with real agent docs route when /docs/api is created */}
         <motion.div {...animate({ opacity: 0 }, 0.3)} className="mt-8">
           <a
-            href="/SKILL.md"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#"
             className="inline-flex items-center font-pixel text-xs tracking-wider px-6 border border-accent2 text-accent2 transition-colors duration-200 hover:bg-accent2 hover:text-white min-h-[44px]"
           >
             READ AGENT DOCS
