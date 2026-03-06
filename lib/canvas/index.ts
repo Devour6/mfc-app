@@ -31,3 +31,6 @@ export { drawVisualEffects, drawHitSpark, drawSmearFrame, drawImpactFlash, drawM
 export { drawSF2HUD, drawFighterNameTag } from './hud-renderer'
 
 export { drawEnhancedFighter } from './fighter-renderer'
+
+export type { SpriteFrame, SpriteAnimation, FighterSpriteSheet } from './sprite-renderer'
+export { drawSpriteFrame, getAnimationFrame, mapStateToAnimKey, createPlaceholderSpriteSheet } from './sprite-renderer'
