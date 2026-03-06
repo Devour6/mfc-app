@@ -18,6 +18,27 @@ import {
 import { getAnimProgress, getAttackPhase, getPhaseProgress } from './animation-controller'
 import { drawHitSpark, drawSmearFrame, drawMotionTrail, drawSweatParticles } from './effects-renderer'
 import { drawFighterNameTag } from './hud-renderer'
+import {
+  drawSpriteFrame, getAnimationFrame, mapStateToAnimKey,
+  createPlaceholderSpriteSheet,
+  type FighterSpriteSheet,
+} from './sprite-renderer'
+
+// ── Sprite sheet cache (one per fighter color) ───────────────────────────────
+const _spriteSheetCache = new Map<string, FighterSpriteSheet>()
+
+function getSpriteSheet(color: string): FighterSpriteSheet {
+  let sheet = _spriteSheetCache.get(color)
+  if (!sheet) {
+    sheet = createPlaceholderSpriteSheet(color)
+    _spriteSheetCache.set(color, sheet)
+  }
+  return sheet
+}
+
+// Set to true to use sprite-frame rendering instead of skeleton+lerp.
+// Luna will flip this when real sprites are ready.
+export const USE_SPRITE_RENDERER = true
 
 // ── Main fighter drawing orchestrator ───────────────────────────────────────
 // Handles position interpolation, knockback, hit-stop, lunge, scale, and delegates
@@ -175,9 +196,33 @@ export const drawEnhancedFighter = (
   ctx.translate(-drawX, -feetY)
 
   const drawColor = isHitFlash && Math.sin(Date.now() * 0.02) > 0 ? '#ffffff' : color
-  const palette = getFighterPalette(fighterData.id)
-  const hairStyle = getFighterHairStyle(fighterData.id)
-  drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats, palette, hairStyle, fightOutcome)
+
+  if (USE_SPRITE_RENDERER) {
+    // ── Sprite-frame rendering path ──────────────────────────────────────
+    const sheet = getSpriteSheet(color)
+
+    // Determine effective state (override for fight end)
+    const isOver = fightOutcome && (fightOutcome.phase === 'ko' || fightOutcome.phase === 'decision' || fightOutcome.phase === 'ended')
+    let effectiveState = fighterState.animation.state
+    if (isOver && fightOutcome) {
+      if (fightOutcome.isWinner) effectiveState = 'victory'
+      else if (effectiveState !== 'down' && effectiveState !== 'hit') effectiveState = 'defeat'
+    }
+
+    const animKey = mapStateToAnimKey(effectiveState)
+    const anim = sheet[animKey]
+    const elapsedMs = fighterState.animation.frameCount * (1000 / 12.5) // 80ms per tick
+    const frame = getAnimationFrame(anim, elapsedMs)
+    const facing = fighterState.position.facing as 1 | -1
+    const tint = isHitFlash ? 'rgba(255,255,255,0.6)' : undefined
+
+    drawSpriteFrame(ctx, frame, drawX, y + 25, facing, tint)
+  } else {
+    // ── Legacy skeleton+lerp rendering path ──────────────────────────────
+    const palette = getFighterPalette(fighterData.id)
+    const hairStyle = getFighterHairStyle(fighterData.id)
+    drawHumanoidFighter(ctx, drawX, y, drawColor, fighterState, fighterNumber, animProgress, fighterData.stats, palette, hairStyle, fightOutcome)
+  }
 
   // Hit spark at contact point — scaled by attack weight
   if (isHitFlash) {
