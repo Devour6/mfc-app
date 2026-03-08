@@ -32,5 +32,5 @@ export { drawSF2HUD, drawFighterNameTag } from './hud-renderer'
 
 export { drawEnhancedFighter } from './fighter-renderer'
 
-export type { SpriteFrame, SpriteAnimation, FighterSpriteSheet } from './sprite-renderer'
-export { drawSpriteFrame, getAnimationFrame, mapStateToAnimKey, createPlaceholderSpriteSheet } from './sprite-renderer'
+export type { SpriteFrame, SpriteAnimation, FighterSpriteSheet, FighterBaseFrames } from './sprite-renderer'
+export { drawSpriteFrame, getAnimationFrame, mapStateToAnimKey, createPlaceholderSpriteSheet, resolveIndexedFrame, assembleSpriteSheet, registerRealSprites, loadSpriteSheet } from './sprite-renderer'
