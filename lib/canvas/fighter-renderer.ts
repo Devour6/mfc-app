@@ -20,17 +20,19 @@ import { drawHitSpark, drawSmearFrame, drawMotionTrail, drawSweatParticles } fro
 import { drawFighterNameTag } from './hud-renderer'
 import {
   drawSpriteFrame, getAnimationFrame, mapStateToAnimKey,
-  createPlaceholderSpriteSheet,
+  loadSpriteSheet,
   type FighterSpriteSheet,
 } from './sprite-renderer'
+import { initRealSprites } from './sprites'
 
 // ── Sprite sheet cache (one per fighter color) ───────────────────────────────
 const _spriteSheetCache = new Map<string, FighterSpriteSheet>()
 
 function getSpriteSheet(color: string): FighterSpriteSheet {
+  initRealSprites() // Register Luna's real pixel art (idempotent)
   let sheet = _spriteSheetCache.get(color)
   if (!sheet) {
-    sheet = createPlaceholderSpriteSheet(color)
+    sheet = loadSpriteSheet(color)
     _spriteSheetCache.set(color, sheet)
   }
   return sheet
