@@ -18,6 +18,9 @@ import {
   JAB_2 as RAW_JAB_2,
   JAB_3 as RAW_JAB_3,
   JAB_4 as RAW_JAB_4,
+  KICK_1 as RAW_KICK_1,
+  KICK_3 as RAW_KICK_3,
+  KICK_4 as RAW_KICK_4,
 } from './fighter-base'
 
 // Convert a palette-indexed frame to renderer-compatible color strings
@@ -39,6 +42,9 @@ export function initRealSprites(): void {
   const JAB_1 = resolve(RAW_JAB_1)
   const JAB_3 = resolve(RAW_JAB_3)
   const JAB_4 = resolve(RAW_JAB_4)
+  const KICK_1 = resolve(RAW_KICK_1)
+  const KICK_3 = resolve(RAW_KICK_3)
+  const KICK_4 = resolve(RAW_KICK_4)
 
   registerRealSprites({
     IDLE_1,
@@ -46,10 +52,9 @@ export function initRealSprites(): void {
     PUNCH_WIND: JAB_1,
     PUNCH_EXTEND: JAB_3,
     PUNCH_RETRACT: JAB_4,
-    // Temporary: reuse jab frames for kicks until Luna ships kick art
-    KICK_WIND: JAB_1,
-    KICK_EXTEND: JAB_3,
-    KICK_RETRACT: JAB_4,
+    KICK_WIND: KICK_1,
+    KICK_EXTEND: KICK_3,
+    KICK_RETRACT: KICK_4,
     // Temporary: reuse idle variants for other states
     HIT: IDLE_3,
     BLOCK: IDLE_4,
