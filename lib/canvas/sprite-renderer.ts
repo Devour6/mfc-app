@@ -4,7 +4,10 @@
 // getAnimationFrame() picks the correct frame by tick count.
 // Luna draws real art — these are placeholder frames.
 
-import { P } from './utils'
+// Sprite pixel size — independent of skeleton system's P=4.
+// At SPRITE_P=2 + FIGHTER_SCALE=2.0, each sprite "pixel" = 4 canvas pixels.
+// This allows higher-resolution sprite art than the old skeleton blocks.
+const SPRITE_P = 2
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,7 +42,7 @@ export interface FighterSpriteSheet {
 // ── Core Rendering ───────────────────────────────────────────────────────────
 
 /**
- * Blit a SpriteFrame to canvas at (x, y). Each pixel is drawn as a P×P block.
+ * Blit a SpriteFrame to canvas at (x, y). Each pixel is drawn as a SPRITE_P×SPRITE_P block.
  * The sprite is anchored at its horizontal center, vertical bottom (feet).
  * If `facing` is -1, the sprite is flipped horizontally.
  */
@@ -51,8 +54,8 @@ export function drawSpriteFrame(
   facing: 1 | -1 = 1,
   tint?: string,
 ): void {
-  const totalW = frame.width * P
-  const totalH = frame.height * P
+  const totalW = frame.width * SPRITE_P
+  const totalH = frame.height * SPRITE_P
 
   // Anchor: center-bottom (feet at x, y)
   const originX = x - totalW / 2
@@ -75,10 +78,10 @@ export function drawSpriteFrame(
       if (!color) continue // transparent
       ctx.fillStyle = color
       ctx.fillRect(
-        Math.round(originX + col * P),
-        Math.round(originY + row * P),
-        P,
-        P,
+        Math.round(originX + col * SPRITE_P),
+        Math.round(originY + row * SPRITE_P),
+        SPRITE_P,
+        SPRITE_P,
       )
     }
   }
