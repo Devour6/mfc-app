@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto'
+import { randomBytes, createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { jsonResponse, errorResponse, validationError, serverError } from '@/lib/api-utils'
 import { validateChallenge } from '@/lib/reverse-captcha'
@@ -68,6 +68,8 @@ export async function POST(request: Request) {
 
     // Generate API key: mfc_sk_ prefix + 64 hex chars (256 bits entropy)
     const apiKeyValue = `mfc_sk_${randomBytes(32).toString('hex')}`
+    // Store only the SHA-256 hash — the plaintext key is returned once and never stored
+    const keyHash = createHash('sha256').update(apiKeyValue).digest('hex')
 
     // Create user + agent profile + API key in one transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
 
       await tx.apiKey.create({
         data: {
-          key: apiKeyValue,
+          key: keyHash,
           userId: user.id,
           name: 'default',
         },
