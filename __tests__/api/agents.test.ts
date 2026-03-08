@@ -90,7 +90,7 @@ describe('POST /api/agents/register', () => {
     )
   })
 
-  it('creates ApiKey with mfc_sk_ prefix', async () => {
+  it('stores API key as SHA-256 hash (not plaintext)', async () => {
     await registerAgent(
       createRequest('/api/agents/register', {
         method: 'POST',
@@ -100,7 +100,7 @@ describe('POST /api/agents/register', () => {
     expect(mockPrisma.apiKey.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          key: expect.stringMatching(/^mfc_sk_/),
+          key: expect.stringMatching(/^[a-f0-9]{64}$/),
           name: 'default',
         }),
       })
