@@ -448,116 +448,167 @@ const JAB_4_DATA: number[][] = JAB_2_DATA.map((row, i) => {
 
 export const JAB_4: SpriteFrame = { width: W, height: H, pixels: JAB_4_DATA }
 
-// --- KICK FRAME 1: Wind-up (rear leg chambers, knee lifts) ---
-const KICK_1_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
-  // Rear leg (right side, cols ~27-35) lifts — remove lower rear leg rows
-  if (i >= 65 && i <= 74) {
-    const copy = [...row]
-    // Zero out right leg pixels (cols 25+)
-    for (let c = 25; c < W; c++) copy[c] = 0
-    return copy
+
+// ── KICK FRAMES ─────────────────────────────────────────────────────────────
+
+// --- KICK FRAME 1 (WIND-UP): Front leg chambers up, weight on rear leg ---
+// Rows 44-74: remove front (right) leg, add bent knee near waist
+const KICK_WIND_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
+  const copy = [...row]
+  // Remove the right leg entirely (cols 21-31 in leg rows)
+  if (i >= 44 && i <= 74) {
+    for (let c = 20; c < 32; c++) copy[c] = 0
   }
-  // Add chambered knee near torso (rows 48-52, right side)
-  if (i >= 48 && i <= 52) {
-    const copy = [...row]
-    // Add knee pixels on right side
-    if (i === 48) { copy[27] = 1; copy[28] = 9; copy[29] = 10; copy[30] = 9; copy[31] = 1 }
-    if (i === 49) { copy[27] = 1; copy[28] = 10; copy[29] = 11; copy[30] = 10; copy[31] = 1 }
-    if (i === 50) { copy[27] = 1; copy[28] = 10; copy[29] = 11; copy[30] = 10; copy[31] = 1 }
-    if (i === 51) { copy[27] = 1; copy[28] = 9; copy[29] = 10; copy[30] = 9; copy[31] = 1 }
-    if (i === 52) { copy[28] = 1; copy[29] = 5; copy[30] = 6; copy[31] = 1 }
-    return copy
-  }
-  return [...row]
+  // Draw chambered knee at hip height (rows 42-48, cols 24-29)
+  if (i === 42) { copy[24] = 1; copy[25] = 9; copy[26] = 10; copy[27] = 9; copy[28] = 1 }
+  if (i === 43) { copy[24] = 1; copy[25] = 10; copy[26] = 11; copy[27] = 10; copy[28] = 1 }
+  if (i === 44) { copy[23] = 1; copy[24] = 9; copy[25] = 10; copy[26] = 11; copy[27] = 10; copy[28] = 9; copy[29] = 1 }
+  if (i === 45) { copy[23] = 1; copy[24] = 9; copy[25] = 10; copy[26] = 10; copy[27] = 10; copy[28] = 9; copy[29] = 1 }
+  if (i === 46) { copy[24] = 1; copy[25] = 5; copy[26] = 6; copy[27] = 5; copy[28] = 1 }
+  if (i === 47) { copy[24] = 1; copy[25] = 5; copy[26] = 6; copy[27] = 6; copy[28] = 5; copy[29] = 1 }
+  if (i === 48) { copy[23] = 1; copy[24] = 1; copy[25] = 1; copy[26] = 1; copy[27] = 1; copy[28] = 1; copy[29] = 1 }
+  return copy
 })
 
-export const KICK_1: SpriteFrame = { width: W, height: H, pixels: KICK_1_DATA }
+export const KICK_WIND: SpriteFrame = { width: W, height: H, pixels: KICK_WIND_DATA }
 
-// --- KICK FRAME 2: Extension start (leg extending outward to the right) ---
-const KICK_2_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
-  // Shift upper body left 1px for counterbalance (rows 4-22)
-  if (i >= 4 && i <= 22) {
-    const copy = Array(W).fill(0)
-    for (let c = 0; c < W - 1; c++) {
-      if (row[c + 1] !== 0) copy[c] = row[c + 1]
-    }
-    return copy
+// --- KICK FRAME 2 (EXTEND): Front leg fully extended horizontally ---
+const KICK_EXTEND_DATA: number[][] = KICK_WIND_DATA.map((row, i) => {
+  const copy = [...row]
+  // Clear the chambered knee
+  if (i >= 42 && i <= 48) {
+    for (let c = 23; c < 30; c++) copy[c] = 0
   }
-  // Remove rear leg below row 48
-  if (i >= 48 && i <= 74) {
-    const copy = [...row]
-    for (let c = 25; c < W; c++) copy[c] = 0
-    // Add extending leg horizontally (rows 48-52)
-    if (i === 48) { for (let c = 28; c <= 38; c++) copy[c] = c === 28 || c === 38 ? 1 : (c % 2 === 0 ? 9 : 10) }
-    if (i === 49) { for (let c = 28; c <= 40; c++) copy[c] = c === 28 || c === 40 ? 1 : (c % 2 === 0 ? 10 : 11) }
-    if (i === 50) { for (let c = 28; c <= 40; c++) copy[c] = c === 28 || c === 40 ? 1 : (c % 2 === 0 ? 10 : 9) }
-    if (i === 51) { for (let c = 28; c <= 38; c++) copy[c] = c === 28 || c === 38 ? 1 : 9 }
-    if (i === 52) { copy[38] = 1; copy[39] = 5; copy[40] = 6; copy[41] = 5; copy[42] = 1 }
-    return copy
-  }
-  return [...row]
+  // Draw extended leg horizontally (rows 43-46, cols 24-39)
+  if (i === 43) { for (let c = 24; c <= 38; c++) copy[c] = (c === 24 || c === 38) ? 1 : (c % 3 === 0 ? 10 : 9) }
+  if (i === 44) { for (let c = 24; c <= 39; c++) copy[c] = (c === 24 || c === 39) ? 1 : (c % 3 === 0 ? 11 : 10) }
+  if (i === 45) { for (let c = 24; c <= 39; c++) copy[c] = (c === 24 || c === 39) ? 1 : (c % 3 === 0 ? 10 : 9) }
+  if (i === 46) { for (let c = 24; c <= 38; c++) copy[c] = (c === 24 || c === 38) ? 1 : (c % 3 === 0 ? 10 : 9) }
+  // Foot at the end
+  if (i === 43) { copy[39] = 1; copy[40] = 5; copy[41] = 6; copy[42] = 6; copy[43] = 1 }
+  if (i === 44) { copy[40] = 1; copy[41] = 6; copy[42] = 7; copy[43] = 6; copy[44] = 1 }
+  if (i === 45) { copy[40] = 1; copy[41] = 1; copy[42] = 1; copy[43] = 1; copy[44] = 1 }
+  return copy
 })
 
-export const KICK_2: SpriteFrame = { width: W, height: H, pixels: KICK_2_DATA }
+export const KICK_EXTEND: SpriteFrame = { width: W, height: H, pixels: KICK_EXTEND_DATA }
 
-// --- KICK FRAME 3: Full extension (leg fully extended, foot at max reach) ---
-const KICK_3_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
-  // Shift upper body left 2px for full counterbalance (rows 4-22)
-  if (i >= 4 && i <= 22) {
+// --- KICK FRAME 3 (RETRACT): Leg pulling back = same as wind-up ---
+export const KICK_RETRACT: SpriteFrame = KICK_WIND
+
+// ── HIT FRAME ───────────────────────────────────────────────────────────────
+
+// --- HIT: Recoil from impact — body shifts right 2px, head tilts ---
+const HIT_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
+  if (i >= 4 && i <= 40) {
     const copy = Array(W).fill(0)
     for (let c = 0; c < W - 2; c++) {
-      if (row[c + 2] !== 0) copy[c] = row[c + 2]
-    }
-    return copy
-  }
-  // Shift torso left 1px (rows 23-40)
-  if (i >= 23 && i <= 40) {
-    const copy = Array(W).fill(0)
-    for (let c = 0; c < W - 1; c++) {
-      if (row[c + 1] !== 0) copy[c] = row[c + 1]
-    }
-    return copy
-  }
-  // Remove rear leg below row 46, add fully extended horizontal leg
-  if (i >= 46 && i <= 74) {
-    const copy = [...row]
-    for (let c = 25; c < W; c++) copy[c] = 0
-    // Fully extended horizontal leg with boot at end (rows 46-51)
-    if (i === 46) { for (let c = 26; c <= 44; c++) copy[c] = c === 26 || c === 44 ? 1 : (c % 2 === 0 ? 9 : 10) }
-    if (i === 47) { for (let c = 26; c <= 46; c++) copy[c] = c === 26 || c === 46 ? 1 : (c % 2 === 0 ? 10 : 11) }
-    if (i === 48) { for (let c = 26; c <= 46; c++) copy[c] = c === 26 || c === 46 ? 1 : (c % 2 === 0 ? 10 : 9) }
-    if (i === 49) { for (let c = 26; c <= 44; c++) copy[c] = c === 26 || c === 44 ? 1 : 9 }
-    // Boot at the end
-    if (i === 47) { copy[44] = 1; copy[45] = 5; copy[46] = 6; copy[47] = 7; copy[48] = 6; copy[49] = 1 }
-    if (i === 48) { copy[44] = 1; copy[45] = 5; copy[46] = 6; copy[47] = 8; copy[48] = 7; copy[49] = 1 }
-    if (i === 49) { copy[44] = 1; copy[45] = 1; copy[46] = 1; copy[47] = 1; copy[48] = 1; copy[49] = 1 }
-    return copy
-  }
-  return [...row]
-})
-
-export const KICK_3: SpriteFrame = { width: W, height: H, pixels: KICK_3_DATA }
-
-// --- KICK FRAME 4: Retraction (leg pulling back toward guard) ---
-const KICK_4_DATA: number[][] = KICK_2_DATA.map((row, i) => {
-  // Retract the kicking leg (rows 48-52) — shift pixels left by 4
-  if (i >= 48 && i <= 52) {
-    const copy = Array(W).fill(0)
-    for (let c = 0; c < W; c++) {
-      const src = c + 4
-      if (src < W && row[src] !== 0) copy[c] = row[src]
-    }
-    return copy
-  }
-  // Upper body shifts back toward center (rows 4-22) — shift right by 1
-  if (i >= 4 && i <= 22) {
-    const copy = Array(W).fill(0)
-    for (let c = W - 1; c > 0; c--) {
-      if (row[c - 1] !== 0) copy[c] = row[c - 1]
+      if (row[c] !== 0) copy[c + 2] = row[c]
     }
     return copy
   }
   return [...row]
 })
 
-export const KICK_4: SpriteFrame = { width: W, height: H, pixels: KICK_4_DATA }
+export const HIT: SpriteFrame = { width: W, height: H, pixels: HIT_DATA }
+
+// ── BLOCK FRAME ─────────────────────────────────────────────────────────────
+
+// --- BLOCK: High guard — arms raised to protect face ---
+const BLOCK_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
+  const copy = [...row]
+  // Add glove guards flanking the face (rows 19-22)
+  if (i >= 19 && i <= 22) {
+    copy[13] = 1; copy[14] = 13; copy[15] = 13
+    copy[29] = 13; copy[30] = 13; copy[31] = 1
+  }
+  // Gi sleeve connecting to gloves (rows 20-22)
+  if (i >= 20 && i <= 22) {
+    copy[12] = 1; copy[13] = 9; copy[14] = 10; copy[15] = 9
+    copy[29] = 9; copy[30] = 10; copy[31] = 9; copy[32] = 1
+  }
+  return copy
+})
+
+export const BLOCK: SpriteFrame = { width: W, height: H, pixels: BLOCK_DATA }
+
+// ── DOWN FRAME ──────────────────────────────────────────────────────────────
+
+// --- DOWN: Knocked out — body collapsed, shifted down + right ---
+const DOWN_DATA: number[][] = (() => {
+  const out: number[][] = Array.from({ length: H }, () => Array(W).fill(0))
+  for (let i = 0; i < H; i++) {
+    const srcRow = i - 10
+    if (srcRow >= 0 && srcRow < H) {
+      const src = IDLE_1_DATA[srcRow]
+      const copy = Array(W).fill(0)
+      for (let c = 0; c < W - 3; c++) {
+        if (src[c] !== 0) copy[c + 3] = src[c]
+      }
+      out[i] = copy
+    }
+  }
+  return out
+})()
+
+export const DOWN: SpriteFrame = { width: W, height: H, pixels: DOWN_DATA }
+
+// ── VICTORY FRAMES ──────────────────────────────────────────────────────────
+
+// --- VICTORY 1: Arms raised triumphantly ---
+const VICTORY_1_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
+  const copy = [...row]
+  // Raised gloves above head (rows 2-3)
+  if (i === 2) { copy[12] = 1; copy[13] = 13; copy[14] = 13; copy[15] = 1; copy[29] = 1; copy[30] = 13; copy[31] = 13; copy[32] = 1 }
+  if (i === 3) { copy[12] = 1; copy[13] = 14; copy[14] = 13; copy[15] = 1; copy[29] = 1; copy[30] = 13; copy[31] = 14; copy[32] = 1 }
+  // Gi sleeves reaching up (rows 4-5)
+  if (i === 4) { copy[13] = 1; copy[14] = 9; copy[15] = 9; copy[29] = 9; copy[30] = 9; copy[31] = 1 }
+  if (i === 5) { copy[14] = 1; copy[15] = 9; copy[16] = 9; copy[28] = 9; copy[29] = 9; copy[30] = 1 }
+  // Remove old arm pixels from torso rows
+  if (i >= 28 && i <= 34) {
+    for (let c = 0; c < 13; c++) copy[c] = 0
+  }
+  return copy
+})
+
+export const VICTORY_1: SpriteFrame = { width: W, height: H, pixels: VICTORY_1_DATA }
+
+// --- VICTORY 2: Bounce peak — upper body shifts up 2 rows ---
+const VICTORY_2_DATA: number[][] = (() => {
+  const out: number[][] = Array.from({ length: H }, () => Array(W).fill(0))
+  for (let i = 0; i < H; i++) {
+    const srcRow = i + 2
+    if (i <= 42 && srcRow < H) {
+      out[i] = [...VICTORY_1_DATA[srcRow]]
+    } else {
+      out[i] = [...VICTORY_1_DATA[Math.min(i, H - 1)]]
+    }
+  }
+  return out
+})()
+
+export const VICTORY_2: SpriteFrame = { width: W, height: H, pixels: VICTORY_2_DATA }
+
+// ── DEFEAT FRAME ────────────────────────────────────────────────────────────
+
+// --- DEFEAT: Slumped posture — head drops, shoulders sag ---
+const DEFEAT_DATA: number[][] = (() => {
+  const out: number[][] = Array.from({ length: H }, () => Array(W).fill(0))
+  // Shift head/upper body down by 3 rows
+  for (let i = 0; i < H; i++) {
+    const srcRow = i < 3 ? 0 : i - 3
+    if (i <= 37 && srcRow >= 0 && srcRow < H) {
+      out[i] = [...IDLE_1_DATA[srcRow]]
+    } else if (i < H) {
+      out[i] = [...IDLE_1_DATA[Math.min(i, H - 1)]]
+    }
+  }
+  // Droop arms: shift rows 26-37 down by 1
+  for (let i = 37; i >= 26; i--) {
+    if (i + 1 < H) out[i + 1] = [...out[i]]
+  }
+  out[26] = Array(W).fill(0)
+  return out
+})()
+
+export const DEFEAT: SpriteFrame = { width: W, height: H, pixels: DEFEAT_DATA }
