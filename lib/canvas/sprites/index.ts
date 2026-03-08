@@ -27,6 +27,10 @@ import {
   VICTORY_1 as RAW_VICTORY_1,
   VICTORY_2 as RAW_VICTORY_2,
   DEFEAT as RAW_DEFEAT,
+  WALK_1 as RAW_WALK_1,
+  WALK_2 as RAW_WALK_2,
+  DODGE_1 as RAW_DODGE_1,
+  DODGE_2 as RAW_DODGE_2,
 } from './fighter-base'
 
 // Convert a palette-indexed frame to renderer-compatible color strings
@@ -44,6 +48,8 @@ export function initRealSprites(): void {
   registerRealSprites({
     IDLE_1: resolve(RAW_IDLE_1),
     IDLE_2: resolve(RAW_IDLE_2),
+    WALK_1: resolve(RAW_WALK_1),
+    WALK_2: resolve(RAW_WALK_2),
     PUNCH_WIND: resolve(RAW_JAB_1),
     PUNCH_EXTEND: resolve(RAW_JAB_3),
     PUNCH_RETRACT: resolve(RAW_JAB_4),
@@ -52,6 +58,8 @@ export function initRealSprites(): void {
     KICK_RETRACT: resolve(RAW_KICK_RETRACT),
     HIT: resolve(RAW_HIT),
     BLOCK: resolve(RAW_BLOCK),
+    DODGE_1: resolve(RAW_DODGE_1),
+    DODGE_2: resolve(RAW_DODGE_2),
     DOWN: resolve(RAW_DOWN),
     VICTORY_1: resolve(RAW_VICTORY_1),
     VICTORY_2: resolve(RAW_VICTORY_2),
