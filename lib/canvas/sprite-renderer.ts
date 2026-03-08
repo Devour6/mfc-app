@@ -144,6 +144,31 @@ export function mapStateToAnimKey(
   }
 }
 
+// ── Palette Conversion ──────────────────────────────────────────────────────
+// Luna's sprite data uses number[][] with palette indices.
+// The renderer expects string[][] with CSS color strings.
+// This function bridges the two formats.
+
+/**
+ * Convert a palette-indexed pixel grid (number[][]) to a color-string grid (string[][]).
+ * Index 0 or 'transparent' → '' (transparent). All other indices → palette[index].
+ */
+export function resolveIndexedFrame(
+  pixels: number[][],
+  palette: string[],
+  width: number,
+  height: number,
+): SpriteFrame {
+  const resolved: string[][] = pixels.map(row =>
+    row.map(idx => {
+      if (idx === 0) return ''
+      const color = palette[idx]
+      return (!color || color === 'transparent') ? '' : color
+    })
+  )
+  return { width, height, pixels: resolved }
+}
+
 // ── Placeholder Sprite Sheets ────────────────────────────────────────────────
 // Minimal recognizable fighters until Luna draws real pixel art.
 // Each frame is a small grid (approx 12×16 pixels).
@@ -398,6 +423,101 @@ function makeDefeatFrame(color: string): SpriteFrame {
       [T, O, O, O, O, T, T, O, O, O, O, T],
     ],
   }
+}
+
+// ── Sprite Sheet Loader ──────────────────────────────────────────────────────
+// Integration point for Luna's real sprite art.
+// When sprites/fighter-base.ts ships, import it and call registerRealSprites().
+// Until then, loadSpriteSheet() falls back to placeholders.
+
+/** Expected named frame exports from Luna's sprites/fighter-base.ts. */
+export interface FighterBaseFrames {
+  IDLE_1: SpriteFrame
+  IDLE_2: SpriteFrame
+  WALK_1?: SpriteFrame        // defaults to IDLE_1
+  WALK_2?: SpriteFrame        // defaults to IDLE_2
+  PUNCH_WIND: SpriteFrame
+  PUNCH_EXTEND: SpriteFrame
+  PUNCH_RETRACT: SpriteFrame
+  KICK_WIND: SpriteFrame
+  KICK_EXTEND: SpriteFrame
+  KICK_RETRACT: SpriteFrame
+  HIT: SpriteFrame
+  BLOCK: SpriteFrame
+  DODGE_1?: SpriteFrame       // defaults to IDLE_2
+  DODGE_2?: SpriteFrame       // defaults to IDLE_1
+  DOWN: SpriteFrame
+  VICTORY_1: SpriteFrame
+  VICTORY_2: SpriteFrame
+  DEFEAT: SpriteFrame
+}
+
+/** Assemble named frame exports into a complete FighterSpriteSheet. */
+export function assembleSpriteSheet(frames: FighterBaseFrames): FighterSpriteSheet {
+  return {
+    idle: {
+      frames: [frames.IDLE_1, frames.IDLE_2],
+      frameDurationMs: 500,
+      loop: true,
+    },
+    walk: {
+      frames: [frames.WALK_1 ?? frames.IDLE_1, frames.WALK_2 ?? frames.IDLE_2],
+      frameDurationMs: 200,
+      loop: true,
+    },
+    punch: {
+      frames: [frames.PUNCH_WIND, frames.PUNCH_EXTEND, frames.PUNCH_EXTEND, frames.PUNCH_RETRACT],
+      frameDurationMs: 80,
+      loop: false,
+    },
+    kick: {
+      frames: [frames.KICK_WIND, frames.KICK_EXTEND, frames.KICK_EXTEND, frames.KICK_RETRACT],
+      frameDurationMs: 100,
+      loop: false,
+    },
+    hit: {
+      frames: [frames.HIT, frames.HIT],
+      frameDurationMs: 150,
+      loop: false,
+    },
+    block: {
+      frames: [frames.BLOCK],
+      frameDurationMs: 300,
+      loop: false,
+    },
+    dodge: {
+      frames: [frames.DODGE_1 ?? frames.IDLE_2, frames.DODGE_2 ?? frames.IDLE_1],
+      frameDurationMs: 150,
+      loop: false,
+    },
+    down: {
+      frames: [frames.DOWN],
+      frameDurationMs: 1000,
+      loop: false,
+    },
+    victory: {
+      frames: [frames.VICTORY_1, frames.VICTORY_2],
+      frameDurationMs: 400,
+      loop: true,
+    },
+    defeat: {
+      frames: [frames.DEFEAT],
+      frameDurationMs: 1000,
+      loop: false,
+    },
+  }
+}
+
+let _realSpriteSheet: FighterSpriteSheet | null = null
+
+/** Register real sprite art — replaces placeholders globally. */
+export function registerRealSprites(frames: FighterBaseFrames): void {
+  _realSpriteSheet = assembleSpriteSheet(frames)
+}
+
+/** Load sprite sheet: real art if registered, otherwise placeholders. */
+export function loadSpriteSheet(color: string): FighterSpriteSheet {
+  return _realSpriteSheet ?? createPlaceholderSpriteSheet(color)
 }
 
 /**
