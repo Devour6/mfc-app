@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { auth0 } from '@/lib/auth0'
@@ -50,10 +51,11 @@ export async function requireAuth(): Promise<AuthSession> {
       throw new AuthRequiredError()
     }
 
-    // TODO: Keys are stored in plaintext. For production, hash with bcrypt
-    // and use a prefix-based lookup strategy instead of findUnique on raw key.
+    // Hash the key with SHA-256 for lookup — keys are stored as hashes, never plaintext.
+    // SHA-256 is appropriate here (vs bcrypt) because API keys have 256-bit entropy.
+    const keyHash = createHash('sha256').update(key).digest('hex')
     const apiKey = await prisma.apiKey.findUnique({
-      where: { key },
+      where: { key: keyHash },
       include: {
         user: {
           select: { id: true, auth0Id: true, email: true, name: true },
