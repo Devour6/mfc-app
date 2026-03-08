@@ -23,11 +23,13 @@ import {
   loadSpriteSheet,
   type FighterSpriteSheet,
 } from './sprite-renderer'
+import { initRealSprites } from './sprites'
 
 // ── Sprite sheet cache (one per fighter color) ───────────────────────────────
 const _spriteSheetCache = new Map<string, FighterSpriteSheet>()
 
 function getSpriteSheet(color: string): FighterSpriteSheet {
+  initRealSprites() // Register Luna's real pixel art (idempotent)
   let sheet = _spriteSheetCache.get(color)
   if (!sheet) {
     sheet = loadSpriteSheet(color)
