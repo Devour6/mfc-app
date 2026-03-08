@@ -22,7 +22,7 @@ A regulated event contract exchange for AI fighter outcomes. AI agents fight in 
 | Language | TypeScript 5 (strict mode) |
 | UI | React 18, Tailwind CSS 3.4, Framer Motion 11 |
 | State | Zustand 4.5 with localStorage persistence |
-| Rendering | HTML5 Canvas (16-bit pixel-block sprites, frame-based keyframe animation) |
+| Rendering | HTML5 Canvas (bitmap sprite frames, palette-indexed pixel art, SPRITE_P=2) |
 | Audio | Web Audio API via custom SoundManager |
 | Database | PostgreSQL 16 via Prisma 7.4 + `@prisma/adapter-pg` (connected, migrated, seeded) |
 | Auth | Auth0 v4 (@auth0/nextjs-auth0 v4.15.0) — proxy.ts + lib/auth-guard.ts |
@@ -212,27 +212,42 @@ Auth column in the table above: "Human" = `requireHuman()`, "Required" = `requir
 
 ## Current Product Status
 
-**Last updated:** 2026-03-05
+**Last updated:** 2026-03-08
 
 ### Where We Are
-- **Combat system:** V13 design validated. Fight engine tuned (225 HP, 80ms ticks, 3 rounds). Canvas being modularized by Luna.
+- **Combat system:** V13 design validated. Fight engine tuned (225 HP, 80ms ticks, 3 rounds). Canvas modularized (9 modules).
+- **Sprite rewrite (COMPLETE):** Skeleton+lerp animation replaced with bitmap sprite frame rendering (7 PRs, #164-#168 + #170). `sprite-renderer.ts` blits 2D pixel arrays. `sprites/fighter-base.ts` holds Luna's palette-indexed art (80x50, 16-color palette). `sprites/index.ts` bridges palette→color format. Idle + jab have real pixel art (8 frames). Remaining states (kick, hit, block, dodge, down, victory, defeat) temporarily reuse idle/jab — Luna and Orcus actively shipping those.
 - **Animation quality:** Boss mandate — must reach Street Fighter 2 level or project gets killed. Luna owns canvas/animations. SF2 reference doc at `SF2_ANIMATION_REFERENCE.md`.
-- **Backend:** All API routes built and tested. Auth (Auth0), payments (Stripe), trading (CLOB), training, billing — all functional.
+- **Backend:** All API routes built and tested (365 tests, 27 suites). Auth (Auth0), payments (Stripe), trading (CLOB), training, billing — all functional.
 - **Landing page:** Clean — Turnstile CAPTCHA removed, stats wired to real DB, CSS consolidated, mock data removed.
 - **Stripe:** Routes implemented, UI wired, tests passing. Needs `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in production env.
 - **Solana:** Scaffold built (wallet provider, credit bridge, config endpoint). Not yet wired to a deployed program.
 - **CI/CD:** Fully green. GitHub Actions (lint, type-check, test, build) + AI PR Review + Vercel auto-deploy.
 
+### Sprite Architecture
+```
+fighter-renderer.ts → getSpriteSheet() → initRealSprites() → registerRealSprites()
+                                           ↓
+sprites/index.ts → resolveIndexedFrame() converts number[][] → string[][]
+                     ↓
+sprites/fighter-base.ts → Luna's pixel art (FIGHTER_PALETTE + IDLE_1-4, JAB_1-4)
+                           ↓ (future)
+sprites/fighter-kick.ts → KICK_1-4, etc. (same format: 80x50 palette-indexed)
+```
+- **SPRITE_P = 2** (decoupled from skeleton P=4). Each sprite pixel = 2×2 canvas px, then FIGHTER_SCALE=2.0 = 4 canvas px total.
+- **Adding new frames**: Export from `fighter-base.ts` (or new file), import in `sprites/index.ts`, map to `registerRealSprites()` call.
+
 ### Current Team
 - **Lyle** — Lead engineer. Backend, infrastructure, API, auth, DB, coordination, PR review/merge.
-- **Luna** — Frontend/canvas. Fight canvas modularization, SF2-quality animations, visual polish.
-- **Orcus** — Backend support. Testing, cleanup, CSS, Stripe wiring, branch management.
+- **Luna** — Frontend/canvas. Pixel art sprite frames, SF2-quality animations, visual polish.
+- **Orcus** — Backend + rendering support. Testing, sprite infrastructure, loader architecture.
 
 ### Priorities
-1. **Canvas quality** (Luna) — SF2-level animation is the existential requirement. Everything else supports this.
-2. **Keep shipping** (all) — Ralph loop: pick task, implement, test, PR, merge, next task. Never leave PRs open.
-3. **Stripe production env** — Set `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` in Vercel to enable real payments.
-4. **Solana integration** — Wire wallet to a deployed program for real trading (future sprint).
+1. **Ship remaining sprite frames** (Luna + Orcus) — kick, hit, block, dodge, down, victory, defeat. These are placeholder reuses right now.
+2. **Canvas quality** (Luna) — SF2-level animation is the existential requirement.
+3. **Keep shipping** (all) — Ralph loop: pick task, implement, test, PR, merge, next task. Never leave PRs open.
+4. **Stripe production env** — Set `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` in Vercel to enable real payments.
+5. **Solana integration** — Wire wallet to a deployed program for real trading (future sprint).
 
 ### Key Design Docs
 | Doc | Path | Status |
