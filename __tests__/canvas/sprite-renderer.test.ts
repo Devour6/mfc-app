@@ -2,10 +2,14 @@ import {
   getAnimationFrame,
   mapStateToAnimKey,
   createPlaceholderSpriteSheet,
+  assembleSpriteSheet,
+  registerRealSprites,
+  loadSpriteSheet,
   drawSpriteFrame,
   type SpriteFrame,
   type SpriteAnimation,
   type FighterSpriteSheet,
+  type FighterBaseFrames,
 } from '@/lib/canvas/sprite-renderer'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -258,5 +262,116 @@ describe('drawSpriteFrame', () => {
     drawSpriteFrame(ctx, frame, 100, 100)
 
     expect(ctx.globalCompositeOperation).toBe('')
+  })
+})
+
+// ── assembleSpriteSheet ──────────────────────────────────────────────────────
+
+describe('assembleSpriteSheet', () => {
+  function makeBaseFrames(): FighterBaseFrames {
+    return {
+      IDLE_1: makeFrame(12, 16, '#idle1'),
+      IDLE_2: makeFrame(12, 16, '#idle2'),
+      PUNCH_WIND: makeFrame(12, 16, '#pw'),
+      PUNCH_EXTEND: makeFrame(16, 16, '#pe'),
+      PUNCH_RETRACT: makeFrame(12, 16, '#pr'),
+      KICK_WIND: makeFrame(12, 16, '#kw'),
+      KICK_EXTEND: makeFrame(16, 16, '#ke'),
+      KICK_RETRACT: makeFrame(12, 16, '#kr'),
+      HIT: makeFrame(12, 16, '#hit'),
+      BLOCK: makeFrame(12, 16, '#blk'),
+      DOWN: makeFrame(16, 6, '#dwn'),
+      VICTORY_1: makeFrame(12, 16, '#v1'),
+      VICTORY_2: makeFrame(12, 16, '#v2'),
+      DEFEAT: makeFrame(12, 16, '#def'),
+    }
+  }
+
+  it('assembles all 10 animation keys from named frames', () => {
+    const sheet = assembleSpriteSheet(makeBaseFrames())
+    const keys: (keyof FighterSpriteSheet)[] = [
+      'idle', 'walk', 'punch', 'kick', 'hit', 'block', 'dodge', 'down', 'victory', 'defeat',
+    ]
+    for (const key of keys) {
+      expect(sheet[key]).toBeDefined()
+      expect(sheet[key].frames.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('uses IDLE frames as walk fallback when WALK not provided', () => {
+    const frames = makeBaseFrames()
+    const sheet = assembleSpriteSheet(frames)
+    expect(sheet.walk.frames[0]).toBe(frames.IDLE_1)
+    expect(sheet.walk.frames[1]).toBe(frames.IDLE_2)
+  })
+
+  it('uses explicit WALK frames when provided', () => {
+    const frames = makeBaseFrames()
+    frames.WALK_1 = makeFrame(12, 16, '#w1')
+    frames.WALK_2 = makeFrame(12, 16, '#w2')
+    const sheet = assembleSpriteSheet(frames)
+    expect(sheet.walk.frames[0]).toBe(frames.WALK_1)
+    expect(sheet.walk.frames[1]).toBe(frames.WALK_2)
+  })
+
+  it('uses IDLE frames as dodge fallback when DODGE not provided', () => {
+    const frames = makeBaseFrames()
+    const sheet = assembleSpriteSheet(frames)
+    expect(sheet.dodge.frames[0]).toBe(frames.IDLE_2)
+    expect(sheet.dodge.frames[1]).toBe(frames.IDLE_1)
+  })
+
+  it('doubles PUNCH_EXTEND for hold phase', () => {
+    const frames = makeBaseFrames()
+    const sheet = assembleSpriteSheet(frames)
+    expect(sheet.punch.frames).toEqual([
+      frames.PUNCH_WIND, frames.PUNCH_EXTEND, frames.PUNCH_EXTEND, frames.PUNCH_RETRACT,
+    ])
+  })
+
+  it('doubles KICK_EXTEND for hold phase', () => {
+    const frames = makeBaseFrames()
+    const sheet = assembleSpriteSheet(frames)
+    expect(sheet.kick.frames).toEqual([
+      frames.KICK_WIND, frames.KICK_EXTEND, frames.KICK_EXTEND, frames.KICK_RETRACT,
+    ])
+  })
+})
+
+// ── loadSpriteSheet + registerRealSprites ────────────────────────────────────
+
+describe('loadSpriteSheet', () => {
+  it('returns placeholder when no real sprites are registered', () => {
+    const sheet = loadSpriteSheet('#ff0000')
+    // Should have all animation keys (same as createPlaceholderSpriteSheet)
+    expect(sheet.idle.frames.length).toBeGreaterThan(0)
+    expect(sheet.punch.frames.length).toBeGreaterThan(0)
+  })
+
+  it('returns real sprites after registerRealSprites is called', () => {
+    const realFrames: FighterBaseFrames = {
+      IDLE_1: makeFrame(24, 32, '#real1'),
+      IDLE_2: makeFrame(24, 32, '#real2'),
+      PUNCH_WIND: makeFrame(24, 32, '#rpw'),
+      PUNCH_EXTEND: makeFrame(32, 32, '#rpe'),
+      PUNCH_RETRACT: makeFrame(24, 32, '#rpr'),
+      KICK_WIND: makeFrame(24, 32, '#rkw'),
+      KICK_EXTEND: makeFrame(32, 32, '#rke'),
+      KICK_RETRACT: makeFrame(24, 32, '#rkr'),
+      HIT: makeFrame(24, 32, '#rhit'),
+      BLOCK: makeFrame(24, 32, '#rblk'),
+      DOWN: makeFrame(32, 12, '#rdwn'),
+      VICTORY_1: makeFrame(24, 32, '#rv1'),
+      VICTORY_2: makeFrame(24, 32, '#rv2'),
+      DEFEAT: makeFrame(24, 32, '#rdef'),
+    }
+
+    registerRealSprites(realFrames)
+    const sheet = loadSpriteSheet('#ff0000')
+
+    // Real sprites should be used — idle frame should be the real one
+    expect(sheet.idle.frames[0]).toBe(realFrames.IDLE_1)
+    expect(sheet.idle.frames[1]).toBe(realFrames.IDLE_2)
+    expect(sheet.punch.frames[1]).toBe(realFrames.PUNCH_EXTEND)
   })
 })
