@@ -612,3 +612,81 @@ const DEFEAT_DATA: number[][] = (() => {
 })()
 
 export const DEFEAT: SpriteFrame = { width: W, height: H, pixels: DEFEAT_DATA }
+
+
+// ── WALK FRAMES ─────────────────────────────────────────────────────────────
+
+// --- WALK 1: Stride position A — left leg forward, right leg back ---
+// Modify leg rows from IDLE_1: shift left leg forward (left in pixel space),
+// shift right leg back (right in pixel space)
+const WALK_1_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
+  const copy = [...row]
+  // Left leg (cols ~5-10 in rows 44-74): shift 2px left (forward step)
+  if (i >= 44 && i <= 74) {
+    // Shift left leg pixels left by 2
+    for (let c = 0; c < 12; c++) {
+      copy[c] = (c + 2 < W && IDLE_1_DATA[i][c + 2] !== 0 && c + 2 < 15)
+        ? IDLE_1_DATA[i][c + 2] : 0
+    }
+    // Shift right leg pixels right by 2
+    for (let c = W - 1; c >= 18; c--) {
+      copy[c] = (c - 2 >= 0 && IDLE_1_DATA[i][c - 2] !== 0 && c - 2 >= 18)
+        ? IDLE_1_DATA[i][c - 2] : 0
+    }
+  }
+  return copy
+})
+
+export const WALK_1: SpriteFrame = { width: W, height: H, pixels: WALK_1_DATA }
+
+// --- WALK 2: Stride position B — legs reversed (right forward, left back) ---
+const WALK_2_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
+  const copy = [...row]
+  // Left leg (cols ~5-10 in rows 44-74): shift 2px right (back position)
+  if (i >= 44 && i <= 74) {
+    for (let c = 14; c >= 0; c--) {
+      copy[c] = (c - 2 >= 0 && IDLE_1_DATA[i][c - 2] !== 0 && c - 2 < 15)
+        ? IDLE_1_DATA[i][c - 2] : 0
+    }
+    // Shift right leg pixels left by 2 (forward)
+    for (let c = 18; c < W; c++) {
+      copy[c] = (c + 2 < W && IDLE_1_DATA[i][c + 2] !== 0 && c + 2 >= 18)
+        ? IDLE_1_DATA[i][c + 2] : 0
+    }
+  }
+  return copy
+})
+
+export const WALK_2: SpriteFrame = { width: W, height: H, pixels: WALK_2_DATA }
+
+// ── DODGE FRAMES ────────────────────────────────────────────────────────────
+
+// --- DODGE 1: Duck — upper body shifts down 3 rows ---
+const DODGE_1_DATA: number[][] = (() => {
+  const out: number[][] = Array.from({ length: H }, () => Array(W).fill(0))
+  for (let i = 0; i < H; i++) {
+    const srcRow = i < 3 ? 0 : i - 3
+    if (i <= 40 && srcRow >= 0 && srcRow < H) {
+      out[i] = [...IDLE_1_DATA[srcRow]]
+    } else {
+      out[i] = [...IDLE_1_DATA[Math.min(i, H - 1)]]
+    }
+  }
+  return out
+})()
+
+export const DODGE_1: SpriteFrame = { width: W, height: H, pixels: DODGE_1_DATA }
+
+// --- DODGE 2: Lean back — upper body shifts right 3px ---
+const DODGE_2_DATA: number[][] = IDLE_1_DATA.map((row, i) => {
+  if (i >= 4 && i <= 35) {
+    const copy = Array(W).fill(0)
+    for (let c = 0; c < W - 3; c++) {
+      if (row[c] !== 0) copy[c + 3] = row[c]
+    }
+    return copy
+  }
+  return [...row]
+})
+
+export const DODGE_2: SpriteFrame = { width: W, height: H, pixels: DODGE_2_DATA }
