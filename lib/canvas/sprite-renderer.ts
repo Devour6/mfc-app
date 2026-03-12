@@ -87,10 +87,22 @@ export function drawSpriteFrame(
   }
 
   // Optional tint overlay (for hit flash, etc.)
+  // Draw tint only on non-transparent sprite pixels to avoid bleeding onto background.
   if (tint) {
-    ctx.globalCompositeOperation = 'source-atop'
     ctx.fillStyle = tint
-    ctx.fillRect(originX, originY, totalW, totalH)
+    for (let row = 0; row < frame.height; row++) {
+      const rowData = frame.pixels[row]
+      if (!rowData) continue
+      for (let col = 0; col < frame.width; col++) {
+        if (!rowData[col]) continue
+        ctx.fillRect(
+          Math.round(originX + col * SPRITE_P),
+          Math.round(originY + row * SPRITE_P),
+          SPRITE_P,
+          SPRITE_P,
+        )
+      }
+    }
   }
 
   ctx.restore()

@@ -116,6 +116,51 @@ const IDLE_1_DATA: number[][] = [
   /* row 79 */ Array(W).fill(0),
 ]
 
+// --- Post-process: balance leg proportions and align head ---
+// The back leg (right side) is drawn 2-3px narrower than the front leg (left side).
+// This creates a "scoliosis" appearance. Fix by widening and shifting head to align.
+function balanceFrame(data: number[][]): void {
+  // 1. Widen narrow right leg to match left leg width (rows 50-66)
+  for (let r = 50; r <= 66; r++) {
+    const row = data[r]
+    if (!row) continue
+    let rStart = -1, rEnd = -1
+    for (let c = 20; c < W; c++) {
+      if (row[c] !== 0) { if (rStart === -1) rStart = c; rEnd = c }
+      else if (rStart !== -1) break
+    }
+    let lStart = -1, lEnd = -1
+    for (let c = 0; c < 20; c++) {
+      if (row[c] !== 0) { if (lStart === -1) lStart = c; lEnd = c }
+      else if (lStart !== -1 && c > lEnd + 2) break
+    }
+    if (rStart === -1 || lStart === -1) continue
+    const lWidth = lEnd - lStart + 1
+    const rWidth = rEnd - rStart + 1
+    if (rWidth >= lWidth - 1) continue
+    const expand = Math.min(lWidth - rWidth, 3)
+    if (row[rStart] === 1) row[rStart] = 10
+    for (let i = 0; i < expand; i++) {
+      const col = rStart - 1 - i
+      if (col >= 0 && row[col] === 0) {
+        row[col] = (i === expand - 1) ? 1 : 10
+      }
+    }
+  }
+  // 2. Shift head rows 2px left to align with body center
+  for (let r = 0; r <= 22; r++) {
+    const row = data[r]
+    if (!row) continue
+    let hasContent = false
+    for (let c = 0; c < W; c++) { if (row[c] !== 0) { hasContent = true; break } }
+    if (!hasContent) continue
+    for (let c = 0; c < W - 2; c++) { row[c] = row[c + 2] }
+    row[W - 2] = 0
+    row[W - 1] = 0
+  }
+}
+balanceFrame(IDLE_1_DATA)
+
 export const IDLE_1: SpriteFrame = { width: W, height: H, pixels: IDLE_1_DATA }
 
 // --- IDLE FRAME 2: Slight inhale (torso rises ~1px, shoulders lift) ---
@@ -202,6 +247,7 @@ const IDLE_2_DATA: number[][] = [
   /* row 79 */ Array(W).fill(0),
 ]
 
+balanceFrame(IDLE_2_DATA)
 export const IDLE_2: SpriteFrame = { width: W, height: H, pixels: IDLE_2_DATA }
 
 // --- IDLE FRAME 3: Peak inhale (chest expanded, shoulders at highest) ---
@@ -341,6 +387,7 @@ const JAB_2_DATA: number[][] = [
   /* row 79 */ Array(W).fill(0),
 ]
 
+balanceFrame(JAB_2_DATA)
 export const JAB_2: SpriteFrame = { width: W, height: H, pixels: JAB_2_DATA }
 
 // --- JAB FRAME 3: Full extension (lead arm straight, fist at max reach) ---
@@ -427,6 +474,7 @@ const JAB_3_DATA: number[][] = [
   /* row 79 */ Array(W).fill(0),
 ]
 
+balanceFrame(JAB_3_DATA)
 export const JAB_3: SpriteFrame = { width: W, height: H, pixels: JAB_3_DATA }
 
 // --- JAB FRAME 4: Retraction (arm pulling back to guard) ---
