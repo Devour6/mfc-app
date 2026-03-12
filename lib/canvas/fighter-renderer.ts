@@ -215,7 +215,8 @@ export const drawEnhancedFighter = (
     const anim = sheet[animKey]
     const elapsedMs = fighterState.animation.frameCount * (1000 / 12.5) // 80ms per tick
     const frame = getAnimationFrame(anim, elapsedMs)
-    const facing = fighterState.position.facing as 1 | -1
+    // Sprite art is drawn facing LEFT. Negate engine facing so fighters face each other.
+    const facing = (-fighterState.position.facing) as 1 | -1
     const tint = isHitFlash ? 'rgba(255,255,255,0.6)' : undefined
 
     drawSpriteFrame(ctx, frame, drawX, y + 25, facing, tint)
